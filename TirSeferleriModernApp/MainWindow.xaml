@@ -4,15 +4,17 @@
         xmlns:local="clr-namespace:TirSeferleriModernApp"
         xmlns:viewmodels="clr-namespace:TirSeferleriModernApp.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        xmlns:conv="clr-namespace:TirSeferleriModernApp.Converters"
         Title="Tır Seferleri Uygulaması"
         Height="720" Width="1200"
         WindowStartupLocation="CenterScreen"
         Background="White"
-        Loaded="MainWindow_Loaded"> <!-- Bu bağlantı var mı? -->
+        Loaded="MainWindow_Loaded">
 
     <Window.Resources>
-        <!-- Görünürlük dönüştürücü -->
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+        <conv:SelectedPlakaToItemMatchConverter x:Key="PlakaMatch"/>
+        <conv:SelectedMenuToCheckedConverter x:Key="MenuChecked"/>
 
         <Style x:Key="MenuButtonStyle" TargetType="Button">
             <Setter Property="Foreground" Value="White"/>
@@ -24,6 +26,22 @@
             <Setter Property="Foreground" Value="White"/>
             <Setter Property="Background" Value="Transparent"/>
             <Setter Property="FontWeight" Value="Normal"/>
+        </Style>
+
+        <Style x:Key="AltMenuToggleStyle" TargetType="ToggleButton">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="#44527A"/>
+            <Setter Property="BorderBrush" Value="#8794BF"/>
+            <Setter Property="BorderThickness" Value="1"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+            <Setter Property="HorizontalContentAlignment" Value="Left"/>
+            <Style.Triggers>
+                <Trigger Property="IsChecked" Value="True">
+                    <Setter Property="Background" Value="#5A6AA3"/>
+                    <Setter Property="BorderBrush" Value="#B3C0F0"/>
+                    <Setter Property="FontWeight" Value="Bold"/>
+                </Trigger>
+            </Style.Triggers>
         </Style>
     </Window.Resources>
 
@@ -91,11 +109,49 @@
                 <ItemsControl x:Name="AraclarMenuContainer" ItemsSource="{Binding AraclarMenu}">
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
-                            <Button Content="{Binding}"
-                                    Command="{Binding DataContext.SelectAracCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
-                                    CommandParameter="{Binding}"
-                                    Style="{StaticResource SubMenuButtonStyle}"
-                                    Margin="10,5,10,0" />
+                            <StackPanel>
+                                <Button Content="{Binding}"
+                                        Command="{Binding DataContext.SelectAracCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                        CommandParameter="{Binding}"
+                                        Style="{StaticResource SubMenuButtonStyle}"
+                                        Margin="10,5,10,0" />
+
+                                <!-- Seçilen plakanın altında ikinci menü -->
+                                <ItemsControl ItemsSource="{Binding DataContext.SeciliPlakaAltMenu, RelativeSource={RelativeSource AncestorType=DockPanel}}">
+                                    <ItemsControl.Style>
+                                        <Style TargetType="ItemsControl">
+                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                            <Style.Triggers>
+                                                <DataTrigger Value="True">
+                                                    <DataTrigger.Binding>
+                                                        <MultiBinding Converter="{StaticResource PlakaMatch}">
+                                                            <Binding Path="DataContext.SelectedPlaka" RelativeSource="{RelativeSource AncestorType=DockPanel}" Mode="OneWay"/>
+                                                            <Binding Mode="OneWay"/>
+                                                        </MultiBinding>
+                                                    </DataTrigger.Binding>
+                                                    <Setter Property="Visibility" Value="Visible"/>
+                                                </DataTrigger>
+                                            </Style.Triggers>
+                                        </Style>
+                                    </ItemsControl.Style>
+                                    <ItemsControl.ItemTemplate>
+                                        <DataTemplate>
+                                            <!-- ToggleButton: seçili kalır, farklı renkte görünür -->
+                                            <ToggleButton Content="{Binding Baslik}"
+                                                          Command="{Binding Komut}"
+                                                          Style="{StaticResource AltMenuToggleStyle}"
+                                                          Margin="25,2,10,0">
+                                                <ToggleButton.IsChecked>
+                                                    <MultiBinding Converter="{StaticResource MenuChecked}" Mode="OneWay">
+                                                        <Binding Path="DataContext.AktifAltMenu" RelativeSource="{RelativeSource AncestorType=DockPanel}" Mode="OneWay"/>
+                                                        <Binding Path="Baslik" Mode="OneWay"/>
+                                                    </MultiBinding>
+                                                </ToggleButton.IsChecked>
+                                            </ToggleButton>
+                                        </DataTemplate>
+                                    </ItemsControl.ItemTemplate>
+                                </ItemsControl>
+                            </StackPanel>
                         </DataTemplate>
                     </ItemsControl.ItemTemplate>
                 </ItemsControl>
@@ -115,30 +171,6 @@
                             Command="{Binding AcTanimlarCommand}"/>
                 </StackPanel>
             </StackPanel>
-
-            <!-- Seferler, Giderler ve Kar Hesap -->
-            <Button x:Name="BtnSeferler"
-                    Content="📋 Seferler"
-                    Margin="10,10,10,0"
-                    Command="{Binding SeferlerCommand}"
-                    Style="{StaticResource MenuButtonStyle}"
-                    Visibility="{Binding ShowSeferler, Converter={StaticResource BoolToVis}}"
-                    DockPanel.Dock="Top"/>
-            <Button x:Name="BtnGiderler"
-                    Content="💸 Giderler"
-                    Margin="10,10,10,0"
-                    Command="{Binding GiderlerCommand}"
-                    Style="{StaticResource MenuButtonStyle}"
-                    Visibility="{Binding ShowGiderler, Converter={StaticResource BoolToVis}}"
-                    DockPanel.Dock="Top"/>
-            <Button x:Name="BtnKarHesap"
-                    Content="📊 Kar Hesap"
-                    Margin="10,10,10,0"
-                    Command="{Binding KarHesapCommand}"
-                    Style="{StaticResource MenuButtonStyle}"
-                    Visibility="{Binding ShowKar, Converter={StaticResource BoolToVis}}"
-                    DockPanel.Dock="Top"
-                    VerticalAlignment="Top"/>
         </DockPanel>
 
         <!-- İçerik Alanı -->

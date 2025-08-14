@@ -1,4 +1,5 @@
-﻿using CommunityToolkit.Mvvm.ComponentModel;
+﻿#pragma warning disable IDE0290 // Birincil oluşturucuyu kullan önerisini bastır
+using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
@@ -19,7 +20,7 @@ namespace TirSeferleriModernApp.ViewModels
 
         // Araclar menüsü (generator ile devam edebilir)
         [ObservableProperty]
-        private ObservableCollection<string> _araclarMenu = new();
+        private ObservableCollection<string> _araclarMenu = [];
 
         // STATUS BAR — manuel property (generator bağımlılığını kaldırdık)
         private string _statusText = "Hazır.";
@@ -28,6 +29,22 @@ namespace TirSeferleriModernApp.ViewModels
         {
             get => _statusText;
             set => SetProperty(ref _statusText, value);
+        }
+
+        // Seçilen plaka (alt menünün hangi plakada açılacağını belirler)
+        private string? _selectedPlaka;
+        public string? SelectedPlaka
+        {
+            get => _selectedPlaka;
+            set => SetProperty(ref _selectedPlaka, value);
+        }
+
+        // Alt menüde hangi öğenin aktif olduğunu takip eder ("📋 Seferler" / "💸 Giderler" / "📊 Kar Hesap")
+        private string? _aktifAltMenu;
+        public string? AktifAltMenu
+        {
+            get => _aktifAltMenu;
+            set => SetProperty(ref _aktifAltMenu, value);
         }
 
         // Geri Dön butonunun görünürlüğü
@@ -39,21 +56,39 @@ namespace TirSeferleriModernApp.ViewModels
             set => SetProperty(ref _geriDonVisibility, value);
         }
 
+        // Seçilen plakanın altında gösterilecek ikinci seviye menü öğeleri (DataBinding için)
+        [ObservableProperty]
+        private ObservableCollection<AltMenuOgesi> _seciliPlakaAltMenu = [];
+
+        // Alt menü öğesi (View’de Button template’ine bağlanacak)
+        public class AltMenuOgesi
+        {
+            public string Baslik { get; }
+            public ICommand Komut { get; }
+
+            public AltMenuOgesi(string baslik, ICommand komut)
+            {
+                Baslik = baslik;
+                Komut = komut;
+            }
+        }
+
         public ICommand BtnGeriDonCommand { get; }
-        public ICommand BtnAraclarCommand { get; }
+        public ICommand BtnAraclarCommand  { get; }
         public ICommand BtnTanimlarCommand { get; }
         public ICommand BtnSeferlerCommand { get; }
         public ICommand BtnGiderlerCommand { get; }
-        public ICommand BtnKarCommand { get; }
+        public ICommand BtnKarCommand      { get; }
         public ICommand DebugListesiKomutu { get; }
-        public ICommand SelectAracCommand { get; set; }
+        public ICommand SelectAracCommand  { get; }
 
-        // ✅ Yeni parametresiz constructor buraya eklenecek
+        // Parametresiz constructor
         public MainViewModel() : this(new SecimTakibi(), "TirSeferleri.db")
         {
             Debug.WriteLine("[MainViewModel.cs] Parametresiz constructor çağrıldı.");
         }
 
+        // Parametreli constructor
         public MainViewModel(SecimTakibi secimTakibi, string dbFile)
         {
             Debug.WriteLine("[MainViewModel.cs:20] MainViewModel constructor çağrıldı.");
@@ -61,13 +96,13 @@ namespace TirSeferleriModernApp.ViewModels
             _databaseService = new DatabaseService(dbFile);
 
             BtnGeriDonCommand = new RelayCommand(ExecuteGeriDon);
-            BtnAraclarCommand = new RelayCommand(ExecuteAraclar);
+            BtnAraclarCommand  = new RelayCommand(ExecuteAraclar);
             BtnTanimlarCommand = new RelayCommand(ExecuteTanimlar);
             BtnSeferlerCommand = new RelayCommand(ExecuteSeferler);
             BtnGiderlerCommand = new RelayCommand(ExecuteGiderler);
-            BtnKarCommand = new RelayCommand(ExecuteKar);
+            BtnKarCommand      = new RelayCommand(ExecuteKar);
             DebugListesiKomutu = new RelayCommand(ExecuteDebugListesi);
-            SelectAracCommand = new RelayCommand<string>(ExecuteSelectArac);
+            SelectAracCommand  = new RelayCommand<string>(ExecuteSelectArac);
             
             Debug.WriteLine("[MainViewModel.cs:28] ViewModel oluşturuldu.");
         }
@@ -95,16 +130,19 @@ namespace TirSeferleriModernApp.ViewModels
         private void ExecuteSeferler()
         {
             Debug.WriteLine("[MainViewModel.cs:53] Seferler menüsü işlemleri başlatıldı.");
+            AktifAltMenu = "📋 Seferler";
         }
 
         private void ExecuteGiderler()
         {
             Debug.WriteLine("[MainViewModel.cs:58] Giderler menüsü işlemleri başlatıldı.");
+            AktifAltMenu = "💸 Giderler";
         }
 
         private void ExecuteKar()
         {
             Debug.WriteLine("[MainViewModel.cs:63] Kar hesap menüsü işlemleri başlatıldı.");
+            AktifAltMenu = "📊 Kar Hesap";
         }
 
         private void ExecuteDebugListesi()
@@ -150,7 +188,37 @@ namespace TirSeferleriModernApp.ViewModels
             }
 
             Debug.WriteLine($"[MainViewModel.cs:125] Seçilen araç: {arac}");
-            // Seçilen araç işlemleri
+            // "PLAKA - Şoför" formatından plakayı ayır ve alt menüyü hazırla
+            var parts = arac.Split(" - ");
+            var plaka = parts.Length > 0 ? parts[0].Trim() : arac.Trim();
+            AltMenuyuGoster(plaka);
+        }
+
+        // Tıklanan plakaya ait ikinci seviye alt menüyü oluşturur
+        public void AltMenuyuGoster(string? plaka)
+        {
+            Debug.WriteLine($"[MainViewModel.cs] AltMenuyuGoster çağrıldı. Plaka: {plaka}");
+
+            // Seçili plaka bilgisini güncelle
+            SelectedPlaka = string.IsNullOrWhiteSpace(plaka) ? null : plaka;
+
+            // Geçersiz parametre geldiyse alt menüyü temizle
+            if (string.IsNullOrWhiteSpace(plaka))
+            {
+                SeciliPlakaAltMenu.Clear();
+                return;
+            }
+
+            // Alt menüyü yeniden oluştur (her tıklamada güncel ve tekil tut)
+            SeciliPlakaAltMenu.Clear();
+
+            // Mevcut komutlar kullanılarak alt menü butonları tanımlanır
+            SeciliPlakaAltMenu.Add(new AltMenuOgesi("📋 Seferler", BtnSeferlerCommand));
+            SeciliPlakaAltMenu.Add(new AltMenuOgesi("💸 Giderler", BtnGiderlerCommand));
+            SeciliPlakaAltMenu.Add(new AltMenuOgesi("📊 Kar Hesap", BtnKarCommand));
+
+            Debug.WriteLine($"[MainViewModel.cs] {plaka} için alt menü oluşturuldu. Öğe sayısı: {SeciliPlakaAltMenu.Count}");
         }
     }
 }
+#pragma warning restore IDE0290 // Birincil oluşturucuyu kullan önerisini geri aç

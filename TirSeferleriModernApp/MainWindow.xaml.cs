@@ -20,18 +20,12 @@ namespace TirSeferleriModernApp
         private readonly SecimTakibi _secimTakibi = new();
         private readonly string dbFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TirSeferleri.db");
 
-
-
         // private readonly ItemsControl _araclarMenuPanel;
 
         public MainWindow()
         {
-            InitializeComponent(); // ✅ Bu satırı ekleyin
-            
-            // ✅ DataContext'i güncelleyin
+            InitializeComponent();
             DataContext = new MainViewModel(_secimTakibi, dbFile);
-            
-            // Event handler'ı kod ile bağlayın (alternatif)
             Loaded += MainWindow_Loaded;
         }
 
@@ -61,6 +55,7 @@ namespace TirSeferleriModernApp
                 MessageBox.Show($"Başlatma hatası: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
+
         private void BtnGeriDon_Click(object sender, RoutedEventArgs e)
         {
             Debug.WriteLine("[MainWindow.xaml.cs:127] BtnGeriDon butonuna tıklandı.");
