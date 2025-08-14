@@ -1,0 +1,164 @@
+﻿<Window x:Class="TirSeferleriModernApp.MainWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        xmlns:local="clr-namespace:TirSeferleriModernApp"
+        xmlns:viewmodels="clr-namespace:TirSeferleriModernApp.ViewModels"
+        xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+        Title="Tır Seferleri Uygulaması"
+        Height="720" Width="1200"
+        WindowStartupLocation="CenterScreen"
+        Background="White"
+        Loaded="MainWindow_Loaded"> <!-- Bu bağlantı var mı? -->
+
+    <Window.Resources>
+        <!-- Görünürlük dönüştürücü -->
+        <BooleanToVisibilityConverter x:Key="BoolToVis"/>
+
+        <Style x:Key="MenuButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="FontWeight" Value="Bold"/>
+        </Style>
+
+        <Style x:Key="SubMenuButtonStyle" TargetType="Button">
+            <Setter Property="Foreground" Value="White"/>
+            <Setter Property="Background" Value="Transparent"/>
+            <Setter Property="FontWeight" Value="Normal"/>
+        </Style>
+    </Window.Resources>
+
+    <DockPanel LastChildFill="True">
+        <!-- Üst MENU -->
+        <Menu x:Name="TopBarMenu"
+              DockPanel.Dock="Top"
+              Background="LightGray"
+              Foreground="Black"
+              FontWeight="Bold"
+              Height="26"
+              VerticalAlignment="Top">
+            <MenuItem x:Name="AA_MenuItem"
+                      Header="AA"
+                      MouseEnter="AA_MenuItem_MouseEnter"
+                      MouseLeave="AA_MenuItem_MouseLeave"
+                      Height="26">
+                <MenuItem Header="Debug Listesi"
+                          Command="{Binding DebugListesiKomutu}" />
+                <MenuItem Header="Alt 2"
+                          Command="{Binding TopAlt2Command}"/>
+                <MenuItem Header="Alt 3"
+                          Command="{Binding TopAlt3Command}"/>
+                <MenuItem Header="Alt 4"
+                          Command="{Binding TopAlt4Command}"/>
+                <MenuItem Header="Alt 5"
+                          Command="{Binding TopAlt5Command}"/>
+            </MenuItem>
+        </Menu>
+
+        <!-- Durum Çubuğu -->
+        <StatusBar Background="#3A4A6F" Foreground="White" DockPanel.Dock="Bottom" Height="30" Padding="5">
+            <StatusBarItem>
+                <TextBlock x:Name="StatusBarTextBlock" Text="{Binding StatusText}" FontSize="12" VerticalAlignment="Center" />
+            </StatusBarItem>
+        </StatusBar>
+
+        <!-- Sol MENU -->
+        <DockPanel Width="300" Background="#2E3A59" VerticalAlignment="Stretch" DockPanel.Dock="Left">
+            <!-- Geri Dön Butonu -->
+            <Button x:Name="BtnGeriDon"
+                    Content="🔙 Geri Dön"
+                    Margin="10,10,10,0"
+                    Command="{Binding GeriDonCommand}"
+                    Style="{StaticResource MenuButtonStyle}"
+                    Visibility="{Binding ShowGeri, Converter={StaticResource BoolToVis}}"
+                    DockPanel.Dock="Top"/>
+
+            <!-- Başlık -->
+            <TextBlock x:Name="HeaderText"
+                       Text="🚚 MDRLOG"
+                       FontWeight="Bold"
+                       FontSize="20"
+                       Foreground="White"
+                       Margin="16,20,16,20"
+                       DockPanel.Dock="Top"/>
+
+            <!-- Araçlar Menüsü -->
+            <StackPanel x:Name="AraclarMenusuContainer" Background="#2E3A59" Margin="10,10,10,0" Visibility="Visible" DockPanel.Dock="Top">
+                <Button x:Name="BtnAraclarMenu"
+                        Content="🚛 Araçlar"
+                        Command="{Binding BtnAraclarCommand}"
+                        Style="{StaticResource MenuButtonStyle}" />
+                <!-- Araçlar menüsü için ItemsControl -->
+                <ItemsControl x:Name="AraclarMenuContainer" ItemsSource="{Binding AraclarMenu}">
+                    <ItemsControl.ItemTemplate>
+                        <DataTemplate>
+                            <Button Content="{Binding}"
+                                    Command="{Binding DataContext.SelectAracCommand, RelativeSource={RelativeSource AncestorType=ItemsControl}}"
+                                    CommandParameter="{Binding}"
+                                    Style="{StaticResource SubMenuButtonStyle}"
+                                    Margin="10,5,10,0" />
+                        </DataTemplate>
+                    </ItemsControl.ItemTemplate>
+                </ItemsControl>
+            </StackPanel>
+
+            <!-- Tanımlar Menüsü -->
+            <StackPanel x:Name="TanimlarMenusuContainer" Background="#2E3A59" Margin="10,10,10,0" Visibility="Visible" DockPanel.Dock="Top">
+                <Button x:Name="BtnTanimlarMenusu"
+                        Content="📋 Tanımlar"
+                        Command="{Binding ToggleTanimlarMenuCommand}"
+                        Style="{StaticResource MenuButtonStyle}"
+                        Visibility="{Binding ShowTanimlar, Converter={StaticResource BoolToVis}}" />
+                <StackPanel x:Name="TanimlarMenu" Background="#3A4A6F" Margin="0,0,0,0" Visibility="Collapsed">
+                    <Button Content="Çekici, Dorse ve Şoför Tanımla"
+                            Margin="10,5,10,0"
+                            Style="{StaticResource SubMenuButtonStyle}"
+                            Command="{Binding AcTanimlarCommand}"/>
+                </StackPanel>
+            </StackPanel>
+
+            <!-- Seferler, Giderler ve Kar Hesap -->
+            <Button x:Name="BtnSeferler"
+                    Content="📋 Seferler"
+                    Margin="10,10,10,0"
+                    Command="{Binding SeferlerCommand}"
+                    Style="{StaticResource MenuButtonStyle}"
+                    Visibility="{Binding ShowSeferler, Converter={StaticResource BoolToVis}}"
+                    DockPanel.Dock="Top"/>
+            <Button x:Name="BtnGiderler"
+                    Content="💸 Giderler"
+                    Margin="10,10,10,0"
+                    Command="{Binding GiderlerCommand}"
+                    Style="{StaticResource MenuButtonStyle}"
+                    Visibility="{Binding ShowGiderler, Converter={StaticResource BoolToVis}}"
+                    DockPanel.Dock="Top"/>
+            <Button x:Name="BtnKarHesap"
+                    Content="📊 Kar Hesap"
+                    Margin="10,10,10,0"
+                    Command="{Binding KarHesapCommand}"
+                    Style="{StaticResource MenuButtonStyle}"
+                    Visibility="{Binding ShowKar, Converter={StaticResource BoolToVis}}"
+                    DockPanel.Dock="Top"
+                    VerticalAlignment="Top"/>
+        </DockPanel>
+
+        <!-- İçerik Alanı -->
+        <Grid>
+            <ContentControl x:Name="MainContent"
+                            HorizontalAlignment="Stretch"
+                            VerticalAlignment="Stretch"
+                            Margin="10">
+                <DockPanel LastChildFill="True">
+                    <!-- Ana Ekran Yazısı -->
+                    <TextBlock Text="Ana Ekran"
+                               FontSize="36"
+                               FontWeight="Bold"
+                               Foreground="Gray"
+                               HorizontalAlignment="Center"
+                               VerticalAlignment="Top"
+                               DockPanel.Dock="Top"
+                               Margin="0,20,0,20"/>
+                </DockPanel>
+            </ContentControl>
+        </Grid>
+    </DockPanel>
+</Window>
