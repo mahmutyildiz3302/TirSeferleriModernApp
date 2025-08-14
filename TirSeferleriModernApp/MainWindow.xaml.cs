@@ -4,12 +4,10 @@ using System.Windows;
 using System.Windows.Controls;
 using TirSeferleriModernApp.Views;
 using TirSeferleriModernApp.ViewModels;
-using Microsoft.Data.Sqlite;
 using MaterialDesignThemes.Wpf;
 using TirSeferleriModernApp.Services;
 using System.IO;
 using System.Windows.Input;
-using System.Collections.Generic;
 
 namespace TirSeferleriModernApp
 {
@@ -47,12 +45,15 @@ namespace TirSeferleriModernApp
                 DatabaseService.CheckAndCreateOrUpdateGiderlerTablosu();
                 DatabaseService.CheckAndCreateOrUpdateKarHesapTablosu();
 
-                LoadAraclarMenu();
-                Debug.WriteLine("[MainWindow.xaml.cs] Araçlar menüsü yüklendi.");
-
                 var databaseService = new DatabaseService(dbFile);
                 databaseService.Initialize();
                 Debug.WriteLine("[MainWindow.xaml.cs] DatabaseService başlatıldı.");
+
+                if (DataContext is MainViewModel viewModel)
+                {
+                    viewModel.BtnAraclarCommand.Execute(null);
+                    Debug.WriteLine("[MainWindow.xaml.cs] Araçlar menüsü yüklendi.");
+                }
             }
             catch (Exception ex)
             {
@@ -60,80 +61,6 @@ namespace TirSeferleriModernApp
                 MessageBox.Show($"Başlatma hatası: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
-
-        private void LoadAraclarMenu()
-        {
-            Debug.WriteLine("[MainWindow.xaml.cs:46] LoadAraclarMenu metodu çağrıldı.");
-
-            // ❌ DataContext null olabilir
-            if (DataContext is not MainViewModel vm)
-            {
-                Debug.WriteLine("[MainWindow.xaml.cs] DataContext null veya MainViewModel değil!");
-                return;
-            }
-            
-                vm.AraclarMenu.Clear();
-            
-                const string query = @"
-                SELECT Cekiciler.CekiciId, Cekiciler.Plaka, Soforler.SoforId, Soforler.SoforAdi, Cekiciler.Aktif, Cekiciler.DorseId
-                FROM Cekiciler 
-                LEFT JOIN Soforler ON Cekiciler.SoforId = Soforler.SoforId";
-            
-                var araclar = new List<(int cekiciId, string plaka, int? soforId, string soforAdi, bool aktif, int? dorseId)>();
-            
-                using var connection = new SqliteConnection(DatabaseService.ConnectionString);
-                connection.Open();
-                Debug.WriteLine("[MainWindow.xaml.cs:55] Veritabanı bağlantısı açıldı.");
-                using var command = new SqliteCommand(query, connection);
-                using var reader = command.ExecuteReader();
-                Debug.WriteLine("[MainWindow.xaml.cs:58] Araçlar sorgusu çalıştırıldı.");
-            
-                while (reader.Read())
-                {
-                    int cekiciId = reader.GetInt32(0);
-                    string plaka = reader.GetString(1);
-                    int? soforId = reader.IsDBNull(2) ? null : reader.GetInt32(2);
-                    string soforAdi = reader.IsDBNull(3) ? "Bilinmiyor" : reader.GetString(3);
-                    bool aktif = reader.GetInt32(4) == 1;
-                    int? dorseId = reader.IsDBNull(5) ? null : reader.GetInt32(5);
-
-                    araclar.Add((cekiciId, plaka, soforId, soforAdi, aktif, dorseId));
-                    Debug.WriteLine($"[MainWindow.xaml.cs:66] Araç eklendi: Plaka={plaka}, Şoför={soforAdi}, Aktif={aktif}");
-                }
-
-            foreach (var (_, plaka, _, soforAdi, _, _) in araclar)
-            {
-                vm.AraclarMenu.Add($"{plaka} - {soforAdi}"); // ✅ sadece string ekle
-            }            
-        }
-               
-        private static void EnsureDatabaseTables()
-        {
-            Debug.WriteLine("[MainWindow.xaml.cs:104] EnsureDatabaseTables metodu çağrıldı.");
-            using var connection = new SqliteConnection(DatabaseService.ConnectionString);
-            connection.Open();
-            Debug.WriteLine("[MainWindow.xaml.cs:107] Veritabanı bağlantısı açıldı.");
-
-            string cekicilerTableCheck = @"
-                CREATE TABLE IF NOT EXISTS Cekiciler (
-                    Plaka TEXT NOT NULL,
-                    SoforId INTEGER,
-                    Aktif INTEGER NOT NULL
-                );";
-            using var cekicilerCommand = new SqliteCommand(cekicilerTableCheck, connection);
-            cekicilerCommand.ExecuteNonQuery();
-            Debug.WriteLine("[MainWindow.xaml.cs:115] Cekiciler tablosu kontrol edildi ve oluşturuldu.");
-
-            string soforlerTableCheck = @"
-                CREATE TABLE IF NOT EXISTS Soforler (
-                    SoforId INTEGER PRIMARY KEY AUTOINCREMENT,
-                    SoforAdi TEXT NOT NULL
-                );";
-            using var soforlerCommand = new SqliteCommand(soforlerTableCheck, connection);
-            soforlerCommand.ExecuteNonQuery();
-            Debug.WriteLine("[MainWindow.xaml.cs:122] Soforler tablosu kontrol edildi ve oluşturuldu.");
-        }
-
         private void BtnGeriDon_Click(object sender, RoutedEventArgs e)
         {
             Debug.WriteLine("[MainWindow.xaml.cs:127] BtnGeriDon butonuna tıklandı.");
