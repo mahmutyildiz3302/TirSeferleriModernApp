@@ -67,9 +67,9 @@
             <Button x:Name="BtnGeriDon"
                     Content="🔙 Geri Dön"
                     Margin="10,10,10,0"
-                    Command="{Binding GeriDonCommand}"
+                    Command="{Binding BtnGeriDonCommand}"
                     Style="{StaticResource MenuButtonStyle}"
-                    Visibility="{Binding ShowGeri, Converter={StaticResource BoolToVis}}"
+                    Visibility="{Binding GeriDonVisibility}"
                     DockPanel.Dock="Top"/>
 
             <!-- Başlık -->

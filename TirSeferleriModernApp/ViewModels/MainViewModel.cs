@@ -23,12 +23,20 @@ namespace TirSeferleriModernApp.ViewModels
 
         // STATUS BAR — manuel property (generator bağımlılığını kaldırdık)
         private string _statusText = "Hazır.";
-        
 
         public string StatusText
         {
             get => _statusText;
             set => SetProperty(ref _statusText, value);
+        }
+
+        // Geri Dön butonunun görünürlüğü
+        private Visibility _geriDonVisibility = Visibility.Collapsed;
+
+        public Visibility GeriDonVisibility
+        {
+            get => _geriDonVisibility;
+            set => SetProperty(ref _geriDonVisibility, value);
         }
 
         public ICommand BtnGeriDonCommand { get; }
