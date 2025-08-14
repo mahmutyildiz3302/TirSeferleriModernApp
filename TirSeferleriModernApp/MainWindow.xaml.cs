@@ -28,10 +28,10 @@ namespace TirSeferleriModernApp
 
         public MainWindow()
         {
-            InitializeComponent();
+            InitializeComponent(); // ✅ Bu satırı ekleyin
             
-            // DataContext'i constructor'da ayarlayın
-            DataContext = new MainViewModel();
+            // ✅ DataContext'i güncelleyin
+            DataContext = new MainViewModel(_secimTakibi, dbFile);
             
             // Event handler'ı kod ile bağlayın (alternatif)
             Loaded += MainWindow_Loaded;

@@ -1,4 +1,4 @@
-using CommunityToolkit.Mvvm.ComponentModel;
+ï»¿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
 using System.Collections.ObjectModel;
 using System.Windows.Input;
@@ -7,8 +7,8 @@ using System.Diagnostics;
 using System.Windows;
 using System.Windows.Controls;
 using TirSeferleriModernApp.Views;
-using System.Linq; // IDE0028 için eklendi
-using TirSeferleriModernApp.Extensions; // ReplaceAll() için eklendi
+using System.Linq; // IDE0028 iÃ§in eklendi
+using TirSeferleriModernApp.Extensions; // ReplaceAll() iÃ§in eklendi
 
 namespace TirSeferleriModernApp.ViewModels
 {
@@ -17,12 +17,12 @@ namespace TirSeferleriModernApp.ViewModels
         private readonly SecimTakibi _secimTakibi;         // IDE0044: readonly
         private readonly DatabaseService _databaseService;  // IDE0044: readonly
 
-        // Araclar menüsü (generator ile devam edebilir)
+        // Araclar menÃ¼sÃ¼ (generator ile devam edebilir)
         [ObservableProperty]
         private ObservableCollection<string> _araclarMenu = new();
 
-        // STATUS BAR — manuel property (generator baðýmlýlýðýný kaldýrdýk)
-        private string _statusText = "Hazýr.";
+        // STATUS BAR â€” manuel property (generator baÄŸÄ±mlÄ±lÄ±ÄŸÄ±nÄ± kaldÄ±rdÄ±k)
+        private string _statusText = "HazÄ±r.";
         
 
         public string StatusText
@@ -40,9 +40,15 @@ namespace TirSeferleriModernApp.ViewModels
         public ICommand DebugListesiKomutu { get; }
         public ICommand SelectAracCommand { get; set; }
 
+        // âœ… Yeni parametresiz constructor buraya eklenecek
+        public MainViewModel() : this(new SecimTakibi(), "TirSeferleri.db")
+        {
+            Debug.WriteLine("[MainViewModel.cs] Parametresiz constructor Ã§aÄŸrÄ±ldÄ±.");
+        }
+
         public MainViewModel(SecimTakibi secimTakibi, string dbFile)
         {
-            Debug.WriteLine("[MainViewModel.cs:20] MainViewModel constructor çaðrýldý.");
+            Debug.WriteLine("[MainViewModel.cs:20] MainViewModel constructor Ã§aÄŸrÄ±ldÄ±.");
             _secimTakibi = secimTakibi;
             _databaseService = new DatabaseService(dbFile);
 
@@ -55,47 +61,47 @@ namespace TirSeferleriModernApp.ViewModels
             DebugListesiKomutu = new RelayCommand(ExecuteDebugListesi);
             SelectAracCommand = new RelayCommand<string>(ExecuteSelectArac);
             
-            Debug.WriteLine("[MainViewModel.cs:28] ViewModel oluþturuldu.");
+            Debug.WriteLine("[MainViewModel.cs:28] ViewModel oluÅŸturuldu.");
         }
 
         private void ExecuteGeriDon()
         {
-            Debug.WriteLine("[MainViewModel.cs:33] BtnGeriDon butonuna týklandý.");
-            Debug.WriteLine("[MainViewModel.cs:34] Geri dönme iþlemi baþlatýldý.");
+            Debug.WriteLine("[MainViewModel.cs:33] BtnGeriDon butonuna tÄ±klandÄ±.");
+            Debug.WriteLine("[MainViewModel.cs:34] Geri dÃ¶nme iÅŸlemi baÅŸlatÄ±ldÄ±.");
             _secimTakibi.GeriDon();
-            Debug.WriteLine("[MainViewModel.cs:36] Geri dönme iþlemi tamamlandý.");
+            Debug.WriteLine("[MainViewModel.cs:36] Geri dÃ¶nme iÅŸlemi tamamlandÄ±.");
         }
 
         private void ExecuteAraclar()
         {
-            Debug.WriteLine("[MainViewModel.cs:41] Araçlar menüsü yükleniyor.");
+            Debug.WriteLine("[MainViewModel.cs:41] AraÃ§lar menÃ¼sÃ¼ yÃ¼kleniyor.");
             LoadAraclarMenu();
-            Debug.WriteLine("[MainViewModel.cs:43] Araçlar menüsü yüklendi.");
+            Debug.WriteLine("[MainViewModel.cs:43] AraÃ§lar menÃ¼sÃ¼ yÃ¼klendi.");
         }
 
         private void ExecuteTanimlar()
         {
-            Debug.WriteLine("[MainViewModel.cs:48] Tanýmlar menüsü iþlemleri baþlatýldý.");
+            Debug.WriteLine("[MainViewModel.cs:48] TanÄ±mlar menÃ¼sÃ¼ iÅŸlemleri baÅŸlatÄ±ldÄ±.");
         }
 
         private void ExecuteSeferler()
         {
-            Debug.WriteLine("[MainViewModel.cs:53] Seferler menüsü iþlemleri baþlatýldý.");
+            Debug.WriteLine("[MainViewModel.cs:53] Seferler menÃ¼sÃ¼ iÅŸlemleri baÅŸlatÄ±ldÄ±.");
         }
 
         private void ExecuteGiderler()
         {
-            Debug.WriteLine("[MainViewModel.cs:58] Giderler menüsü iþlemleri baþlatýldý.");
+            Debug.WriteLine("[MainViewModel.cs:58] Giderler menÃ¼sÃ¼ iÅŸlemleri baÅŸlatÄ±ldÄ±.");
         }
 
         private void ExecuteKar()
         {
-            Debug.WriteLine("[MainViewModel.cs:63] Kar hesap menüsü iþlemleri baþlatýldý.");
+            Debug.WriteLine("[MainViewModel.cs:63] Kar hesap menÃ¼sÃ¼ iÅŸlemleri baÅŸlatÄ±ldÄ±.");
         }
 
         private void ExecuteDebugListesi()
         {
-            Debug.WriteLine("[MainViewModel.cs:68] Debug listesi yeni bir pencere olarak açýlýyor.");
+            Debug.WriteLine("[MainViewModel.cs:68] Debug listesi yeni bir pencere olarak aÃ§Ä±lÄ±yor.");
 
             var debugWindow = new Window
             {
@@ -107,36 +113,36 @@ namespace TirSeferleriModernApp.ViewModels
             };
 
             debugWindow.Show();
-            Debug.WriteLine("[MainViewModel.cs:76] Debug listesi yeni bir pencere olarak açýldý.");
+            Debug.WriteLine("[MainViewModel.cs:76] Debug listesi yeni bir pencere olarak aÃ§Ä±ldÄ±.");
         }
 
         private void LoadAraclarMenu()
         {
-            Debug.WriteLine("[MainViewModel.cs:76.1] Araçlar menüsü verileri yükleniyor. GetAraclar metodu çaðrýlacak.");
+            Debug.WriteLine("[MainViewModel.cs:76.1] AraÃ§lar menÃ¼sÃ¼ verileri yÃ¼kleniyor. GetAraclar metodu Ã§aÄŸrÄ±lacak.");
             try
             {
                 var items = DatabaseService.GetAraclar()
                                            .Select(a => $"{a.Plaka} - {a.SoforAdi}");
 
                 AraclarMenu.ReplaceAll(items);
-                Debug.WriteLine("[MainViewModel.cs:76.3] Araçlar menüsü verileri yüklendi.");
+                Debug.WriteLine("[MainViewModel.cs:76.3] AraÃ§lar menÃ¼sÃ¼ verileri yÃ¼klendi.");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[MainViewModel.cs:76.4] Araçlar menüsü yüklenirken hata oluþtu: {ex.Message}");
+                Debug.WriteLine($"[MainViewModel.cs:76.4] AraÃ§lar menÃ¼sÃ¼ yÃ¼klenirken hata oluÅŸtu: {ex.Message}");
             }
         }
         private void ExecuteSelectArac(string? arac)
         {
-            Debug.WriteLine("[MainViewModel.cs:120] ExecuteSelectArac metodu çaðrýldý.");
+            Debug.WriteLine("[MainViewModel.cs:120] ExecuteSelectArac metodu Ã§aÄŸrÄ±ldÄ±.");
             if (arac == null)
             {
-                Debug.WriteLine("[MainViewModel.cs:122] Seçilen araç null.");
+                Debug.WriteLine("[MainViewModel.cs:122] SeÃ§ilen araÃ§ null.");
                 return;
             }
 
-            Debug.WriteLine($"[MainViewModel.cs:125] Seçilen araç: {arac}");
-            // Seçilen araç iþlemleri
+            Debug.WriteLine($"[MainViewModel.cs:125] SeÃ§ilen araÃ§: {arac}");
+            // SeÃ§ilen araÃ§ iÅŸlemleri
         }
     }
 }
