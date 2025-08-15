@@ -46,17 +46,29 @@
                 <TextBlock Text="Açıklama:" Foreground="#F5F9FF"/>
                 <TextBox Background="White" Text="{Binding SeciliSefer.Aciklama, Mode=TwoWay}" MinWidth="200" Margin="0,5,0,20"/>
 
-                <Button Content="{Binding KaydetButonMetni}"
-            Command="{Binding KaydetVeyaGuncelleCommand}"
-            Background="White" Foreground="#22335A"
-            Margin="0,10,0,0" Padding="10,5"
-            HorizontalAlignment="Stretch"/>
+                <!-- Kaydet/Güncelle butonu -->
+                <Button Command="{Binding KaydetVeyaGuncelleCommand}"
+                        Background="White" Foreground="#22335A"
+                        Margin="0,10,0,0" Padding="10,5"
+                        HorizontalAlignment="Stretch"
+                        ToolTip="Formdaki sefer bilgilerini kaydeder veya seçili seferi günceller.">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <materialDesign:PackIcon Kind="ContentSave" Foreground="#22335A" Margin="0,0,8,0"/>
+                        <TextBlock Text="{Binding KaydetButonMetni, FallbackValue=Kaydet/Güncelle, TargetNullValue=Kaydet/Güncelle}"/>
+                    </StackPanel>
+                </Button>
 
-                <Button Content="{Binding TemizleButonMetni}"
-            Command="{Binding SecimiTemizleCommand}"
-            Background="White" Foreground="#22335A"
-            Margin="0,10,0,0" Padding="10,5"
-            HorizontalAlignment="Stretch"/>
+                <!-- Temizle butonu -->
+                <Button Command="{Binding SecimiTemizleCommand}"
+                        Background="White" Foreground="#22335A"
+                        Margin="0,10,0,0" Padding="10,5"
+                        HorizontalAlignment="Stretch"
+                        ToolTip="Form alanlarını temizler ve yeni giriş için hazırlar.">
+                    <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
+                        <materialDesign:PackIcon Kind="Broom" Foreground="#22335A" Margin="0,0,8,0"/>
+                        <TextBlock Text="{Binding TemizleButonMetni, FallbackValue=Temizle, TargetNullValue=Temizle}"/>
+                    </StackPanel>
+                </Button>
             </StackPanel>
 
         </ScrollViewer>

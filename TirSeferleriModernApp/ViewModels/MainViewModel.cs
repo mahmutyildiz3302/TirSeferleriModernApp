@@ -148,18 +148,24 @@ namespace TirSeferleriModernApp.ViewModels
         {
             Trace.WriteLine("[MainViewModel.cs:53] Seferler menüsü işlemleri başlatıldı.");
             AktifAltMenu = "📋 Seferler";
+            CurrentContent = new SeferlerView();
+            StatusText = "Seferler açıldı.";
         }
 
         private void ExecuteGiderler()
         {
             Trace.WriteLine("[MainViewModel.cs:58] Giderler menüsü işlemleri başlatıldı.");
             AktifAltMenu = "💸 Giderler";
+            CurrentContent = new GiderlerView();
+            StatusText = "Giderler açıldı.";
         }
 
         private void ExecuteKar()
         {
             Trace.WriteLine("[MainViewModel.cs:63] Kar hesap menüsü işlemleri başlatıldı.");
             AktifAltMenu = "📊 Kar Hesap";
+            CurrentContent = new KarHesapView();
+            StatusText = "Kar Hesap açıldı.";
         }
 
         private void ExecuteDebugListesi()
