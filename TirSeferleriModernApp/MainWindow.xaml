@@ -184,23 +184,28 @@
         </DockPanel>
 
         <!-- İçerik Alanı -->
-        <Grid>
-            <ContentControl x:Name="MainContent"
-                            HorizontalAlignment="Stretch"
-                            VerticalAlignment="Stretch"
-                            Margin="10">
-                <DockPanel LastChildFill="True">
-                    <!-- Ana Ekran Yazısı -->
-                    <TextBlock Text="Ana Ekran"
-                               FontSize="36"
-                               FontWeight="Bold"
-                               Foreground="Gray"
-                               HorizontalAlignment="Center"
-                               VerticalAlignment="Top"
-                               DockPanel.Dock="Top"
-                               Margin="0,20,0,20"/>
-                </DockPanel>
-            </ContentControl>
+        <Grid Margin="10">
+            <!-- ViewModel.CurrentContent burada render edilir -->
+            <ContentPresenter Content="{Binding CurrentContent}"/>
+            <!-- İçerik yoksa placeholder başlık göster -->
+            <TextBlock Text="Ana Ekran"
+                       FontSize="36"
+                       FontWeight="Bold"
+                       Foreground="Gray"
+                       HorizontalAlignment="Center"
+                       VerticalAlignment="Top"
+                       Margin="0,20,0,20">
+                <TextBlock.Style>
+                    <Style TargetType="TextBlock">
+                        <Setter Property="Visibility" Value="Collapsed"/>
+                        <Style.Triggers>
+                            <DataTrigger Binding="{Binding CurrentContent}" Value="{x:Null}">
+                                <Setter Property="Visibility" Value="Visible"/>
+                            </DataTrigger>
+                        </Style.Triggers>
+                    </Style>
+                </TextBlock.Style>
+            </TextBlock>
         </Grid>
     </DockPanel>
 </Window>
