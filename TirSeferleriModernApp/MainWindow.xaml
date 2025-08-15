@@ -46,31 +46,32 @@
     </Window.Resources>
 
     <DockPanel LastChildFill="True">
-        <!-- Üst MENU -->
-        <Menu x:Name="TopBarMenu"
-              DockPanel.Dock="Top"
-              Background="LightGray"
-              Foreground="Black"
-              FontWeight="Bold"
-              Height="26"
-              VerticalAlignment="Top">
-            <MenuItem x:Name="AA_MenuItem"
-                      Header="AA"
-                      MouseEnter="AA_MenuItem_MouseEnter"
-                      MouseLeave="AA_MenuItem_MouseLeave"
-                      Height="26">
-                <MenuItem Header="Debug Listesi"
-                          Command="{Binding DebugListesiKomutu}" />
-                <MenuItem Header="Alt 2"
-                          Command="{Binding TopAlt2Command}"/>
-                <MenuItem Header="Alt 3"
-                          Command="{Binding TopAlt3Command}"/>
-                <MenuItem Header="Alt 4"
-                          Command="{Binding TopAlt4Command}"/>
-                <MenuItem Header="Alt 5"
-                          Command="{Binding TopAlt5Command}"/>
-            </MenuItem>
-        </Menu>
+        <!-- Üst MENU + sağda Debug butonu -->
+        <DockPanel DockPanel.Dock="Top" Background="LightGray" Height="26">
+            <!-- Sağda debug butonu -->
+            <Button Content="🐞" ToolTip="Debug Listesi" Command="{Binding DebugListesiKomutu}"
+                    DockPanel.Dock="Right"
+                    Background="Transparent" BorderThickness="0" Padding="8,0"
+                    HorizontalAlignment="Right" VerticalAlignment="Stretch"/>
+            <!-- Sol tarafta mevcut menü -->
+            <Menu x:Name="TopBarMenu"
+                  Background="LightGray"
+                  Foreground="Black"
+                  FontWeight="Bold"
+                  Height="26">
+                <MenuItem x:Name="AA_MenuItem"
+                          Header="AA"
+                          MouseEnter="AA_MenuItem_MouseEnter"
+                          MouseLeave="AA_MenuItem_MouseLeave"
+                          Height="26">
+                    <!-- Debug Listesi bu açılır menüden taşındı -->
+                    <MenuItem Header="Alt 2" Command="{Binding TopAlt2Command}"/>
+                    <MenuItem Header="Alt 3" Command="{Binding TopAlt3Command}"/>
+                    <MenuItem Header="Alt 4" Command="{Binding TopAlt4Command}"/>
+                    <MenuItem Header="Alt 5" Command="{Binding TopAlt5Command}"/>
+                </MenuItem>
+            </Menu>
+        </DockPanel>
 
         <!-- Durum Çubuğu -->
         <StatusBar Background="#3A4A6F" Foreground="White" DockPanel.Dock="Bottom" Height="30" Padding="5">
@@ -103,10 +104,20 @@
             <StackPanel x:Name="AraclarMenusuContainer" Background="#2E3A59" Margin="10,10,10,0" Visibility="Visible" DockPanel.Dock="Top">
                 <Button x:Name="BtnAraclarMenu"
                         Content="🚛 Araçlar"
-                        Command="{Binding BtnAraclarCommand}"
+                        Command="{Binding ToggleAraclarMenuCommand}"
                         Style="{StaticResource MenuButtonStyle}" />
                 <!-- Araçlar menüsü için ItemsControl -->
                 <ItemsControl x:Name="AraclarMenuContainer" ItemsSource="{Binding AraclarMenu}">
+                    <ItemsControl.Style>
+                        <Style TargetType="ItemsControl">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding AraclarMenuAcik}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </ItemsControl.Style>
                     <ItemsControl.ItemTemplate>
                         <DataTemplate>
                             <StackPanel>
@@ -116,7 +127,7 @@
                                         Style="{StaticResource SubMenuButtonStyle}"
                                         Margin="10,5,10,0" />
 
-                                <!-- Seçilen plakanın altında ikinci menü -->
+                                <!-- ikinci menü: seçilen plaka altında -->
                                 <ItemsControl ItemsSource="{Binding DataContext.SeciliPlakaAltMenu, RelativeSource={RelativeSource AncestorType=DockPanel}}">
                                     <ItemsControl.Style>
                                         <Style TargetType="ItemsControl">
@@ -136,7 +147,6 @@
                                     </ItemsControl.Style>
                                     <ItemsControl.ItemTemplate>
                                         <DataTemplate>
-                                            <!-- ToggleButton: seçili kalır, farklı renkte görünür -->
                                             <ToggleButton Content="{Binding Baslik}"
                                                           Command="{Binding Komut}"
                                                           Style="{StaticResource AltMenuToggleStyle}"

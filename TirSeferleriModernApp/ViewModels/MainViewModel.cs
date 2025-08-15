@@ -18,9 +18,17 @@ namespace TirSeferleriModernApp.ViewModels
         private readonly SecimTakibi _secimTakibi;         // IDE0044: readonly
         private readonly DatabaseService _databaseService;  // IDE0044: readonly
 
-        // Araclar menüsü (generator ile devam edebilir)
+        // Araçlar menüsü (plaka listesi)
         [ObservableProperty]
         private ObservableCollection<string> _araclarMenu = [];
+
+        // Araçlar üst menü açık/kapalı bilgisi (başlangıçta kapalı)
+        private bool _araclarMenuAcik;
+        public bool AraclarMenuAcik
+        {
+            get => _araclarMenuAcik;
+            set => SetProperty(ref _araclarMenuAcik, value);
+        }
 
         // STATUS BAR — manuel property (generator bağımlılığını kaldırdık)
         private string _statusText = "Hazır.";
@@ -75,6 +83,7 @@ namespace TirSeferleriModernApp.ViewModels
 
         public ICommand BtnGeriDonCommand { get; }
         public ICommand BtnAraclarCommand  { get; }
+        public ICommand ToggleAraclarMenuCommand { get; }
         public ICommand BtnTanimlarCommand { get; }
         public ICommand BtnSeferlerCommand { get; }
         public ICommand BtnGiderlerCommand { get; }
@@ -95,8 +104,12 @@ namespace TirSeferleriModernApp.ViewModels
             _secimTakibi = secimTakibi;
             _databaseService = new DatabaseService(dbFile);
 
+            // Başlangıçta araçlar üst menü kapalı
+            _araclarMenuAcik = false;
+
             BtnGeriDonCommand = new RelayCommand(ExecuteGeriDon);
-            BtnAraclarCommand  = new RelayCommand(ExecuteAraclar);
+            BtnAraclarCommand  = new RelayCommand(ExecuteAraclar);            // veri yükleme
+            ToggleAraclarMenuCommand = new RelayCommand(ExecuteToggleAraclar); // aç/kapa
             BtnTanimlarCommand = new RelayCommand(ExecuteTanimlar);
             BtnSeferlerCommand = new RelayCommand(ExecuteSeferler);
             BtnGiderlerCommand = new RelayCommand(ExecuteGiderler);
@@ -117,9 +130,19 @@ namespace TirSeferleriModernApp.ViewModels
 
         private void ExecuteAraclar()
         {
-            Debug.WriteLine("[MainViewModel.cs:41] Araçlar menüsü yükleniyor.");
+            Debug.WriteLine("[MainViewModel.cs:41] Araçlar menüsü verileri yükleniyor.");
             LoadAraclarMenu();
-            Debug.WriteLine("[MainViewModel.cs:43] Araçlar menüsü yüklendi.");
+            Debug.WriteLine("[MainViewModel.cs:43] Araçlar menüsü verileri yüklendi (görünürlük: " + AraclarMenuAcik + ").");
+        }
+
+        private void ExecuteToggleAraclar()
+        {
+            AraclarMenuAcik = !AraclarMenuAcik;
+            Debug.WriteLine($"[MainViewModel.cs] Araçlar menüsü {(AraclarMenuAcik ? "açıldı" : "kapandı")}.");
+            if (AraclarMenuAcik && AraclarMenu.Count == 0)
+            {
+                LoadAraclarMenu();
+            }
         }
 
         private void ExecuteTanimlar()
@@ -178,6 +201,7 @@ namespace TirSeferleriModernApp.ViewModels
                 Debug.WriteLine($"[MainViewModel.cs:76.4] Araçlar menüsü yüklenirken hata oluştu: {ex.Message}");
             }
         }
+
         private void ExecuteSelectArac(string? arac)
         {
             Debug.WriteLine("[MainViewModel.cs:120] ExecuteSelectArac metodu çağrıldı.");
@@ -199,7 +223,17 @@ namespace TirSeferleriModernApp.ViewModels
         {
             Debug.WriteLine($"[MainViewModel.cs] AltMenuyuGoster çağrıldı. Plaka: {plaka}");
 
-            // Seçili plaka bilgisini güncelle
+            // Toggle davranışı: Aynı plaka tekrar tıklanırsa kapat
+            if (!string.IsNullOrWhiteSpace(SelectedPlaka) && string.Equals(SelectedPlaka, plaka, System.StringComparison.OrdinalIgnoreCase))
+            {
+                SelectedPlaka = null;
+                AktifAltMenu = null;
+                SeciliPlakaAltMenu.Clear();
+                Debug.WriteLine("[MainViewModel.cs] Aynı plaka tekrar tıklandı, alt menü kapatıldı.");
+                return;
+            }
+
+            // Seçimi güncelle
             SelectedPlaka = string.IsNullOrWhiteSpace(plaka) ? null : plaka;
 
             // Geçersiz parametre geldiyse alt menüyü temizle
