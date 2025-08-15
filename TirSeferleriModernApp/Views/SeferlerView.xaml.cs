@@ -28,7 +28,7 @@ namespace TirSeferleriModernApp.Views
         }
 
         // ContextMenuOpening olayını işleyen metot
-        private void DgSeferler_ContextMenuOpening(object sender, ContextMenuEventArgs e)
+        private void dgSeferler_ContextMenuOpening(object sender, ContextMenuEventArgs e)
         {
             // DataGrid'in ContextMenu'sünü oluştur
             ContextMenu contextMenu = new();
@@ -39,7 +39,7 @@ namespace TirSeferleriModernApp.Views
                 // Her sütun için bir MenuItem oluştur
                 MenuItem menuItem = new()
                 {
-                    Header = column.Header.ToString(),
+                    Header = column.Header?.ToString(),
                     IsCheckable = true, // İşaretlenebilir hale getir
                     IsChecked = column.Visibility == Visibility.Visible // Sütunun görünürlüğüne göre işaret durumu
                 };
@@ -54,11 +54,6 @@ namespace TirSeferleriModernApp.Views
 
             // DataGrid'e ContextMenu'yu ata
             dgSeferler.ContextMenu = contextMenu;
-        }
-
-        private void dgSeferler_ContextMenuOpening(object sender, ContextMenuEventArgs e)
-        {
-            // Buraya context menu açılırken yapılacak işlemleri ekleyebilirsiniz.
         }
     }
 }

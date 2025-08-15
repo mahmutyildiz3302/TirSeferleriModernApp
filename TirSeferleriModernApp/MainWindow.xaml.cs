@@ -29,6 +29,23 @@ namespace TirSeferleriModernApp
             Loaded += MainWindow_Loaded;
         }
 
+        private void BtnToggleLeftMenu_Click(object sender, RoutedEventArgs e)
+        {
+            // 300 px genişliğe sahip sol menu, 48 px'e daraltılır ya da geri açılır
+            if (LeftMenuPanel.Width > 60)
+            {
+                LeftMenuPanel.Width = 48;
+                // buton ok yönünü değiştir
+                if (sender is Button b) b.Content = "❯";
+            }
+            else
+            {
+                LeftMenuPanel.Width = 300;
+                if (sender is Button b) b.Content = "❮";
+            }
+            // DockPanel.LastChildFill olduğu için sağ içerik otomatik genişleyecek/daralacak
+        }
+
         private void MainWindow_Loaded(object? sender, RoutedEventArgs e)
         {
             Trace.WriteLine("[MainWindow.xaml.cs] MainWindow_Loaded çağrıldı.");

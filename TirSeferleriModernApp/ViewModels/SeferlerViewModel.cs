@@ -29,8 +29,37 @@ namespace TirSeferleriModernApp.ViewModels
             }
         }
 
+        // Soldaki menüden gelen bilgiler (bildirimli özellikler)
+        private string? _seciliCekiciPlaka;
+        public string? SeciliCekiciPlaka
+        {
+            get => _seciliCekiciPlaka;
+            set => SetProperty(ref _seciliCekiciPlaka, value);
+        }
+
+        private string? _seciliSoforAdi;
+        public string? SeciliSoforAdi
+        {
+            get => _seciliSoforAdi;
+            set => SetProperty(ref _seciliSoforAdi, value);
+        }
+
+        private string? _seciliDorsePlaka;
+        public string? SeciliDorsePlaka
+        {
+            get => _seciliDorsePlaka;
+            set => SetProperty(ref _seciliDorsePlaka, value);
+        }
+
+        public void UpdateSelection(string? cekiciPlaka, string? soforAdi)
+        {
+            SeciliCekiciPlaka = cekiciPlaka;
+            SeciliSoforAdi = soforAdi;
+            SeciliDorsePlaka = string.IsNullOrWhiteSpace(cekiciPlaka) ? null : DatabaseService.GetDorsePlakaByCekiciPlaka(cekiciPlaka);
+        }
+
         public string KaydetButonMetni => SeciliSefer?.SeferId > 0 ? "Seçimi Güncelle" : "Yeni Sefer Kaydet";
-        public string TemizleButonMetni => SeciliSefer != null ? "Seçimi Bırak" : "Temizle";
+        public string TemizleButonMetni => "Temizle";
 
         public ObservableCollection<Sefer> SeferListesi { get; set; } = [];
 
@@ -41,7 +70,20 @@ namespace TirSeferleriModernApp.ViewModels
         [RelayCommand]
         private void KaydetVeyaGuncelle()
         {
-            SeciliSefer ??= new Sefer();
+            SeciliSefer ??= new Sefer { Tarih = DateTime.Today };
+
+            // Seçimden gelen bilgileri (ID'ler dahil) tamamla
+            if (!string.IsNullOrWhiteSpace(SeciliCekiciPlaka))
+            {
+                var info = DatabaseService.GetVehicleInfoByCekiciPlaka(SeciliCekiciPlaka);
+                SeciliSefer.CekiciId = info.cekiciId;
+                SeciliSefer.DorseId = info.dorseId;
+                SeciliSefer.SoforId = info.soforId;
+                SeciliSefer.SoforAdi = info.soforAdi;
+                SeciliSefer.CekiciPlaka = SeciliCekiciPlaka;
+                SeciliDorsePlaka = info.dorsePlaka; // üst şerit güncellensin
+                SeciliSoforAdi = info.soforAdi;      // üst şerit güncellensin
+            }
 
             if (SeciliSefer.SeferId <= 0)
             {
@@ -51,40 +93,35 @@ namespace TirSeferleriModernApp.ViewModels
             {
                 SeferGuncelle(SeciliSefer);
             }
+            // Listeyi yenile
+            SeferListesi.ReplaceAll(DatabaseService.GetSeferler());
         }
 
         private void SeferGuncelle(Sefer guncellenecekSefer)
         {
             if (!ValidateSefer(guncellenecekSefer)) return;
 
-            SeferGuncelle(guncellenecekSefer);
-
-            var mevcutSefer = SeferListesi.FirstOrDefault(s => s.SeferId == guncellenecekSefer.SeferId);
-            if (mevcutSefer != null)
-            {
-                mevcutSefer.KonteynerNo = guncellenecekSefer.KonteynerNo;
-                mevcutSefer.KonteynerBoyutu = guncellenecekSefer.KonteynerBoyutu;
-                mevcutSefer.YuklemeYeri = guncellenecekSefer.YuklemeYeri;
-                mevcutSefer.BosaltmaYeri = guncellenecekSefer.BosaltmaYeri;
-                mevcutSefer.Tarih = guncellenecekSefer.Tarih;
-                mevcutSefer.Saat = guncellenecekSefer.Saat;
-                mevcutSefer.Fiyat = guncellenecekSefer.Fiyat;
-                mevcutSefer.Aciklama = guncellenecekSefer.Aciklama;
-            }
+            DatabaseService.SeferGuncelle(guncellenecekSefer);
 
             MessageQueue.Enqueue($"{guncellenecekSefer.KonteynerNo} numaralı konteyner seferi başarıyla güncellendi!");
-            SeciliSefer = null;
+            SeciliSefer = new Sefer { Tarih = DateTime.Today };
         }
 
         private void SeferEkle(Sefer yeniSefer)
         {
             if (!ValidateSefer(yeniSefer)) return;
 
-            DatabaseService.SeferEkle(yeniSefer);
-            SeferListesi.Add(yeniSefer);
-
-            MessageQueue.Enqueue($"{yeniSefer.KonteynerNo} numaralı konteyner seferi başarıyla eklendi!");
-            SeciliSefer = null;
+            var newId = DatabaseService.SeferEkle(yeniSefer);
+            if (newId > 0)
+            {
+                yeniSefer.SeferId = newId;
+                MessageQueue.Enqueue($"{yeniSefer.KonteynerNo} numaralı konteyner seferi başarıyla eklendi!");
+            }
+            else
+            {
+                MessageQueue.Enqueue("Sefer kaydedilemedi.");
+            }
+            SeciliSefer = new Sefer { Tarih = DateTime.Today };
         }
 
         private bool ValidateSefer(Sefer sefer)
@@ -114,33 +151,16 @@ namespace TirSeferleriModernApp.ViewModels
         [RelayCommand]
         private void SecimiTemizle()
         {
-            SeciliSefer = null;
-            MessageQueue.Enqueue("Seçim temizlendi.");
+            // Formu gerçekten temizlemek için yeni boş bir Sefer atıyoruz
+            SeciliSefer = new Sefer { Tarih = DateTime.Today };
+            MessageQueue.Enqueue("Form temizlendi.");
         }
 
         public int? SelectedVehicleId { get; set; }
 
         public void LoadSeferler()
         {
-            string query = "SELECT * FROM Seferler WHERE CekiciId = @SelectedVehicleId";
-            using var connection = new SqliteConnection(DatabaseService.ConnectionString);
-            connection.Open();
-            using var command = new SqliteCommand(query, connection);
-            command.Parameters.AddWithValue("@SelectedVehicleId", SelectedVehicleId ?? (object)DBNull.Value);
-            using var reader = command.ExecuteReader();
-
-            var seferler = new List<Sefer>();
-            while (reader.Read())
-            {
-                seferler.Add(new Sefer
-                {
-                    SeferId = reader.GetInt32(0),
-                    CekiciId = reader.GetInt32(1),
-                    // Diğer alanlar...
-                });
-            }
-
-            SeferListesi.ReplaceAll(seferler);
+            SeferListesi.ReplaceAll(DatabaseService.GetSeferler());
         }
     }
 }

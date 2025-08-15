@@ -81,60 +81,80 @@
         Padding="5"
         Margin="10,0,0,0"
         Background="White">
-            <DataGrid x:Name="dgSeferler"
-          ItemsSource="{Binding SeferListesi}"
-          AutoGenerateColumns="False"
-          SelectedItem="{Binding SeciliSefer, Mode=TwoWay}"
-          IsReadOnly="True"
-          HeadersVisibility="Column"
-          CanUserAddRows="False"
-          Background="White"
-          RowBackground="#F5F6FA"
-          AlternatingRowBackground="#E9ECF3"
-          GridLinesVisibility="All"
-          BorderThickness="0"
-          Margin="0"
-          RowHeight="35"
-          ColumnHeaderHeight="35"
-          ContextMenuOpening="dgSeferler_ContextMenuOpening">
+            <Grid>
+                <!-- Üst bilgi şeridi -->
+                <Border Background="#F0F4FF" BorderBrush="#D0D7F2" BorderThickness="0 0 0 1" Padding="8" VerticalAlignment="Top" Height="38">
+                    <StackPanel Orientation="Horizontal">
+                        <TextBlock Text="Şoför: " FontWeight="Bold"/>
+                        <TextBlock Text="{Binding SeciliSoforAdi, TargetNullValue=-}" Margin="6,0,0,0"/>
+                        <TextBlock Text=" | Çekici: " FontWeight="Bold" Margin="10,0,0,0"/>
+                        <TextBlock Text="{Binding SeciliCekiciPlaka, TargetNullValue=-}" Margin="6,0,0,0"/>
+                        <TextBlock Text=" | Dorse: " FontWeight="Bold" Margin="10,0,0,0"/>
+                        <TextBlock Text="{Binding SeciliDorsePlaka, TargetNullValue=-}" Margin="6,0,0,0"/>
+                    </StackPanel>
+                </Border>
 
-                <DataGrid.ColumnHeaderStyle>
-                    <Style TargetType="DataGridColumnHeader">
-                        <Setter Property="Background" Value="LightSkyBlue"/>
-                        <!-- Açık turkuaz -->
-                        <Setter Property="Foreground" Value="Black"/>
-                        <Setter Property="FontWeight" Value="Bold"/>
-                        <Setter Property="HorizontalContentAlignment" Value="Center"/>
-                    </Style>
-                </DataGrid.ColumnHeaderStyle>
-                <DataGrid.Columns>
-                    <DataGridTextColumn Header="Sefer ID" Binding="{Binding SeferId}" Width="40"/>
-                    <DataGridTextColumn Header="Konteyner No" Binding="{Binding KonteynerNo}" Width="*"/>
-                    <DataGridTextColumn Header="Boyut" Binding="{Binding KonteynerBoyutu}" Width="60"/>
-                    <DataGridTextColumn Header="Yükleme" Binding="{Binding YuklemeYeri}" Width="*"/>
-                    <DataGridTextColumn Header="Boşaltma" Binding="{Binding BosaltmaYeri}" Width="*"/>
-                    <DataGridTextColumn Header="Tarih" Binding="{Binding Tarih, StringFormat=dd.MM.yyyy}" Width="100"/>
-                    <DataGridTextColumn Header="Saat" Binding="{Binding Saat}" Width="80"/>
-                    <DataGridTextColumn Header="Fiyat" Binding="{Binding Fiyat}" Width="80"/>
-                    <DataGridTextColumn Header="Açıklama" Binding="{Binding Aciklama}" Width="*"/>
-                    <DataGridTextColumn Header="Çekici ID" Binding="{Binding CekiciId}" Width="60"/>
-                    <DataGridTextColumn Header="Çekici Plaka" Binding="{Binding CekiciPlaka}" Width="100"/>
-                    <DataGridTextColumn Header="Dorse ID" Binding="{Binding DorseId}" Width="60"/>
-                    <DataGridTextColumn Header="Şoför ID" Binding="{Binding SoforId}" Width="60"/>
-                    <DataGridTextColumn Header="Şoför Adı" Binding="{Binding SoforAdi}" Width="100"/>
-                </DataGrid.Columns>
+                <DataGrid x:Name="dgSeferler" Margin="0,40,0,0"
+                          ItemsSource="{Binding SeferListesi}"
+                          AutoGenerateColumns="False"
+                          SelectedItem="{Binding SeciliSefer, Mode=TwoWay}"
+                          IsReadOnly="True"
+                          HeadersVisibility="Column"
+                          CanUserAddRows="False"
+                          Background="White"
+                          RowBackground="#F5F6FA"
+                          AlternatingRowBackground="#E9ECF3"
+                          GridLinesVisibility="All"
+                          BorderThickness="0"
+                          RowHeight="35"
+                          ColumnHeaderHeight="35"
+                          ContextMenuOpening="dgSeferler_ContextMenuOpening">
+                    <DataGrid.ColumnHeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="Background" Value="LightSkyBlue"/>
+                            <Setter Property="Foreground" Value="Black"/>
+                            <Setter Property="FontWeight" Value="Bold"/>
+                            <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                        </Style>
+                    </DataGrid.ColumnHeaderStyle>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Sefer ID" Binding="{Binding SeferId}" Width="40"/>
+                        <DataGridTextColumn Header="Konteyner No" Binding="{Binding KonteynerNo}" Width="*"/>
+                        <DataGridTextColumn Header="Boyut" Binding="{Binding KonteynerBoyutu}" Width="60"/>
+                        <DataGridTextColumn Header="Yükleme" Binding="{Binding YuklemeYeri}" Width="*"/>
+                        <DataGridTextColumn Header="Boşaltma" Binding="{Binding BosaltmaYeri}" Width="*"/>
+                        <DataGridTextColumn Header="Tarih" Binding="{Binding Tarih, StringFormat=dd.MM.yyyy}" Width="100"/>
+                        <DataGridTextColumn Header="Saat" Binding="{Binding Saat}" Width="80"/>
+                        <DataGridTextColumn Header="Fiyat" Binding="{Binding Fiyat}" Width="80"/>
+                        <DataGridTextColumn Header="Açıklama" Binding="{Binding Aciklama}" Width="*"/>
+                        <DataGridTextColumn Header="Çekici ID" Binding="{Binding CekiciId}" Width="60"/>
+                        <DataGridTextColumn Header="Çekici Plaka" Binding="{Binding CekiciPlaka}" Width="100"/>
+                        <DataGridTextColumn Header="Dorse ID" Binding="{Binding DorseId}" Width="60"/>
+                        <DataGridTextColumn Header="Şoför ID" Binding="{Binding SoforId}" Width="60"/>
+                        <DataGridTextColumn Header="Şoför Adı" Binding="{Binding SoforAdi}" Width="100"/>
+                    </DataGrid.Columns>
+                </DataGrid>
 
-            </DataGrid>
+                <!-- Boş veri mesajı -->
+                <TextBlock Text="Kayıtlı sefer yok" Foreground="Gray" FontStyle="Italic" HorizontalAlignment="Center" VerticalAlignment="Center">
+                    <TextBlock.Style>
+                        <Style TargetType="TextBlock">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Value="0">
+                                    <DataTrigger.Binding>
+                                        <Binding Path="SeferListesi.Count"/>
+                                    </DataTrigger.Binding>
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBlock.Style>
+                </TextBlock>
+            </Grid>
         </Border>
 
         <!-- Snackbar -->
-        <materialDesign:Snackbar
-            x:Name="MainSnackbar"
-            HorizontalAlignment="Right"
-            VerticalAlignment="Bottom"
-            Margin="16"
-            MessageQueue="{Binding MessageQueue, Mode=OneWay}" />
-        
-
+        <materialDesign:Snackbar x:Name="MainSnackbar" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="16" MessageQueue="{Binding MessageQueue, Mode=OneWay}" />
     </Grid>
 </UserControl>

@@ -10,6 +10,7 @@ using System.Windows.Controls;
 using TirSeferleriModernApp.Views;
 using System.Linq; // IDE0028 için eklendi
 using TirSeferleriModernApp.Extensions; // ReplaceAll() için eklendi
+using MaterialDesignThemes.Wpf; // SnackbarMessageQueue için
 
 namespace TirSeferleriModernApp.ViewModels
 {
@@ -20,6 +21,8 @@ namespace TirSeferleriModernApp.ViewModels
 
         [ObservableProperty]
         private ObservableCollection<string> _araclarMenu = [];
+
+        private SeferlerViewModel? _aktifSeferlerVm;
 
         // İçerik alanında gösterilecek mevcut görünüm (UserControl)
         private object? _currentContent;
@@ -148,7 +151,16 @@ namespace TirSeferleriModernApp.ViewModels
         {
             Trace.WriteLine("[MainViewModel.cs:53] Seferler menüsü işlemleri başlatıldı.");
             AktifAltMenu = "📋 Seferler";
-            CurrentContent = new SeferlerView();
+            _aktifSeferlerVm = new SeferlerViewModel(new SnackbarMessageQueue(TimeSpan.FromSeconds(3)), _databaseService);
+            _aktifSeferlerVm.LoadSeferler();
+            // Mevcut seçili plaka varsa VM'ye aktar
+            if (!string.IsNullOrWhiteSpace(SelectedPlaka))
+            {
+                var sofor = AraclarMenu.FirstOrDefault(x => x.StartsWith(SelectedPlaka + " "))?.Split(" - ").ElementAtOrDefault(1);
+                _aktifSeferlerVm.UpdateSelection(SelectedPlaka, sofor);
+            }
+            var view = new SeferlerView { DataContext = _aktifSeferlerVm };
+            CurrentContent = view;
             StatusText = "Seferler açıldı.";
         }
 
@@ -203,7 +215,11 @@ namespace TirSeferleriModernApp.ViewModels
             Trace.WriteLine($"[MainViewModel.cs:125] Seçilen araç: {arac}");
             var parts = arac.Split(" - ");
             var plaka = parts.Length > 0 ? parts[0].Trim() : arac.Trim();
+            var sofor = parts.Length > 1 ? parts[1].Trim() : null;
             AltMenuyuGoster(plaka);
+
+            // Eğer Seferler ekranı açıksa üstteki bilgileri güncelle
+            _aktifSeferlerVm?.UpdateSelection(plaka, sofor);
         }
 
         public void AltMenuyuGoster(string? plaka)

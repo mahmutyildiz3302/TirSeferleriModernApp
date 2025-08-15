@@ -82,7 +82,7 @@
         </StatusBar>
 
         <!-- Sol MENU -->
-        <DockPanel Width="300" Background="#2E3A59" VerticalAlignment="Stretch" DockPanel.Dock="Left">
+        <DockPanel x:Name="LeftMenuPanel" Width="300" Background="#2E3A59" VerticalAlignment="Stretch" DockPanel.Dock="Left">
             <!-- Geri Dön Butonu -->
             <Button x:Name="BtnGeriDon"
                     Content="🔙 Geri Dön"
@@ -92,14 +92,30 @@
                     Visibility="{Binding GeriDonVisibility}"
                     DockPanel.Dock="Top"/>
 
-            <!-- Başlık -->
-            <TextBlock x:Name="HeaderText"
-                       Text="🚚 MDRLOG"
-                       FontWeight="Bold"
-                       FontSize="20"
-                       Foreground="White"
-                       Margin="16,20,16,20"
-                       DockPanel.Dock="Top"/>
+            <!-- Başlık + Minimize -->
+            <Grid Margin="10,10,10,0" DockPanel.Dock="Top">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+                <TextBlock x:Name="HeaderText"
+                           Text="🚚 MDRLOG"
+                           FontWeight="Bold"
+                           FontSize="20"
+                           Foreground="White"
+                           Margin="6,10,6,10"
+                           Grid.Column="0"/>
+                <Button x:Name="BtnToggleLeftMenu"
+                        Content="❮"
+                        ToolTip="Menüyü daralt/genişlet"
+                        Width="28" Height="28"
+                        Margin="0,6,6,6"
+                        Click="BtnToggleLeftMenu_Click"
+                        Grid.Column="1"
+                        Background="#44527A"
+                        Foreground="White"
+                        BorderBrush="#8794BF"/>
+            </Grid>
 
             <!-- Araçlar Menüsü -->
             <StackPanel x:Name="AraclarMenusuContainer" Background="#2E3A59" Margin="10,10,10,0" Visibility="Visible" DockPanel.Dock="Top">
