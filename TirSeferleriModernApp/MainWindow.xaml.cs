@@ -31,7 +31,7 @@ namespace TirSeferleriModernApp
 
         private void MainWindow_Loaded(object? sender, RoutedEventArgs e)
         {
-            Debug.WriteLine("[MainWindow.xaml.cs] MainWindow_Loaded çağrıldı.");
+            Trace.WriteLine("[MainWindow.xaml.cs] MainWindow_Loaded çağrıldı.");
 
             try
             {
@@ -41,92 +41,92 @@ namespace TirSeferleriModernApp
 
                 var databaseService = new DatabaseService(dbFile);
                 databaseService.Initialize();
-                Debug.WriteLine("[MainWindow.xaml.cs] DatabaseService başlatıldı.");
+                Trace.WriteLine("[MainWindow.xaml.cs] DatabaseService başlatıldı.");
 
                 if (DataContext is MainViewModel viewModel)
                 {
                     viewModel.BtnAraclarCommand.Execute(null);
-                    Debug.WriteLine("[MainWindow.xaml.cs] Araçlar menüsü yüklendi.");
+                    Trace.WriteLine("[MainWindow.xaml.cs] Araçlar menüsü yüklendi.");
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[MainWindow.xaml.cs] Hata: {ex.Message}");
+                Trace.WriteLine($"[MainWindow.xaml.cs] Hata: {ex.Message}");
                 MessageBox.Show($"Başlatma hatası: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
             }
         }
 
         private void BtnGeriDon_Click(object sender, RoutedEventArgs e)
         {
-            Debug.WriteLine("[MainWindow.xaml.cs:127] BtnGeriDon butonuna tıklandı.");
+            Trace.WriteLine("[MainWindow.xaml.cs:127] BtnGeriDon butonuna tıklandı.");
         }
 
         private void BtnAraclar_Click(object sender, RoutedEventArgs e)
         {
-            Debug.WriteLine("[MainWindow.xaml.cs:132] BtnAraclar butonuna tıklandı.");
+            Trace.WriteLine("[MainWindow.xaml.cs:132] BtnAraclar butonuna tıklandı.");
             if (DataContext is MainViewModel viewModel)
             {
                 viewModel.BtnAraclarCommand.Execute(null);
-                Debug.WriteLine("[MainWindow.xaml.cs:136] BtnAraclarCommand çalıştırıldı.");
+                Trace.WriteLine("[MainWindow.xaml.cs:136] BtnAraclarCommand çalıştırıldı.");
             }
         }
 
         private void BtnTanimlar_Click(object sender, RoutedEventArgs e)
         {
-            Debug.WriteLine("[MainWindow.xaml.cs:141] BtnTanimlar butonuna tıklandı.");
+            Trace.WriteLine("[MainWindow.xaml.cs:141] BtnTanimlar butonuna tıklandı.");
         }
         private void BtnTanimla_Click(object sender, RoutedEventArgs e)
         {
-            Debug.WriteLine("[MainWindow.xaml.cs:146] BtnTanimla butonuna tıklandı.");
+            Trace.WriteLine("[MainWindow.xaml.cs:146] BtnTanimla butonuna tıklandı.");
         }
         private void BtnSeferler_Click(object sender, RoutedEventArgs e)
         {
-            Debug.WriteLine("[MainWindow.xaml.cs:151] BtnSeferler butonuna tıklandı.");
+            Trace.WriteLine("[MainWindow.xaml.cs:151] BtnSeferler butonuna tıklandı.");
         }
         private void BtnGiderler_Click(object sender, RoutedEventArgs e)
         {
-            Debug.WriteLine("[MainWindow.xaml.cs:156] BtnGiderler butonuna tıklandı.");
+            Trace.WriteLine("[MainWindow.xaml.cs:156] BtnGiderler butonuna tıklandı.");
         }
         private void BtnKar_Click(object sender, RoutedEventArgs e)
         {
-            Debug.WriteLine("[MainWindow.xaml.cs:161] BtnKar butonuna tıklandı.");
+            Trace.WriteLine("[MainWindow.xaml.cs:161] BtnKar butonuna tıklandı.");
         }
         private void MenuItem_Click(object sender, RoutedEventArgs e)
         {
-            Debug.WriteLine("[MainWindow.xaml.cs:166] MenuItem butonuna tıklandı.");
+            Trace.WriteLine("[MainWindow.xaml.cs:166] MenuItem butonuna tıklandı.");
             if (sender is MenuItem menuItem)
             {
                 string selectedService = menuItem.Header?.ToString() ?? "Bilinmiyor (Menü başlığı tanımlı değil)";
-                Debug.WriteLine($"[MainWindow.xaml.cs:170] Seçilen Hizmet: {selectedService}");
+                Trace.WriteLine($"[MainWindow.xaml.cs:170] Seçilen Hizmet: {selectedService}");
                 MessageBox.Show($"Seçilen Hizmet: {selectedService}", "Bilgi", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
         private void SearchButton_Click(object sender, RoutedEventArgs e)
         {
-            Debug.WriteLine("[MainWindow.xaml.cs:177] SearchButton butonuna tıklandı.");
+            Trace.WriteLine("[MainWindow.xaml.cs:177] SearchButton butonuna tıklandı.");
             MessageBox.Show("Arama işlemi başlatıldı!", "Bilgi", MessageBoxButton.OK, MessageBoxImage.Information);
         }
 
         private void TopMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            Debug.WriteLine("[MainWindow.xaml.cs:183] TopMenuItem butonuna tıklandı.");
+            Trace.WriteLine("[MainWindow.xaml.cs:183] TopMenuItem butonuna tıklandı.");
             if (sender is MenuItem menuItem)
             {
                 string selectedMenu = menuItem.Header?.ToString() ?? "Bilinmiyor";
-                Debug.WriteLine($"[MainWindow.xaml.cs:187] Seçilen Menü: {selectedMenu}");
+                Trace.WriteLine($"[MainWindow.xaml.cs:187] Seçilen Menü: {selectedMenu}");
                 MessageBox.Show($"Seçilen Menü: {selectedMenu}", "Bilgi", MessageBoxButton.OK, MessageBoxImage.Information);
             }
         }
 
         private void AA_MenuItem_MouseEnter(object sender, MouseEventArgs e)
         {
-            Debug.WriteLine("[MainWindow.xaml.cs:194] AA_MenuItem_MouseEnter metodu çağrıldı.");
+            Trace.WriteLine("[MainWindow.xaml.cs:194] AA_MenuItem_MouseEnter metodu çağrıldı.");
         }
 
         private void AA_MenuItem_MouseLeave(object sender, MouseEventArgs e)
         {
-            Debug.WriteLine("[MainWindow.xaml.cs:198] AA_MenuItem_MouseLeave metodu çağrıldı.");
+            Trace.WriteLine("[MainWindow.xaml.cs:198] AA_MenuItem_MouseLeave metodu çağrıldı.");
         }
 
         public void StatusBarBilgisiGoster(string mesaj)

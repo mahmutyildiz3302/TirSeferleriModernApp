@@ -49,7 +49,8 @@
         <!-- Üst MENU + sağda Debug butonu -->
         <DockPanel DockPanel.Dock="Top" Background="LightGray" Height="26">
             <!-- Sağda debug butonu -->
-            <Button Content="🐞" ToolTip="Debug Listesi" Command="{Binding DebugListesiKomutu}"
+            <Button Content="🐞" ToolTip="Debug Listesi"
+                    Command="{Binding DataContext.DebugListesiKomutu, RelativeSource={RelativeSource AncestorType=Window}}"
                     DockPanel.Dock="Right"
                     Background="Transparent" BorderThickness="0" Padding="8,0"
                     HorizontalAlignment="Right" VerticalAlignment="Stretch"/>
@@ -187,6 +188,7 @@
         <Grid Margin="10">
             <!-- ViewModel.CurrentContent burada render edilir -->
             <ContentPresenter Content="{Binding CurrentContent}"/>
+
             <!-- İçerik yoksa placeholder başlık göster -->
             <TextBlock Text="Ana Ekran"
                        FontSize="36"

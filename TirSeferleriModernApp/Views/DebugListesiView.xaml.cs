@@ -37,14 +37,12 @@ namespace TirSeferleriModernApp.Views
             {
                 // Debug ekranındaki verileri temizle
                 LogService.Entries.Clear();
-                Debug.WriteLine("[DebugListesiView.xaml.cs] Debug listesi temizlendi.");
+                Trace.WriteLine("[DebugListesiView.xaml.cs] Debug listesi temizlendi.");
             }
             else if (e.Key == Key.Escape)
             {
-                // Debug ekranını kapat
-                var parentWindow = Window.GetWindow(this);
-                parentWindow?.Close();
-                Debug.WriteLine("[DebugListesiView.xaml.cs] Debug ekranı kapatıldı.");
+                // Debug ekranını kapat (gömülü view olduğundan pencereyi kapatmak yerine sadece bilgi loglayalım)
+                Trace.WriteLine("[DebugListesiView.xaml.cs] Escape tuşuna basıldı (gömülü görünüm).");
             }
         }
     }

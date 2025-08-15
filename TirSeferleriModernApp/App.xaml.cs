@@ -11,6 +11,9 @@ namespace TirSeferleriModernApp
         {
             base.OnStartup(e);
 
+            // Log servisinin başlatılması (Debug ve Trace yakalanır)
+            LogService.Initialize();
+
             // Veritabanı ve tablolar uygulama açılışında kontrol edilir/oluşturulur
             DatabaseService.CheckAndCreateOrUpdateSeferlerTablosu();
         }

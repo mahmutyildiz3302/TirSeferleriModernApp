@@ -4,6 +4,7 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:TirSeferleriModernApp.Views"
+             xmlns:services="clr-namespace:TirSeferleriModernApp.Services"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="800">
     <Grid Margin="10">
@@ -11,10 +12,24 @@
             <Grid>
                 <Grid.RowDefinitions>
                     <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/> <!-- ListView ekranın altına kadar uzanacak -->
+                    <RowDefinition Height="*"/>
                 </Grid.RowDefinitions>
                 <TextBlock Text="Debug Listesi" FontSize="20" FontWeight="Bold" Margin="0 0 0 8" Grid.Row="0"/>
-                <ListView x:Name="lstLogs" Grid.Row="1"/> <!-- Yükseklik kaldırıldı -->
+                <ListView x:Name="lstLogs"
+                          Grid.Row="1"
+                          Background="White"
+                          Foreground="Black"
+                          ItemsSource="{x:Static services:LogService.Entries}">
+                    <ListView.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding}"
+                                       TextWrapping="Wrap"
+                                       FontFamily="Consolas"
+                                       FontSize="12"
+                                       Foreground="Black"/>
+                        </DataTemplate>
+                    </ListView.ItemTemplate>
+                </ListView>
             </Grid>
         </Border>
     </Grid>
