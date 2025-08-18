@@ -39,6 +39,14 @@ namespace TirSeferleriModernApp.ViewModels
             set => SetProperty(ref _araclarMenuAcik, value);
         }
 
+        // Tanımlar butonunun görünürlüğü
+        private bool _showTanimlar = true;
+        public bool ShowTanimlar
+        {
+            get => _showTanimlar;
+            set => SetProperty(ref _showTanimlar, value);
+        }
+
         private string _statusText = "Hazır.";
         public string StatusText
         {
@@ -84,12 +92,13 @@ namespace TirSeferleriModernApp.ViewModels
         public ICommand BtnGeriDonCommand { get; }
         public ICommand BtnAraclarCommand  { get; }
         public ICommand ToggleAraclarMenuCommand { get; }
-        public ICommand BtnTanimlarCommand { get; }
         public ICommand BtnSeferlerCommand { get; }
         public ICommand BtnGiderlerCommand { get; }
         public ICommand BtnKarCommand      { get; }
         public ICommand DebugListesiKomutu { get; }
         public ICommand SelectAracCommand  { get; }
+        public ICommand ToggleTanimlarMenuCommand { get; }
+        public ICommand AcTanimlarCommand { get; }
 
         public MainViewModel() : this(new SecimTakibi(), "TirSeferleri.db")
         {
@@ -107,14 +116,23 @@ namespace TirSeferleriModernApp.ViewModels
             BtnGeriDonCommand = new RelayCommand(ExecuteGeriDon);
             BtnAraclarCommand  = new RelayCommand(ExecuteAraclar);
             ToggleAraclarMenuCommand = new RelayCommand(ExecuteToggleAraclar);
-            BtnTanimlarCommand = new RelayCommand(ExecuteTanimlar);
             BtnSeferlerCommand = new RelayCommand(ExecuteSeferler);
             BtnGiderlerCommand = new RelayCommand(ExecuteGiderler);
             BtnKarCommand      = new RelayCommand(ExecuteKar);
             DebugListesiKomutu = new RelayCommand(ExecuteDebugListesi);
             SelectAracCommand  = new RelayCommand<string>(ExecuteSelectArac);
+            ToggleTanimlarMenuCommand = new RelayCommand(ExecuteTanimlar);
+            AcTanimlarCommand = new RelayCommand(ExecuteTanimlar);
             
             Trace.WriteLine("[MainViewModel.cs:28] ViewModel oluşturuldu.");
+        }
+
+        private void ExecuteTanimlar()
+        {
+            // Tanımlar ekranını aç
+            CurrentContent = new TanimlamaView();
+            StatusText = "Tanımlar açıldı.";
+            AktifAltMenu = "📋 Tanımlar";
         }
 
         private void ExecuteGeriDon()
@@ -140,11 +158,6 @@ namespace TirSeferleriModernApp.ViewModels
             {
                 LoadAraclarMenu();
             }
-        }
-
-        private void ExecuteTanimlar()
-        {
-            Trace.WriteLine("[MainViewModel.cs:48] Tanımlar menüsü işlemleri başlatıldı.");
         }
 
         private void ExecuteSeferler()

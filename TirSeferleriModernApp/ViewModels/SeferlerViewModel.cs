@@ -56,6 +56,12 @@ namespace TirSeferleriModernApp.ViewModels
             SeciliCekiciPlaka = cekiciPlaka;
             SeciliSoforAdi = soforAdi;
             SeciliDorsePlaka = string.IsNullOrWhiteSpace(cekiciPlaka) ? null : DatabaseService.GetDorsePlakaByCekiciPlaka(cekiciPlaka);
+
+            // Seçilen çekici plakasına göre listeyi filtrele
+            if (!string.IsNullOrWhiteSpace(SeciliCekiciPlaka))
+                LoadSeferler(SeciliCekiciPlaka);
+            else
+                LoadSeferler();
         }
 
         public string KaydetButonMetni => SeciliSefer?.SeferId > 0 ? "Seçimi Güncelle" : "Yeni Sefer Kaydet";
@@ -93,8 +99,11 @@ namespace TirSeferleriModernApp.ViewModels
             {
                 SeferGuncelle(SeciliSefer);
             }
-            // Listeyi yenile
-            SeferListesi.ReplaceAll(DatabaseService.GetSeferler());
+            // Listeyi, filtre korunarak yenile
+            if (!string.IsNullOrWhiteSpace(SeciliCekiciPlaka))
+                SeferListesi.ReplaceAll(DatabaseService.GetSeferlerByCekiciPlaka(SeciliCekiciPlaka));
+            else
+                SeferListesi.ReplaceAll(DatabaseService.GetSeferler());
         }
 
         private void SeferGuncelle(Sefer guncellenecekSefer)
@@ -161,6 +170,11 @@ namespace TirSeferleriModernApp.ViewModels
         public void LoadSeferler()
         {
             SeferListesi.ReplaceAll(DatabaseService.GetSeferler());
+        }
+
+        public void LoadSeferler(string cekiciPlaka)
+        {
+            SeferListesi.ReplaceAll(DatabaseService.GetSeferlerByCekiciPlaka(cekiciPlaka));
         }
     }
 }

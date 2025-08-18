@@ -384,6 +384,39 @@ namespace TirSeferleriModernApp.Services
             return result;
         }
 
+        public static List<Sefer> GetSeferlerByCekiciPlaka(string cekiciPlaka)
+        {
+            var result = new List<Sefer>();
+            using var connection = new SqliteConnection(ConnectionString);
+            connection.Open();
+            using var cmd = connection.CreateCommand();
+            cmd.CommandText = "SELECT SeferId, KonteynerNo, KonteynerBoyutu, YuklemeYeri, BosaltmaYeri, Tarih, Saat, Fiyat, Aciklama, CekiciId, CekiciPlaka, DorseId, SoforId, SoforAdi FROM Seferler WHERE CekiciPlaka = @p ORDER BY SeferId DESC";
+            cmd.Parameters.AddWithValue("@p", cekiciPlaka);
+            using var reader = cmd.ExecuteReader();
+            while (reader.Read())
+            {
+                var s = new Sefer
+                {
+                    SeferId = reader.IsDBNull(0) ? 0 : reader.GetInt32(0),
+                    KonteynerNo = reader.IsDBNull(1) ? null : reader.GetString(1),
+                    KonteynerBoyutu = reader.IsDBNull(2) ? null : reader.GetString(2),
+                    YuklemeYeri = reader.IsDBNull(3) ? null : reader.GetString(3),
+                    BosaltmaYeri = reader.IsDBNull(4) ? null : reader.GetString(4),
+                    Tarih = ParseDate(reader.IsDBNull(5) ? null : reader.GetString(5)),
+                    Saat = reader.IsDBNull(6) ? null : reader.GetString(6),
+                    Fiyat = reader.IsDBNull(7) ? 0 : Convert.ToDecimal(reader.GetDouble(7)),
+                    Aciklama = reader.IsDBNull(8) ? null : reader.GetString(8),
+                    CekiciId = reader.IsDBNull(9) ? null : reader.GetInt32(9),
+                    CekiciPlaka = reader.IsDBNull(10) ? null : reader.GetString(10),
+                    DorseId = reader.IsDBNull(11) ? null : reader.GetInt32(11),
+                    SoforId = reader.IsDBNull(12) ? null : reader.GetInt32(12),
+                    SoforAdi = reader.IsDBNull(13) ? null : reader.GetString(13)
+                };
+                result.Add(s);
+            }
+            return result;
+        }
+
         private static void BindSeferParams(SqliteCommand cmd, Sefer s)
         {
             cmd.Parameters.AddWithValue("@KonteynerNo", (object?)s.KonteynerNo ?? DBNull.Value);
