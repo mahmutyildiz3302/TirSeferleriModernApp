@@ -13,7 +13,7 @@ namespace TirSeferleriModernApp.ViewModels
 {
     public partial class SeferlerViewModel(SnackbarMessageQueue messageQueue, DatabaseService databaseService) : ObservableObject
     {
-        private Sefer? _seciliSefer;
+        private Sefer? _seciliSefer = new Sefer { Tarih = DateTime.Today }; // İlk açılışta null olmasın
         public Sefer? SeciliSefer
         {
             get => _seciliSefer;
