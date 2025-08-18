@@ -5,6 +5,7 @@
         xmlns:viewmodels="clr-namespace:TirSeferleriModernApp.ViewModels"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:conv="clr-namespace:TirSeferleriModernApp.Converters"
+        xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
         Title="Tır Seferleri Uygulaması"
         Height="720" Width="1200"
         WindowStartupLocation="CenterScreen"
@@ -15,6 +16,18 @@
         <BooleanToVisibilityConverter x:Key="BoolToVis"/>
         <conv:SelectedPlakaToItemMatchConverter x:Key="PlakaMatch"/>
         <conv:SelectedMenuToCheckedConverter x:Key="MenuChecked"/>
+
+        <!-- Snackbar mesajı: uzun metinler için sarma ve pencere genişliği kadar max genişlik -->
+        <Style TargetType="materialDesign:SnackbarMessage">
+            <Setter Property="ContentTemplate">
+                <Setter.Value>
+                    <DataTemplate>
+                        <TextBlock Text="{Binding}" TextWrapping="Wrap" TextTrimming="None"
+                                   MaxWidth="{Binding RelativeSource={RelativeSource AncestorType=Window}, Path=ActualWidth}"/>
+                    </DataTemplate>
+                </Setter.Value>
+            </Setter>
+        </Style>
 
         <Style x:Key="MenuButtonStyle" TargetType="Button">
             <Setter Property="Foreground" Value="White"/>
@@ -224,6 +237,13 @@
                     </Style>
                 </TextBlock.Style>
             </TextBlock>
+
+            <!-- Global Snackbar -->
+            <materialDesign:Snackbar x:Name="GlobalSnackbar"
+                                     HorizontalAlignment="Stretch"
+                                     VerticalAlignment="Bottom"
+                                     Margin="16"
+                                     MessageQueue="{Binding MessageQueue, Mode=OneWay}"/>
         </Grid>
     </DockPanel>
 </Window>

@@ -171,7 +171,5 @@
             </Grid>
         </Border>
 
-        <!-- Snackbar -->
-        <materialDesign:Snackbar x:Name="MainSnackbar" HorizontalAlignment="Right" VerticalAlignment="Bottom" Margin="16" MessageQueue="{Binding MessageQueue, Mode=OneWay}" />
     </Grid>
 </UserControl>

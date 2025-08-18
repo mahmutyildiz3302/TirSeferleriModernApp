@@ -24,6 +24,9 @@ namespace TirSeferleriModernApp.ViewModels
 
         private SeferlerViewModel? _aktifSeferlerVm;
 
+        // Uygulama geneli snackbar kuyruğu
+        public SnackbarMessageQueue MessageQueue { get; } = new SnackbarMessageQueue(System.TimeSpan.FromSeconds(3));
+
         // İçerik alanında gösterilecek mevcut görünüm (UserControl)
         private object? _currentContent;
         public object? CurrentContent
@@ -164,7 +167,7 @@ namespace TirSeferleriModernApp.ViewModels
         {
             Trace.WriteLine("[MainViewModel.cs:53] Seferler menüsü işlemleri başlatıldı.");
             AktifAltMenu = "📋 Seferler";
-            _aktifSeferlerVm = new SeferlerViewModel(new SnackbarMessageQueue(TimeSpan.FromSeconds(3)), _databaseService);
+            _aktifSeferlerVm = new SeferlerViewModel(MessageQueue, _databaseService);
             _aktifSeferlerVm.LoadSeferler();
             // Mevcut seçili plaka varsa VM'ye aktar
             if (!string.IsNullOrWhiteSpace(SelectedPlaka))
