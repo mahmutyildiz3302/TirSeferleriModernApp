@@ -1,0 +1,17 @@
+<UserControl x:Class="TirSeferleriModernApp.Views.VergilerView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             mc:Ignorable="d"
+             d:DesignHeight="300" d:DesignWidth="400">
+    <Grid Background="White" Margin="10">
+        <StackPanel>
+            <TextBlock Text="Vergiler" FontSize="20" FontWeight="Bold"/>
+            <TextBlock Text="{Binding SelectedPlaka, StringFormat=Secili Arac: {0}, TargetNullValue=Secili arac yok}" Margin="0,6,0,0"/>
+            <Border Margin="0,10,0,0" Background="#F5F6FA" BorderBrush="#D0D0D0" BorderThickness="1" Padding="10">
+                <TextBlock Foreground="Gray" Text="Vergiler ekrani (icerik eklenecek)"/>
+            </Border>
+        </StackPanel>
+    </Grid>
+</UserControl>

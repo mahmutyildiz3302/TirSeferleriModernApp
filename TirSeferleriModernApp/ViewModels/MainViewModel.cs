@@ -133,11 +133,11 @@ namespace TirSeferleriModernApp.ViewModels
             ToggleTanimlarMenuCommand = new RelayCommand(ExecuteTanimlar);
             AcTanimlarCommand = new RelayCommand(ExecuteTanimlar);
 
-            // Alt gider komutları
-            BtnYakitCommand    = new RelayCommand(() => StatusText = "Yakıt giderleri");
-            BtnSanaiCommand    = new RelayCommand(() => StatusText = "Sanai giderleri");
-            BtnGenelCommand    = new RelayCommand(() => StatusText = "Genel giderler");
-            BtnVergilerCommand = new RelayCommand(() => StatusText = "Vergiler");
+            // Alt gider komutları: ilgili view'ları açar
+            BtnYakitCommand    = new RelayCommand(() => CurrentContent = new YakitGiderView());
+            BtnSanaiCommand    = new RelayCommand(() => CurrentContent = new SanaiGiderView());
+            BtnGenelCommand    = new RelayCommand(() => CurrentContent = new GenelGiderView());
+            BtnVergilerCommand = new RelayCommand(() => CurrentContent = new VergilerView());
             
             Trace.WriteLine("[MainViewModel.cs:28] ViewModel oluşturuldu.");
         }
@@ -178,6 +178,13 @@ namespace TirSeferleriModernApp.ViewModels
         private void ExecuteSeferler()
         {
             Trace.WriteLine("[MainViewModel.cs:53] Seferler menüsü işlemleri başlatıldı.");
+            // Toggle mantığı: aynı menüye tekrar basılırsa kapat
+            if (AktifAltMenu == "📋 Seferler")
+            {
+                AktifAltMenu = null;
+                StatusText = "Seferler alt menü kapatıldı.";
+                return;
+            }
             AktifAltMenu = "📋 Seferler";
             _aktifSeferlerVm = new SeferlerViewModel(MessageQueue, _databaseService);
             _aktifSeferlerVm.LoadSeferler();
@@ -195,6 +202,13 @@ namespace TirSeferleriModernApp.ViewModels
         private void ExecuteGiderler()
         {
             Trace.WriteLine("[MainViewModel.cs:58] Giderler menüsü işlemleri başlatıldı.");
+            // Toggle mantığı: aynı menüye tekrar basılırsa kapat
+            if (AktifAltMenu == "💸 Giderler")
+            {
+                AktifAltMenu = null; // Alt menü kapansın
+                StatusText = "Giderler alt menü kapatıldı.";
+                return;
+            }
             AktifAltMenu = "💸 Giderler";
             CurrentContent = new GiderlerView();
             StatusText = "Giderler açıldı.";
@@ -203,6 +217,13 @@ namespace TirSeferleriModernApp.ViewModels
         private void ExecuteKar()
         {
             Trace.WriteLine("[MainViewModel.cs:63] Kar hesap menüsü işlemleri başlatıldı.");
+            // Toggle mantığı: aynı menüye tekrar basılırsa kapat
+            if (AktifAltMenu == "📊 Kar Hesap")
+            {
+                AktifAltMenu = null;
+                StatusText = "Kar Hesap alt menü kapatıldı.";
+                return;
+            }
             AktifAltMenu = "📊 Kar Hesap";
             CurrentContent = new KarHesapView();
             StatusText = "Kar Hesap açıldı.";
