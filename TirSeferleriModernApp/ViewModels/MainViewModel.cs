@@ -103,6 +103,12 @@ namespace TirSeferleriModernApp.ViewModels
         public ICommand ToggleTanimlarMenuCommand { get; }
         public ICommand AcTanimlarCommand { get; }
 
+        // Giderler alt buton komutları
+        public ICommand BtnYakitCommand   { get; }
+        public ICommand BtnSanaiCommand   { get; }
+        public ICommand BtnGenelCommand   { get; }
+        public ICommand BtnVergilerCommand { get; }
+
         public MainViewModel() : this(new SecimTakibi(), "TirSeferleri.db")
         {
             Trace.WriteLine("[MainViewModel.cs] Parametresiz constructor çağrıldı.");
@@ -126,6 +132,12 @@ namespace TirSeferleriModernApp.ViewModels
             SelectAracCommand  = new RelayCommand<string>(ExecuteSelectArac);
             ToggleTanimlarMenuCommand = new RelayCommand(ExecuteTanimlar);
             AcTanimlarCommand = new RelayCommand(ExecuteTanimlar);
+
+            // Alt gider komutları
+            BtnYakitCommand    = new RelayCommand(() => StatusText = "Yakıt giderleri");
+            BtnSanaiCommand    = new RelayCommand(() => StatusText = "Sanai giderleri");
+            BtnGenelCommand    = new RelayCommand(() => StatusText = "Genel giderler");
+            BtnVergilerCommand = new RelayCommand(() => StatusText = "Vergiler");
             
             Trace.WriteLine("[MainViewModel.cs:28] ViewModel oluşturuldu.");
         }

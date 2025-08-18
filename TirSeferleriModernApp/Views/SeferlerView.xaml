@@ -5,8 +5,13 @@
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
              xmlns:viewmodels="clr-namespace:TirSeferleriModernApp.ViewModels" 
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+             xmlns:conv="clr-namespace:TirSeferleriModernApp.Converters"
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="900">
+
+    <UserControl.Resources>
+        <conv:RowIndexToNumberConverter x:Key="RowIndexToNumber"/>
+    </UserControl.Resources>
 
     <Grid Margin="20">
         <Grid.ColumnDefinitions>
@@ -110,6 +115,7 @@
                           ColumnHeaderHeight="35"
                           ColumnWidth="SizeToCells"
                           MinColumnWidth="60"
+                          AlternationCount="1000000"
                           ContextMenuOpening="dgSeferler_ContextMenuOpening">
                     <DataGrid.Resources>
                         <Style TargetType="DataGridColumnHeader">
@@ -135,7 +141,16 @@
                     </DataGrid.Resources>
 
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Sefer ID" Binding="{Binding SeferId}"/>
+                        <!-- Sıra numarası sütunu -->
+                        <DataGridTemplateColumn Header="#" Width="50">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=AlternationIndex, Converter={StaticResource RowIndexToNumber}}" HorizontalAlignment="Center"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
+                        <DataGridTextColumn Header="Sefer ID" Binding="{Binding SeferId}" Visibility="Collapsed"/>
                         <DataGridTextColumn Header="Konteyner No" Binding="{Binding KonteynerNo}"/>
                         <DataGridTextColumn Header="Boyut" Binding="{Binding KonteynerBoyutu}"/>
                         <DataGridTextColumn Header="Yükleme" Binding="{Binding YuklemeYeri}"/>
@@ -144,10 +159,10 @@
                         <DataGridTextColumn Header="Saat" Binding="{Binding Saat}"/>
                         <DataGridTextColumn Header="Fiyat" Binding="{Binding Fiyat}"/>
                         <DataGridTextColumn Header="Açıklama" Binding="{Binding Aciklama}"/>
-                        <DataGridTextColumn Header="Çekici ID" Binding="{Binding CekiciId}"/>
+                        <DataGridTextColumn Header="Çekici ID" Binding="{Binding CekiciId}" Visibility="Collapsed"/>
                         <DataGridTextColumn Header="Çekici Plaka" Binding="{Binding CekiciPlaka}"/>
-                        <DataGridTextColumn Header="Dorse ID" Binding="{Binding DorseId}"/>
-                        <DataGridTextColumn Header="Şoför ID" Binding="{Binding SoforId}"/>
+                        <DataGridTextColumn Header="Dorse ID" Binding="{Binding DorseId}" Visibility="Collapsed"/>
+                        <DataGridTextColumn Header="Şoför ID" Binding="{Binding SoforId}" Visibility="Collapsed"/>
                         <DataGridTextColumn Header="Şoför Adı" Binding="{Binding SoforAdi}"/>
                     </DataGrid.Columns>
                 </DataGrid>
