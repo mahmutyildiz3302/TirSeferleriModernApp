@@ -108,30 +108,47 @@
                           BorderThickness="0"
                           RowHeight="35"
                           ColumnHeaderHeight="35"
+                          ColumnWidth="SizeToCells"
+                          MinColumnWidth="60"
                           ContextMenuOpening="dgSeferler_ContextMenuOpening">
-                    <DataGrid.ColumnHeaderStyle>
+                    <DataGrid.Resources>
                         <Style TargetType="DataGridColumnHeader">
                             <Setter Property="Background" Value="LightSkyBlue"/>
                             <Setter Property="Foreground" Value="Black"/>
                             <Setter Property="FontWeight" Value="Bold"/>
                             <Setter Property="HorizontalContentAlignment" Value="Center"/>
+                            <Setter Property="BorderBrush" Value="Black"/>
+                            <Setter Property="BorderThickness" Value="0,0,1,0"/>
+                            <Setter Property="Template">
+                                <Setter.Value>
+                                    <ControlTemplate TargetType="DataGridColumnHeader">
+                                        <Border Background="{TemplateBinding Background}"
+                                                BorderBrush="{TemplateBinding BorderBrush}"
+                                                BorderThickness="{TemplateBinding BorderThickness}">
+                                            <ContentPresenter HorizontalAlignment="{TemplateBinding HorizontalContentAlignment}"
+                                                              VerticalAlignment="{TemplateBinding VerticalContentAlignment}"/>
+                                        </Border>
+                                    </ControlTemplate>
+                                </Setter.Value>
+                            </Setter>
                         </Style>
-                    </DataGrid.ColumnHeaderStyle>
+                    </DataGrid.Resources>
+
                     <DataGrid.Columns>
-                        <DataGridTextColumn Header="Sefer ID" Binding="{Binding SeferId}" Width="40"/>
-                        <DataGridTextColumn Header="Konteyner No" Binding="{Binding KonteynerNo}" Width="*"/>
-                        <DataGridTextColumn Header="Boyut" Binding="{Binding KonteynerBoyutu}" Width="60"/>
-                        <DataGridTextColumn Header="Yükleme" Binding="{Binding YuklemeYeri}" Width="*"/>
-                        <DataGridTextColumn Header="Boşaltma" Binding="{Binding BosaltmaYeri}" Width="*"/>
-                        <DataGridTextColumn Header="Tarih" Binding="{Binding Tarih, StringFormat=dd.MM.yyyy}" Width="100"/>
-                        <DataGridTextColumn Header="Saat" Binding="{Binding Saat}" Width="80"/>
-                        <DataGridTextColumn Header="Fiyat" Binding="{Binding Fiyat}" Width="80"/>
-                        <DataGridTextColumn Header="Açıklama" Binding="{Binding Aciklama}" Width="*"/>
-                        <DataGridTextColumn Header="Çekici ID" Binding="{Binding CekiciId}" Width="60"/>
-                        <DataGridTextColumn Header="Çekici Plaka" Binding="{Binding CekiciPlaka}" Width="100"/>
-                        <DataGridTextColumn Header="Dorse ID" Binding="{Binding DorseId}" Width="60"/>
-                        <DataGridTextColumn Header="Şoför ID" Binding="{Binding SoforId}" Width="60"/>
-                        <DataGridTextColumn Header="Şoför Adı" Binding="{Binding SoforAdi}" Width="100"/>
+                        <DataGridTextColumn Header="Sefer ID" Binding="{Binding SeferId}"/>
+                        <DataGridTextColumn Header="Konteyner No" Binding="{Binding KonteynerNo}"/>
+                        <DataGridTextColumn Header="Boyut" Binding="{Binding KonteynerBoyutu}"/>
+                        <DataGridTextColumn Header="Yükleme" Binding="{Binding YuklemeYeri}"/>
+                        <DataGridTextColumn Header="Boşaltma" Binding="{Binding BosaltmaYeri}"/>
+                        <DataGridTextColumn Header="Tarih" Binding="{Binding Tarih, StringFormat=dd.MM.yyyy}"/>
+                        <DataGridTextColumn Header="Saat" Binding="{Binding Saat}"/>
+                        <DataGridTextColumn Header="Fiyat" Binding="{Binding Fiyat}"/>
+                        <DataGridTextColumn Header="Açıklama" Binding="{Binding Aciklama}"/>
+                        <DataGridTextColumn Header="Çekici ID" Binding="{Binding CekiciId}"/>
+                        <DataGridTextColumn Header="Çekici Plaka" Binding="{Binding CekiciPlaka}"/>
+                        <DataGridTextColumn Header="Dorse ID" Binding="{Binding DorseId}"/>
+                        <DataGridTextColumn Header="Şoför ID" Binding="{Binding SoforId}"/>
+                        <DataGridTextColumn Header="Şoför Adı" Binding="{Binding SoforAdi}"/>
                     </DataGrid.Columns>
                 </DataGrid>
 
