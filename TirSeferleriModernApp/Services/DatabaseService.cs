@@ -453,7 +453,7 @@ namespace TirSeferleriModernApp.Services
             command.CommandText = @"
         SELECT  C.Plaka, S.SoforAdi FROM Cekiciler as C
         INNER JOIN Soforler S ON S.SoforId = C.SoforId
-        WHERE   C.Aktif = 1
+        WHERE   C.Aktif = 1 AND IFNULL(C.Arsivli,0)=0
         ORDER BY C.Plaka;";
 
             using var reader = command.ExecuteReader();

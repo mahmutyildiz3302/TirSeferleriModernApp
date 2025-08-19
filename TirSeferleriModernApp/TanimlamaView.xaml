@@ -32,7 +32,17 @@
                             </StackPanel>
                         </StackPanel>
                     </Border>
-                    <DataGrid x:Name="dgCekiciler" AutoGenerateColumns="True" IsReadOnly="True" Margin="0,10,0,0" Background="White"/>
+                    <DataGrid x:Name="dgCekiciler" AutoGenerateColumns="True" IsReadOnly="True" Margin="0,10,0,0" Background="White">
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn x:Name="colCekiciUnarchive" Header="İşlem">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="Geri Al" Padding="6,2" Click="BtnCekiciGeriAl_Click"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
                 </StackPanel>
             </Border>
 
@@ -53,7 +63,17 @@
                             </StackPanel>
                         </StackPanel>
                     </Border>
-                    <DataGrid x:Name="dgDorseler" AutoGenerateColumns="True" IsReadOnly="True" Margin="0,10,0,0" Background="White"/>
+                    <DataGrid x:Name="dgDorseler" AutoGenerateColumns="True" IsReadOnly="True" Margin="0,10,0,0" Background="White">
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn x:Name="colDorseUnarchive" Header="İşlem">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="Geri Al" Padding="6,2" Click="BtnDorseGeriAl_Click"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
                 </StackPanel>
             </Border>
 
@@ -74,7 +94,17 @@
                             </StackPanel>
                         </StackPanel>
                     </Border>
-                    <DataGrid x:Name="dgSoforler" AutoGenerateColumns="True" IsReadOnly="True" Margin="0,10,0,0" Background="White"/>
+                    <DataGrid x:Name="dgSoforler" AutoGenerateColumns="True" IsReadOnly="True" Margin="0,10,0,0" Background="White">
+                        <DataGrid.Columns>
+                            <DataGridTemplateColumn x:Name="colSoforUnarchive" Header="İşlem">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="Geri Al" Padding="6,2" Click="BtnSoforGeriAl_Click"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                        </DataGrid.Columns>
+                    </DataGrid>
                 </StackPanel>
             </Border>
         </StackPanel>

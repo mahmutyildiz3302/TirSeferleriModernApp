@@ -253,5 +253,36 @@ namespace TirSeferleriModernApp.Views
             cmd.Parameters.AddWithValue("@Id", id);
             cmd.ExecuteNonQuery();
         }
+
+        private void BtnCekiciGeriAl_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_cekiciArsivGoster) { MessageBox.Show("Bu işlem arşiv görünümünde kullanılabilir."); return; }
+            if (dgCekiciler.SelectedItem is not DataRowView row) { MessageBox.Show("Satır seçin"); return; }
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            using var cmd = new SqliteCommand("UPDATE Cekiciler SET Arsivli=0 WHERE CekiciId=@id", conn);
+            cmd.Parameters.AddWithValue("@id", row["CekiciId"]);
+            cmd.ExecuteNonQuery();
+            LoadData();
+        }
+        private void BtnDorseGeriAl_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_dorseArsivGoster) { MessageBox.Show("Bu işlem arşiv görünümünde kullanılabilir."); return; }
+            if (dgDorseler.SelectedItem is not DataRowView row) { MessageBox.Show("Satır seçin"); return; }
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            using var cmd = new SqliteCommand("UPDATE Dorseler SET Arsivli=0 WHERE DorseId=@id", conn);
+            cmd.Parameters.AddWithValue("@id", row["DorseId"]);
+            cmd.ExecuteNonQuery();
+            LoadData();
+        }
+        private void BtnSoforGeriAl_Click(object sender, RoutedEventArgs e)
+        {
+            if (!_arsivGosteriliyor) { MessageBox.Show("Bu işlem arşiv görünümünde kullanılabilir."); return; }
+            if (dgSoforler.SelectedItem is not DataRowView row) { MessageBox.Show("Satır seçin"); return; }
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            using var cmd = new SqliteCommand("UPDATE Soforler SET Arsivli=0 WHERE SoforId=@id", conn);
+            cmd.Parameters.AddWithValue("@id", row["SoforId"]);
+            cmd.ExecuteNonQuery();
+            LoadData();
+        }
     }
 }
