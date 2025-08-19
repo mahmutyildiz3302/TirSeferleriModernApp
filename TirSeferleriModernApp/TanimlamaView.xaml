@@ -42,13 +42,19 @@
                     <!-- Sağ: DataGrid -->
                     <DataGrid Grid.Column="1" x:Name="dgCekiciler" AutoGenerateColumns="True" IsReadOnly="True" Background="White" MinHeight="220" HorizontalAlignment="Stretch" MouseDoubleClick="dgCekiciler_MouseDoubleClick">
                         <DataGrid.Columns>
+                            <!-- Geri Al sütunu sadece arşiv görünümünde görünür -->
                             <DataGridTemplateColumn x:Name="colCekiciUnarchive" Header="İşlem">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <StackPanel Orientation="Horizontal">
-                                            <Button Content="Geri Al" Padding="6,2" Click="BtnCekiciGeriAl_Click" Margin="0,0,6,0"/>
-                                            <Button Content="Çekici Detay" Padding="6,2" Click="BtnCekiciDetay_Click"/>
-                                        </StackPanel>
+                                        <Button Content="Geri Al" Padding="6,2" Click="BtnCekiciGeriAl_Click"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <!-- Detay sütunu her zaman görünür -->
+                            <DataGridTemplateColumn x:Name="colCekiciDetay" Header="Detay">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="Çekici Detay" Padding="6,2" Click="BtnCekiciDetay_Click"/>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
@@ -88,10 +94,14 @@
                             <DataGridTemplateColumn x:Name="colDorseUnarchive" Header="İşlem">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <StackPanel Orientation="Horizontal">
-                                            <Button Content="Geri Al" Padding="6,2" Click="BtnDorseGeriAl_Click" Margin="0,0,6,0"/>
-                                            <Button Content="Dorse Detay" Padding="6,2" Click="BtnDorseDetay_Click"/>
-                                        </StackPanel>
+                                        <Button Content="Geri Al" Padding="6,2" Click="BtnDorseGeriAl_Click"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn x:Name="colDorseDetay" Header="Detay">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="Dorse Detay" Padding="6,2" Click="BtnDorseDetay_Click"/>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
@@ -131,10 +141,14 @@
                             <DataGridTemplateColumn x:Name="colSoforUnarchive" Header="İşlem">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <StackPanel Orientation="Horizontal">
-                                            <Button Content="Geri Al" Padding="6,2" Click="BtnSoforGeriAl_Click" Margin="0,0,6,0"/>
-                                            <Button Content="Personel Detay" Padding="6,2" Click="BtnSoforDetay_Click"/>
-                                        </StackPanel>
+                                        <Button Content="Geri Al" Padding="6,2" Click="BtnSoforGeriAl_Click"/>
+                                    </DataTemplate>
+                                </DataGridTemplateColumn.CellTemplate>
+                            </DataGridTemplateColumn>
+                            <DataGridTemplateColumn x:Name="colSoforDetay" Header="Detay">
+                                <DataGridTemplateColumn.CellTemplate>
+                                    <DataTemplate>
+                                        <Button Content="Personel Detay" Padding="6,2" Click="BtnSoforDetay_Click"/>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
