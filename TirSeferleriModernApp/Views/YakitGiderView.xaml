@@ -134,14 +134,7 @@
                                 </MultiBinding>
                             </DataGridTextColumn.Binding>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Header="Birim Fiyat">
-                            <DataGridTextColumn.Binding>
-                                <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
-                                    <Binding Path="BirimFiyat"/>
-                                    <Binding Path="Aciklama"/>
-                                </MultiBinding>
-                            </DataGridTextColumn.Binding>
-                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Birim Fiyat" Binding="{Binding BirimFiyat, Converter={StaticResource NumericTrConverter}, ConverterParameter=2}"/>
                         <DataGridTextColumn Header="Tutar">
                             <DataGridTextColumn.Binding>
                                 <MultiBinding Converter="{StaticResource ToplamNumberConverter}" ConverterParameter="2">
@@ -150,14 +143,7 @@
                                 </MultiBinding>
                             </DataGridTextColumn.Binding>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Header="KM">
-                            <DataGridTextColumn.Binding>
-                                <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
-                                    <Binding Path="Km"/>
-                                    <Binding Path="Aciklama"/>
-                                </MultiBinding>
-                            </DataGridTextColumn.Binding>
-                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="KM" Binding="{Binding Km, Converter={StaticResource NumericTrConverter}, ConverterParameter=0}"/>
                         <DataGridTextColumn Header="Aciklama" Binding="{Binding Aciklama}" Width="*"/>
                     </DataGrid.Columns>
                 </DataGrid>

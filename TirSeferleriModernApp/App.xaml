@@ -15,6 +15,7 @@
             <BooleanToVisibilityConverter x:Key="BoolToVis" />
             <conv:HideOnToplamConverter x:Key="HideOnToplamConverter"/>
             <conv:ToplamNumberConverter x:Key="ToplamNumberConverter"/>
+            <conv:NumericTrConverter x:Key="NumericTrConverter"/>
         </ResourceDictionary>
     </Application.Resources>
 </Application>
