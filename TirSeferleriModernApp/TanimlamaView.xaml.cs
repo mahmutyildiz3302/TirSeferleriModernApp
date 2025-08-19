@@ -176,9 +176,11 @@ namespace TirSeferleriModernApp.Views
         private void BtnDorseKaydet_Click(object sender, RoutedEventArgs e)
         {
             var plaka = txtDorsePlaka.Text?.Trim(); if (string.IsNullOrWhiteSpace(plaka)) { MessageBox.Show("Dorse plakası girin"); return; }
+            var tip = (cmbDorseTip.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? cmbDorseTip.Text?.Trim();
             using var conn = new SqliteConnection(ConnectionString); conn.Open();
-            using var cmd = new SqliteCommand("INSERT INTO Dorseler (Plaka, Tip, Arsivli) VALUES (@p,'Standard',0)", conn);
+            using var cmd = new SqliteCommand("INSERT INTO Dorseler (Plaka, Tip, Arsivli) VALUES (@p,@t,0)", conn);
             cmd.Parameters.AddWithValue("@p", plaka);
+            cmd.Parameters.AddWithValue("@t", (object?)tip ?? System.DBNull.Value);
             cmd.ExecuteNonQuery();
             LoadData(); LoadDorseler();
         }
@@ -188,9 +190,11 @@ namespace TirSeferleriModernApp.Views
             if (dgDorseler.SelectedItem is not DataRowView row) { MessageBox.Show("Güncellenecek dorsayı listeden seçin"); return; }
             var id = row["DorseId"]?.ToString(); if (string.IsNullOrEmpty(id)) { MessageBox.Show("ID bulunamadı"); return; }
             var plaka = txtDorsePlaka.Text?.Trim(); if (string.IsNullOrWhiteSpace(plaka)) { MessageBox.Show("Dorse plakası girin"); return; }
+            var tip = (cmbDorseTip.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? cmbDorseTip.Text?.Trim();
             using var conn = new SqliteConnection(ConnectionString); conn.Open();
-            using var cmd = new SqliteCommand("UPDATE Dorseler SET Plaka=@p WHERE DorseId=@id", conn);
+            using var cmd = new SqliteCommand("UPDATE Dorseler SET Plaka=@p, Tip=@t WHERE DorseId=@id", conn);
             cmd.Parameters.AddWithValue("@p", plaka);
+            cmd.Parameters.AddWithValue("@t", (object?)tip ?? System.DBNull.Value);
             cmd.Parameters.AddWithValue("@id", id);
             cmd.ExecuteNonQuery();
             LoadData(); LoadDorseler();
@@ -199,9 +203,11 @@ namespace TirSeferleriModernApp.Views
         private void BtnSoforKaydet_Click(object sender, RoutedEventArgs e)
         {
             var ad = txtSoforAd.Text?.Trim(); if (string.IsNullOrWhiteSpace(ad)) { MessageBox.Show("Şoför adı girin"); return; }
+            var tel = txtSoforTelefon.Text?.Trim() ?? string.Empty;
             using var conn = new SqliteConnection(ConnectionString); conn.Open();
-            using var cmd = new SqliteCommand("INSERT INTO Soforler (SoforAdi, Telefon, Arsivli) VALUES (@a,'',0)", conn);
+            using var cmd = new SqliteCommand("INSERT INTO Soforler (SoforAdi, Telefon, Arsivli) VALUES (@a,@t,0)", conn);
             cmd.Parameters.AddWithValue("@a", ad);
+            cmd.Parameters.AddWithValue("@t", tel);
             cmd.ExecuteNonQuery();
             LoadData(); LoadSoforler();
         }
@@ -211,9 +217,11 @@ namespace TirSeferleriModernApp.Views
             if (dgSoforler.SelectedItem is not DataRowView row) { MessageBox.Show("Güncellenecek şoförü listeden seçin"); return; }
             var id = row["SoforId"]?.ToString(); if (string.IsNullOrEmpty(id)) { MessageBox.Show("ID bulunamadı"); return; }
             var ad = txtSoforAd.Text?.Trim(); if (string.IsNullOrWhiteSpace(ad)) { MessageBox.Show("Şoför adı girin"); return; }
+            var tel = txtSoforTelefon.Text?.Trim() ?? string.Empty;
             using var conn = new SqliteConnection(ConnectionString); conn.Open();
-            using var cmd = new SqliteCommand("UPDATE Soforler SET SoforAdi=@a WHERE SoforId=@id", conn);
+            using var cmd = new SqliteCommand("UPDATE Soforler SET SoforAdi=@a, Telefon=@t WHERE SoforId=@id", conn);
             cmd.Parameters.AddWithValue("@a", ad);
+            cmd.Parameters.AddWithValue("@t", tel);
             cmd.Parameters.AddWithValue("@id", id);
             cmd.ExecuteNonQuery();
             LoadData(); LoadSoforler();
@@ -323,6 +331,11 @@ namespace TirSeferleriModernApp.Views
             if (dgDorseler.SelectedItem is DataRowView row)
             {
                 txtDorsePlaka.Text = row["Plaka"]?.ToString() ?? string.Empty;
+                if (row.Row.Table.Columns.Contains("Tip"))
+                {
+                    var tip = row["Tip"]?.ToString() ?? string.Empty;
+                    cmbDorseTip.Text = tip;
+                }
             }
         }
 
@@ -331,6 +344,8 @@ namespace TirSeferleriModernApp.Views
             if (dgSoforler.SelectedItem is DataRowView row)
             {
                 txtSoforAd.Text = row["SoforAdi"]?.ToString() ?? string.Empty;
+                if (row.Row.Table.Columns.Contains("Telefon"))
+                    txtSoforTelefon.Text = row["Telefon"]?.ToString() ?? string.Empty;
             }
         }
     }
