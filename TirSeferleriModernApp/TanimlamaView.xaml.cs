@@ -29,6 +29,7 @@ namespace TirSeferleriModernApp.Views
             LoadData();
             LoadDorseler();
             LoadSoforler();
+            UpdateUnarchiveColumnsVisibility();
         }
 
         private void LoadData()
@@ -36,6 +37,17 @@ namespace TirSeferleriModernApp.Views
             dgCekiciler.ItemsSource = LoadTable("Cekiciler").DefaultView;
             dgDorseler.ItemsSource = LoadTable("Dorseler").DefaultView;
             dgSoforler.ItemsSource = LoadTable("Soforler").DefaultView;
+            UpdateUnarchiveColumnsVisibility();
+        }
+
+        private void UpdateUnarchiveColumnsVisibility()
+        {
+            if (colCekiciUnarchive != null)
+                colCekiciUnarchive.Visibility = _cekiciArsivGoster ? Visibility.Visible : Visibility.Collapsed;
+            if (colDorseUnarchive != null)
+                colDorseUnarchive.Visibility = _dorseArsivGoster ? Visibility.Visible : Visibility.Collapsed;
+            if (colSoforUnarchive != null)
+                colSoforUnarchive.Visibility = _arsivGosteriliyor ? Visibility.Visible : Visibility.Collapsed;
         }
 
         private DataTable LoadTable(string tableName)
