@@ -64,11 +64,12 @@
                             <TextBlock Text="Şoför Tanımı" FontSize="18" FontWeight="Bold" Margin="0,0,0,5"/>
                             <TextBox x:Name="txtSoforAd" materialDesignControls:HintAssist.Hint="Yeni Şoför Adı Giriniz" Width="300" Margin="0,0,0,5"/>
 
-                            <!-- Şöför Kaydet ve Sil Butonları -->
+                            <!-- Şöför Kaydet / Sil / Arşiv Butonları -->
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                 <Button Content="Güncelle" Width="120" Margin="0,0,10,0" Style="{StaticResource MaterialDesignFlatButton}" BorderBrush="Gray" BorderThickness="1" Click="BtnSoforGuncelle_Click"/>
                                 <Button Content="Kaydet" Width="120" Margin="0,0,10,0" Style="{StaticResource MaterialDesignFlatButton}" BorderBrush="Gray" BorderThickness="1" Click="BtnSoforKaydet_Click"/>
-                                <Button Content="Sil" Width="120" Margin="0,0,0,0" Style="{StaticResource MaterialDesignFlatButton}" BorderBrush="Gray" BorderThickness="1" Click="Sil_Click"/>
+                                <Button Content="Sil" Width="120" Margin="0,0,10,0" Style="{StaticResource MaterialDesignFlatButton}" BorderBrush="Gray" BorderThickness="1" Click="Sil_Click"/>
+                                <Button x:Name="btnSoforArsiv" Content="Arşiv" Width="120" Style="{StaticResource MaterialDesignFlatButton}" BorderBrush="Gray" BorderThickness="1" Click="BtnSoforArsiv_Click"/>
                             </StackPanel>
                          </StackPanel>
                     </Border>

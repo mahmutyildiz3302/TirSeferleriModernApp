@@ -73,6 +73,9 @@ namespace TirSeferleriModernApp.Services
                     KarHesapId INTEGER PRIMARY KEY AUTOINCREMENT,
                     CekiciId INTEGER NOT NULL
                 );", []);
+
+            // Soforler tablosunda Arsivli kolonu olduğundan emin ol
+            EnsureSoforlerArsivliColumn();
         }
 
         private void EnsureDatabaseFile()
@@ -139,6 +142,78 @@ namespace TirSeferleriModernApp.Services
             }
         }
 
+        public static void EnsureSoforlerArsivliColumn()
+        {
+            try
+            {
+                EnsureDatabaseFileStatic();
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+
+                // Kolon var mı kontrol et
+                bool exists = false;
+                using (var cmd = connection.CreateCommand())
+                {
+                    cmd.CommandText = "PRAGMA table_info(Soforler);";
+                    using var reader = cmd.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        var colName = reader.GetString(1);
+                        if (string.Equals(colName, "Arsivli", StringComparison.OrdinalIgnoreCase))
+                        {
+                            exists = true;
+                            break;
+                        }
+                    }
+                }
+
+                if (!exists)
+                {
+                    using var alter = connection.CreateCommand();
+                    alter.CommandText = "ALTER TABLE Soforler ADD COLUMN Arsivli INTEGER DEFAULT 0;";
+                    alter.ExecuteNonQuery();
+                    Debug.WriteLine("[DatabaseService] Soforler.Arsivli kolonu eklendi.");
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] EnsureSoforlerArsivliColumn hata: {ex.Message}");
+            }
+        }
+
+        public static int GetSeferCountBySoforId(int soforId)
+        {
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "SELECT COUNT(1) FROM Seferler WHERE SoforId = @sid";
+                cmd.Parameters.AddWithValue("@sid", soforId);
+                var count = Convert.ToInt32(cmd.ExecuteScalar());
+                return count;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] GetSeferCountBySoforId hata: {ex.Message}");
+                return 0;
+            }
+        }
+
+        public static void EnsureDatabaseFileStatic()
+        {
+            if (!File.Exists(DbFile))
+            {
+                using var initialConnection = new SqliteConnection(ConnectionString);
+                initialConnection.Open();
+                Debug.WriteLine("[DatabaseService.xaml.cs] Veritabanı dosyası oluşturuldu.");
+            }
+            else
+            {
+                Debug.WriteLine($"[DatabaseService.xaml.cs] Veritabanı dosyası zaten mevcut: {DbFile}");
+            }
+        }
+
         public static void CheckAndCreateOrUpdateSeferlerTablosu()
         {
             try
@@ -177,20 +252,6 @@ namespace TirSeferleriModernApp.Services
             catch (Exception ex)
             {
                 Debug.WriteLine($"[DatabaseService.xaml.cs] Hata: {ex.Message}");
-            }
-        }
-
-        public static void EnsureDatabaseFileStatic()
-        {
-            if (!File.Exists(DbFile))
-            {
-                using var initialConnection = new SqliteConnection(ConnectionString);
-                initialConnection.Open();
-                Debug.WriteLine("[DatabaseService.xaml.cs] Veritabanı dosyası oluşturuldu.");
-            }
-            else
-            {
-                Debug.WriteLine($"[DatabaseService.xaml.cs] Veritabanı dosyası zaten mevcut: {DbFile}");
             }
         }
 
