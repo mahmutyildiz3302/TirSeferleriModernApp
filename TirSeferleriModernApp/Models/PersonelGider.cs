@@ -9,6 +9,9 @@ namespace TirSeferleriModernApp.Models
         public string? Plaka { get; set; }
         public DateTime Tarih { get; set; }
         public string? PersonelAdi { get; set; }
+        public string? OdemeTuru { get; set; } // Maas, Avans, SGK, DigerVergi
+        public string? SgkDonem { get; set; }  // Örn: 2025/08
+        public string? VergiTuru { get; set; } // Örn: Damga, Muhtasar
         public decimal Tutar { get; set; }
         public string? Aciklama { get; set; }
     }

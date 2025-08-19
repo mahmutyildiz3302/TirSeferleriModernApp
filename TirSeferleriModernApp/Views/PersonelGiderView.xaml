@@ -49,6 +49,20 @@
                     <TextBlock Text="Personel"/>
                     <TextBox x:Name="txtPersonel" Width="300" Margin="0,2,0,8"/>
 
+                    <TextBlock Text="Odeme Turu"/>
+                    <ComboBox x:Name="cmbOdemeTuru" Width="300" Margin="0,2,0,8">
+                        <ComboBoxItem Content="Maas"/>
+                        <ComboBoxItem Content="Avans"/>
+                        <ComboBoxItem Content="SGK"/>
+                        <ComboBoxItem Content="Diger Vergi"/>
+                    </ComboBox>
+
+                    <TextBlock Text="SGK Donem"/>
+                    <TextBox x:Name="txtSgkDonem" Width="300" Margin="0,2,0,8" ToolTip="YYYY/AA"/>
+
+                    <TextBlock Text="Vergi Turu"/>
+                    <TextBox x:Name="txtVergiTuru" Width="300" Margin="0,2,0,8"/>
+
                     <TextBlock Text="Tutar"/>
                     <TextBox x:Name="txtTutar" Width="300" Margin="0,2,0,8"/>
 
@@ -84,6 +98,9 @@
                         <DataGridTextColumn Header="Plaka" Binding="{Binding Plaka}" Width="100"/>
                         <DataGridTextColumn Header="Tarih" Binding="{Binding Tarih, StringFormat=yyyy-MM-dd}" Width="110"/>
                         <DataGridTextColumn Header="Personel" Binding="{Binding PersonelAdi}" Width="150"/>
+                        <DataGridTextColumn Header="Odeme Turu" Binding="{Binding OdemeTuru}" Width="120"/>
+                        <DataGridTextColumn Header="SGK Donem" Binding="{Binding SgkDonem}" Width="90"/>
+                        <DataGridTextColumn Header="Vergi Turu" Binding="{Binding VergiTuru}" Width="120"/>
                         <DataGridTextColumn Header="Tutar" Binding="{Binding Tutar, Converter={StaticResource NumericTrConverter}, ConverterParameter=2}" Width="100"/>
                         <DataGridTextColumn Header="Aciklama" Binding="{Binding Aciklama}" Width="*"/>
                     </DataGrid.Columns>

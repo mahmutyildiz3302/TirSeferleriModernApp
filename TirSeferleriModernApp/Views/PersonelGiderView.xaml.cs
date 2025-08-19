@@ -69,6 +69,9 @@ namespace TirSeferleriModernApp.Views
                 Plaka = string.Empty,
                 Tarih = DateTime.Today,
                 PersonelAdi = string.Empty,
+                OdemeTuru = "",
+                SgkDonem = "",
+                VergiTuru = "",
                 Tutar = list.Sum(x => x.Tutar),
                 Aciklama = "Toplam"
             };
@@ -113,6 +116,9 @@ namespace TirSeferleriModernApp.Views
             _secili = null;
             cmbCekici.SelectedIndex = -1;
             txtPersonel.Text = string.Empty;
+            cmbOdemeTuru.SelectedIndex = -1;
+            txtSgkDonem.Text = string.Empty;
+            txtVergiTuru.Text = string.Empty;
             txtTutar.Text = string.Empty;
             txtAciklama.Text = string.Empty;
             dpTarih.SelectedDate = DateTime.Today;
@@ -128,6 +134,9 @@ namespace TirSeferleriModernApp.Views
             }
             g.Tarih = dpTarih.SelectedDate ?? DateTime.Today;
             g.PersonelAdi = txtPersonel.Text?.Trim();
+            g.OdemeTuru = (cmbOdemeTuru.SelectedItem as ComboBoxItem)?.Content?.ToString();
+            g.SgkDonem = txtSgkDonem.Text?.Trim();
+            g.VergiTuru = txtVergiTuru.Text?.Trim();
             if (!decimal.TryParse(txtTutar.Text, out var tutar)) tutar = 0;
             g.Tutar = tutar;
             g.Aciklama = txtAciklama.Text?.Trim();
@@ -144,6 +153,14 @@ namespace TirSeferleriModernApp.Views
                 cmbCekici.SelectedItem = cekiciler.FirstOrDefault(x => x.CekiciId == row.CekiciId) ?? cekiciler.FirstOrDefault(x => x.Plaka == row.Plaka);
                 dpTarih.SelectedDate = row.Tarih;
                 txtPersonel.Text = row.PersonelAdi;
+                // set odeme turu
+                foreach (var item in cmbOdemeTuru.Items)
+                {
+                    if (item is ComboBoxItem ci && string.Equals(ci.Content?.ToString(), row.OdemeTuru, StringComparison.OrdinalIgnoreCase))
+                    { cmbOdemeTuru.SelectedItem = item; break; }
+                }
+                txtSgkDonem.Text = row.SgkDonem;
+                txtVergiTuru.Text = row.VergiTuru;
                 txtTutar.Text = row.Tutar.ToString("0.00");
                 txtAciklama.Text = row.Aciklama;
             }
@@ -174,7 +191,7 @@ namespace TirSeferleriModernApp.Views
                     nfi.NumberDecimalSeparator = "."; // csv için nokta
 
                     var sb = new StringBuilder();
-                    sb.AppendLine("Id,Plaka,Tarih,Personel,Tutar,Aciklama");
+                    sb.AppendLine("Id,Plaka,Tarih,Personel,OdemeTuru,SgkDonem,VergiTuru,Tutar,Aciklama");
                     foreach (var r in _sonListe)
                     {
                         string line = string.Join(",", new[]
@@ -183,6 +200,9 @@ namespace TirSeferleriModernApp.Views
                             Quote(r.Plaka),
                             r.Tarih.ToString("yyyy-MM-dd"),
                             Quote(r.PersonelAdi),
+                            Quote(r.OdemeTuru),
+                            Quote(r.SgkDonem),
+                            Quote(r.VergiTuru),
                             r.Tutar.ToString(nfi),
                             Quote(r.Aciklama)
                         });

@@ -1271,6 +1271,9 @@ WHERE f.SoforId IS NULL;";
                     Plaka TEXT,
                     Tarih TEXT NOT NULL,
                     PersonelAdi TEXT,
+                    OdemeTuru TEXT,
+                    SgkDonem TEXT,
+                    VergiTuru TEXT,
                     Tutar REAL,
                     Aciklama TEXT
                 );";
@@ -1279,6 +1282,9 @@ WHERE f.SoforId IS NULL;";
                     "Plaka TEXT",
                     "Tarih TEXT",
                     "PersonelAdi TEXT",
+                    "OdemeTuru TEXT",
+                    "SgkDonem TEXT",
+                    "VergiTuru TEXT",
                     "Tutar REAL",
                     "Aciklama TEXT"
                 ];
@@ -1297,8 +1303,8 @@ WHERE f.SoforId IS NULL;";
                 using var connection = new SqliteConnection(ConnectionString);
                 connection.Open();
                 using var cmd = connection.CreateCommand();
-                cmd.CommandText = @"INSERT INTO PersonelGider (CekiciId, Plaka, Tarih, PersonelAdi, Tutar, Aciklama)
-                                    VALUES (@CekiciId, @Plaka, @Tarih, @PersonelAdi, @Tutar, @Aciklama);
+                cmd.CommandText = @"INSERT INTO PersonelGider (CekiciId, Plaka, Tarih, PersonelAdi, OdemeTuru, SgkDonem, VergiTuru, Tutar, Aciklama)
+                                    VALUES (@CekiciId, @Plaka, @Tarih, @PersonelAdi, @OdemeTuru, @SgkDonem, @VergiTuru, @Tutar, @Aciklama);
                                     SELECT last_insert_rowid();";
                 BindPersonelParams(cmd, g);
                 var id = (long)cmd.ExecuteScalar()!;
@@ -1321,7 +1327,8 @@ WHERE f.SoforId IS NULL;";
                 using var cmd = connection.CreateCommand();
                 cmd.CommandText = @"UPDATE PersonelGider SET
                                     CekiciId=@CekiciId, Plaka=@Plaka, Tarih=@Tarih,
-                                    PersonelAdi=@PersonelAdi, Tutar=@Tutar, Aciklama=@Aciklama
+                                    PersonelAdi=@PersonelAdi, OdemeTuru=@OdemeTuru, SgkDonem=@SgkDonem, VergiTuru=@VergiTuru,
+                                    Tutar=@Tutar, Aciklama=@Aciklama
                                    WHERE PersonelGiderId=@Id";
                 BindPersonelParams(cmd, g);
                 cmd.Parameters.AddWithValue("@Id", g.PersonelGiderId);
@@ -1358,7 +1365,7 @@ WHERE f.SoforId IS NULL;";
                 using var connection = new SqliteConnection(ConnectionString);
                 connection.Open();
                 using var cmd = connection.CreateCommand();
-                var sql = "SELECT PersonelGiderId, CekiciId, Plaka, Tarih, PersonelAdi, Tutar, Aciklama FROM PersonelGider WHERE 1=1";
+                var sql = "SELECT PersonelGiderId, CekiciId, Plaka, Tarih, PersonelAdi, OdemeTuru, SgkDonem, VergiTuru, Tutar, Aciklama FROM PersonelGider WHERE 1=1";
                 if (cekiciId.HasValue) sql += " AND CekiciId=@Id";
                 if (baslangic.HasValue) sql += " AND Tarih >= @Bas";
                 if (bitis.HasValue) sql += " AND Tarih <= @Bit";
@@ -1378,8 +1385,11 @@ WHERE f.SoforId IS NULL;";
                         Plaka = reader.IsDBNull(2) ? null : reader.GetString(2),
                         Tarih = DateTime.TryParse(reader.IsDBNull(3) ? null : reader.GetString(3), out var d) ? d : DateTime.Today,
                         PersonelAdi = reader.IsDBNull(4) ? null : reader.GetString(4),
-                        Tutar = reader.IsDBNull(5) ? 0 : Convert.ToDecimal(reader.GetDouble(5)),
-                        Aciklama = reader.IsDBNull(6) ? null : reader.GetString(6)
+                        OdemeTuru = reader.IsDBNull(5) ? null : reader.GetString(5),
+                        SgkDonem = reader.IsDBNull(6) ? null : reader.GetString(6),
+                        VergiTuru = reader.IsDBNull(7) ? null : reader.GetString(7),
+                        Tutar = reader.IsDBNull(8) ? 0 : Convert.ToDecimal(reader.GetDouble(8)),
+                        Aciklama = reader.IsDBNull(9) ? null : reader.GetString(9)
                     });
                 }
             }
@@ -1396,6 +1406,9 @@ WHERE f.SoforId IS NULL;";
             cmd.Parameters.AddWithValue("@Plaka", (object?)g.Plaka ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@Tarih", g.Tarih.ToString("yyyy-MM-dd"));
             cmd.Parameters.AddWithValue("@PersonelAdi", (object?)g.PersonelAdi ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@OdemeTuru", (object?)g.OdemeTuru ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@SgkDonem", (object?)g.SgkDonem ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@VergiTuru", (object?)g.VergiTuru ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@Tutar", Convert.ToDouble(g.Tutar));
             cmd.Parameters.AddWithValue("@Aciklama", (object?)g.Aciklama ?? DBNull.Value);
         }
