@@ -55,9 +55,10 @@ namespace TirSeferleriModernApp.Views
                 using var connection = new SqliteConnection(ConnectionString);
                 connection.Open();
 
-                string query = tableName switch
+                string query;
+                if (tableName == "Cekiciler")
                 {
-                    "Cekiciler" => @"
+                    query = @"
                 SELECT 
                     C.CekiciId, 
                     C.Plaka, 
@@ -66,13 +67,18 @@ namespace TirSeferleriModernApp.Views
                     C.Aktif 
                 FROM Cekiciler C
                 LEFT JOIN Soforler S ON C.SoforId = S.SoforId
-                LEFT JOIN Dorseler D ON C.DorseId = D.DorseId",
-                    // Soförler listesi toggle (aktif/arsivli)
-                    "Soforler" => _arsivGosteriliyor
+                LEFT JOIN Dorseler D ON C.DorseId = D.DorseId";
+                }
+                else if (tableName == "Soforler")
+                {
+                    query = _arsivGosteriliyor
                         ? "SELECT SoforId, SoforAdi, Telefon FROM Soforler WHERE IFNULL(Arsivli,0)=1"
-                        : "SELECT SoforId, SoforAdi, Telefon FROM Soforler WHERE IFNULL(Arsivli,0)=0",
-                    _ => $"SELECT * FROM {tableName}"
-                };
+                        : "SELECT SoforId, SoforAdi, Telefon FROM Soforler WHERE IFNULL(Arsivli,0)=0";
+                }
+                else
+                {
+                    query = $"SELECT * FROM {tableName}";
+                }
 
                 using var command = new SqliteCommand(query, connection);
                 using var reader = command.ExecuteReader();
@@ -160,6 +166,16 @@ namespace TirSeferleriModernApp.Views
             {
                 MessageBox.Show($"Silme işlemi sırasında bir hata oluştu: {ex.Message}", "Hata", MessageBoxButton.OK, MessageBoxImage.Error);
             }
+        }
+
+        private void BtnCekiciEksikleriniDuzelt_Click(object sender, RoutedEventArgs e)
+        {
+            var count = DatabaseService.RestoreMissingCekicilerFromSeferler();
+            if (count > 0)
+                MessageBox.Show($"Sefer kayıtlarından {count} çekici otomatik geri getirildi.", "Bilgi", MessageBoxButton.OK, MessageBoxImage.Information);
+            else
+                MessageBox.Show("Eksik çekici bulunamadı.", "Bilgi", MessageBoxButton.OK, MessageBoxImage.Information);
+            LoadData();
         }
 
         private static void DeleteRowInternal(string tableName, string idColumnName, string id)

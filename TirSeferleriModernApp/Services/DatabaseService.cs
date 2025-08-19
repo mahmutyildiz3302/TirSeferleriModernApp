@@ -569,5 +569,60 @@ namespace TirSeferleriModernApp.Services
             }
             return (null, null, null, null, null);
         }
+
+        public static int RestoreMissingCekicilerFromSeferler()
+        {
+            int inserted = 0;
+            try
+            {
+                EnsureDatabaseFileStatic();
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+
+                // Seferler'deki plakalardan Cekiciler'de olmayanları, en son sefer bilgileriyle ekle
+                string query = @"
+WITH latest AS (
+    SELECT CekiciPlaka, MAX(SeferId) AS MaxSeferId
+    FROM Seferler
+    WHERE CekiciPlaka IS NOT NULL AND TRIM(CekiciPlaka) <> ''
+    GROUP BY CekiciPlaka
+), src AS (
+    SELECT s.CekiciPlaka, s.SoforId, s.DorseId
+    FROM Seferler s
+    INNER JOIN latest l ON l.CekiciPlaka = s.CekiciPlaka AND l.MaxSeferId = s.SeferId
+)
+SELECT src.CekiciPlaka, src.SoforId, src.DorseId
+FROM src
+LEFT JOIN Cekiciler c ON c.Plaka = src.CekiciPlaka
+WHERE c.CekiciId IS NULL;";
+
+                using var selectCmd = new SqliteCommand(query, connection);
+                using var reader = selectCmd.ExecuteReader();
+                var items = new List<(string plaka, int? soforId, int? dorseId)>();
+                while (reader.Read())
+                {
+                    var plaka = reader.IsDBNull(0) ? string.Empty : reader.GetString(0);
+                    int? soforId = reader.IsDBNull(1) ? null : reader.GetInt32(1);
+                    int? dorseId = reader.IsDBNull(2) ? null : reader.GetInt32(2);
+                    if (!string.IsNullOrWhiteSpace(plaka))
+                        items.Add((plaka, soforId, dorseId));
+                }
+                reader.Close();
+
+                foreach (var it in items)
+                {
+                    using var ins = new SqliteCommand("INSERT INTO Cekiciler (Plaka, SoforId, DorseId, Aktif) VALUES (@p, @s, @d, 1)", connection);
+                    ins.Parameters.AddWithValue("@p", it.plaka);
+                    ins.Parameters.AddWithValue("@s", (object?)it.soforId ?? DBNull.Value);
+                    ins.Parameters.AddWithValue("@d", (object?)it.dorseId ?? DBNull.Value);
+                    inserted += ins.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] RestoreMissingCekicilerFromSeferler hata: {ex.Message}");
+            }
+            return inserted;
+        }
     }
 }
