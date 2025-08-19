@@ -1,0 +1,45 @@
+<Window x:Class="TirSeferleriModernApp.Views.Detay.CekiciDetayWindow"
+        xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+        xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+        Title="Cekici Detay" Height="420" Width="560" WindowStartupLocation="CenterOwner">
+    <Grid Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+            <RowDefinition Height="Auto"/>
+        </Grid.RowDefinitions>
+        <StackPanel Orientation="Vertical" Margin="0,0,0,10">
+            <TextBlock Text="Cekici Detay" FontSize="18" FontWeight="Bold"/>
+            <StackPanel Orientation="Horizontal">
+                <StackPanel Width="240" Margin="0,0,12,0">
+                    <TextBlock Text="Plaka"/>
+                    <TextBox x:Name="txtPlaka"/>
+                </StackPanel>
+                <StackPanel Width="240">
+                    <TextBlock Text="Aktif"/>
+                    <CheckBox x:Name="chkAktif" Content="Aktif"/>
+                </StackPanel>
+            </StackPanel>
+        </StackPanel>
+        <GroupBox Header="Atamalar" Grid.Row="1" Margin="0,0,0,10">
+            <Grid Margin="6">
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <StackPanel Grid.Column="0" Margin="0,0,12,0">
+                    <TextBlock Text="Sofor"/>
+                    <TextBox x:Name="txtSofor"/>
+                </StackPanel>
+                <StackPanel Grid.Column="1">
+                    <TextBlock Text="Dorse"/>
+                    <TextBox x:Name="txtDorse"/>
+                </StackPanel>
+            </Grid>
+        </GroupBox>
+        <StackPanel Grid.Row="2" Orientation="Horizontal" HorizontalAlignment="Right">
+            <Button Content="Kaydet" Width="120" Margin="0,0,8,0" Click="BtnKaydet_Click"/>
+            <Button Content="Kapat" Width="100" Click="BtnKapat_Click"/>
+        </StackPanel>
+    </Grid>
+</Window>

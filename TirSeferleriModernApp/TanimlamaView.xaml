@@ -45,7 +45,10 @@
                             <DataGridTemplateColumn x:Name="colCekiciUnarchive" Header="İşlem">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Button Content="Geri Al" Padding="6,2" Click="BtnCekiciGeriAl_Click"/>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Content="Geri Al" Padding="6,2" Click="BtnCekiciGeriAl_Click" Margin="0,0,6,0"/>
+                                            <Button Content="Çekici Detay" Padding="6,2" Click="BtnCekiciDetay_Click"/>
+                                        </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
@@ -85,7 +88,10 @@
                             <DataGridTemplateColumn x:Name="colDorseUnarchive" Header="İşlem">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Button Content="Geri Al" Padding="6,2" Click="BtnDorseGeriAl_Click"/>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Content="Geri Al" Padding="6,2" Click="BtnDorseGeriAl_Click" Margin="0,0,6,0"/>
+                                            <Button Content="Dorse Detay" Padding="6,2" Click="BtnDorseDetay_Click"/>
+                                        </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>
@@ -125,7 +131,10 @@
                             <DataGridTemplateColumn x:Name="colSoforUnarchive" Header="İşlem">
                                 <DataGridTemplateColumn.CellTemplate>
                                     <DataTemplate>
-                                        <Button Content="Geri Al" Padding="6,2" Click="BtnSoforGeriAl_Click"/>
+                                        <StackPanel Orientation="Horizontal">
+                                            <Button Content="Geri Al" Padding="6,2" Click="BtnSoforGeriAl_Click" Margin="0,0,6,0"/>
+                                            <Button Content="Personel Detay" Padding="6,2" Click="BtnSoforDetay_Click"/>
+                                        </StackPanel>
                                     </DataTemplate>
                                 </DataGridTemplateColumn.CellTemplate>
                             </DataGridTemplateColumn>

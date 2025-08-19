@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using TirSeferleriModernApp.Services;
 using System.Collections.Generic;
 using System.Linq;
+using TirSeferleriModernApp.Views.Detay;
 
 namespace TirSeferleriModernApp.Views
 {
@@ -368,6 +369,36 @@ namespace TirSeferleriModernApp.Views
                 if (row.Row.Table.Columns.Contains("Telefon"))
                     txtSoforTelefon.Text = row["Telefon"]?.ToString() ?? string.Empty;
             }
+        }
+
+        private void BtnCekiciDetay_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgCekiciler.SelectedItem is not DataRowView row || row.Row.Table.Columns.Contains("CekiciId") == false)
+            { MessageBox.Show("Detay için çekici satırı seçin"); return; }
+            if (!int.TryParse(row["CekiciId"]?.ToString(), out var id)) { MessageBox.Show("Geçersiz çekici"); return; }
+            var win = new CekiciDetayWindow(id) { Owner = Window.GetWindow(this) };
+            win.ShowDialog();
+            LoadData();
+        }
+
+        private void BtnDorseDetay_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgDorseler.SelectedItem is not DataRowView row || row.Row.Table.Columns.Contains("DorseId") == false)
+            { MessageBox.Show("Detay için dorse satırı seçin"); return; }
+            if (!int.TryParse(row["DorseId"]?.ToString(), out var id)) { MessageBox.Show("Geçersiz dorse"); return; }
+            var win = new DorseDetayWindow(id) { Owner = Window.GetWindow(this) };
+            win.ShowDialog();
+            LoadData();
+        }
+
+        private void BtnSoforDetay_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgSoforler.SelectedItem is not DataRowView row || row.Row.Table.Columns.Contains("SoforId") == false)
+            { MessageBox.Show("Detay için personel satırı seçin"); return; }
+            if (!int.TryParse(row["SoforId"]?.ToString(), out var id)) { MessageBox.Show("Geçersiz personel"); return; }
+            var win = new PersonelDetayWindow(id) { Owner = Window.GetWindow(this) };
+            win.ShowDialog();
+            LoadData();
         }
     }
 }
