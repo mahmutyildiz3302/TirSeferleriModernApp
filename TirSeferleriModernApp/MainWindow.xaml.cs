@@ -55,6 +55,7 @@ namespace TirSeferleriModernApp
                 DatabaseService.CheckAndCreateOrUpdateSeferlerTablosu();
                 DatabaseService.CheckAndCreateOrUpdateGiderlerTablosu();
                 DatabaseService.CheckAndCreateOrUpdateKarHesapTablosu();
+                DatabaseService.CheckAndCreateOrUpdateYakitGiderTablosu();
 
                 var databaseService = new DatabaseService(dbFile);
                 databaseService.Initialize();

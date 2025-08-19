@@ -205,12 +205,12 @@ namespace TirSeferleriModernApp.ViewModels
             // Toggle mantığı: aynı menüye tekrar basılırsa kapat
             if (AktifAltMenu == "💸 Giderler")
             {
-                AktifAltMenu = null; // Alt menü kapansın
+                AktifAltMenu = null;
                 StatusText = "Giderler alt menü kapatıldı.";
                 return;
             }
             AktifAltMenu = "💸 Giderler";
-            CurrentContent = new GiderlerView();
+            CurrentContent = new YakitGiderView();
             StatusText = "Giderler açıldı.";
         }
 

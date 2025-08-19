@@ -819,5 +819,151 @@ WHERE f.SoforId IS NULL;";
             }
             return inserted;
         }
+
+        public static void CheckAndCreateOrUpdateYakitGiderTablosu()
+        {
+            try
+            {
+                EnsureDatabaseFileStatic();
+                string createScript = @"CREATE TABLE IF NOT EXISTS YakitGider (
+                    YakitId INTEGER PRIMARY KEY AUTOINCREMENT,
+                    CekiciId INTEGER,
+                    Plaka TEXT,
+                    Tarih TEXT NOT NULL,
+                    Istasyon TEXT,
+                    Litre REAL,
+                    BirimFiyat REAL,
+                    Tutar REAL,
+                    Km INTEGER,
+                    Aciklama TEXT
+                );";
+                string[] requiredColumns = [
+                    "CekiciId INTEGER",
+                    "Plaka TEXT",
+                    "Tarih TEXT",
+                    "Istasyon TEXT",
+                    "Litre REAL",
+                    "BirimFiyat REAL",
+                    "Tutar REAL",
+                    "Km INTEGER",
+                    "Aciklama TEXT"
+                ];
+                EnsureTable("YakitGider", createScript, requiredColumns);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] CheckAndCreateOrUpdateYakitGiderTablosu hata: {ex.Message}");
+            }
+        }
+
+        public static int YakitEkle(YakitGider y)
+        {
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = @"INSERT INTO YakitGider (CekiciId, Plaka, Tarih, Istasyon, Litre, BirimFiyat, Tutar, Km, Aciklama)
+                                    VALUES (@CekiciId, @Plaka, @Tarih, @Istasyon, @Litre, @BirimFiyat, @Tutar, @Km, @Aciklama);
+                                    SELECT last_insert_rowid();";
+                BindYakitParams(cmd, y);
+                var id = (long)cmd.ExecuteScalar()!;
+                return (int)id;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] YakitEkle hata: {ex.Message}");
+                return 0;
+            }
+        }
+
+        public static void YakitGuncelle(YakitGider y)
+        {
+            if (y.YakitId <= 0) return;
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = @"UPDATE YakitGider SET
+                                    CekiciId=@CekiciId, Plaka=@Plaka, Tarih=@Tarih, Istasyon=@Istasyon,
+                                    Litre=@Litre, BirimFiyat=@BirimFiyat, Tutar=@Tutar, Km=@Km, Aciklama=@Aciklama
+                                   WHERE YakitId=@Id";
+                BindYakitParams(cmd, y);
+                cmd.Parameters.AddWithValue("@Id", y.YakitId);
+                cmd.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] YakitGuncelle hata: {ex.Message}");
+            }
+        }
+
+        public static void YakitSil(int id)
+        {
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "DELETE FROM YakitGider WHERE YakitId=@Id";
+                cmd.Parameters.AddWithValue("@Id", id);
+                cmd.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] YakitSil hata: {ex.Message}");
+            }
+        }
+
+        public static List<YakitGider> GetYakitGiderleri(int? cekiciId)
+        {
+            var list = new List<YakitGider>();
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = cekiciId.HasValue
+                    ? "SELECT YakitId, CekiciId, Plaka, Tarih, Istasyon, Litre, BirimFiyat, Tutar, Km, Aciklama FROM YakitGider WHERE CekiciId=@Id ORDER BY Tarih DESC, YakitId DESC"
+                    : "SELECT YakitId, CekiciId, Plaka, Tarih, Istasyon, Litre, BirimFiyat, Tutar, Km, Aciklama FROM YakitGider ORDER BY Tarih DESC, YakitId DESC";
+                if (cekiciId.HasValue) cmd.Parameters.AddWithValue("@Id", cekiciId.Value);
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    list.Add(new YakitGider
+                    {
+                        YakitId = reader.IsDBNull(0) ? 0 : reader.GetInt32(0),
+                        CekiciId = reader.IsDBNull(1) ? null : reader.GetInt32(1),
+                        Plaka = reader.IsDBNull(2) ? null : reader.GetString(2),
+                        Tarih = DateTime.TryParse(reader.IsDBNull(3) ? null : reader.GetString(3), out var d) ? d : DateTime.Today,
+                        Istasyon = reader.IsDBNull(4) ? null : reader.GetString(4),
+                        Litre = reader.IsDBNull(5) ? 0 : Convert.ToDecimal(reader.GetDouble(5)),
+                        BirimFiyat = reader.IsDBNull(6) ? 0 : Convert.ToDecimal(reader.GetDouble(6)),
+                        Tutar = reader.IsDBNull(7) ? 0 : Convert.ToDecimal(reader.GetDouble(7)),
+                        Km = reader.IsDBNull(8) ? null : reader.GetInt32(8),
+                        Aciklama = reader.IsDBNull(9) ? null : reader.GetString(9)
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] GetYakitGiderleri hata: {ex.Message}");
+            }
+            return list;
+        }
+
+        private static void BindYakitParams(SqliteCommand cmd, YakitGider y)
+        {
+            cmd.Parameters.AddWithValue("@CekiciId", (object?)y.CekiciId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Plaka", (object?)y.Plaka ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Tarih", y.Tarih.ToString("yyyy-MM-dd"));
+            cmd.Parameters.AddWithValue("@Istasyon", (object?)y.Istasyon ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Litre", Convert.ToDouble(y.Litre));
+            cmd.Parameters.AddWithValue("@BirimFiyat", Convert.ToDouble(y.BirimFiyat));
+            cmd.Parameters.AddWithValue("@Tutar", Convert.ToDouble(y.Tutar));
+            cmd.Parameters.AddWithValue("@Km", (object?)y.Km ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Aciklama", (object?)y.Aciklama ?? DBNull.Value);
+        }
     }
 }
