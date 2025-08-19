@@ -69,6 +69,9 @@ namespace TirSeferleriModernApp.Views
                 Tarih = DateTime.Today,
                 VergiTuru = string.Empty,
                 Donem = string.Empty,
+                VarlikTipi = string.Empty,
+                DorseId = null,
+                DorsePlaka = string.Empty,
                 Tutar = list.Sum(x => x.Tutar),
                 Aciklama = "Toplam"
             };
@@ -130,6 +133,9 @@ namespace TirSeferleriModernApp.Views
             g.Tarih = dpTarih.SelectedDate ?? DateTime.Today;
             g.VergiTuru = (cmbVergiTuru.SelectedItem as ComboBoxItem)?.Content?.ToString();
             g.Donem = txtDonem.Text?.Trim();
+            g.VarlikTipi = "Cekici"; // Þimdilik çekici odaklý; ihtiyaç olursa UI’dan seçilebilir
+            g.DorseId = null;
+            g.DorsePlaka = null;
             if (!decimal.TryParse(txtTutar.Text, out var tutar)) tutar = 0;
             g.Tutar = tutar;
             g.Aciklama = txtAciklama.Text?.Trim();
@@ -181,7 +187,7 @@ namespace TirSeferleriModernApp.Views
                     nfi.NumberDecimalSeparator = "."; // csv için nokta
 
                     var sb = new StringBuilder();
-                    sb.AppendLine("Id,Plaka,Tarih,VergiTuru,Donem,Tutar,Aciklama");
+                    sb.AppendLine("Id,Plaka,Tarih,VergiTuru,Donem,VarlikTipi,DorseId,DorsePlaka,Tutar,Aciklama");
                     foreach (var r in _sonListe)
                     {
                         string line = string.Join(",", new[]
@@ -191,6 +197,9 @@ namespace TirSeferleriModernApp.Views
                             r.Tarih.ToString("yyyy-MM-dd"),
                             Quote(r.VergiTuru),
                             Quote(r.Donem),
+                            Quote(r.VarlikTipi),
+                            r.DorseId?.ToString() ?? "",
+                            Quote(r.DorsePlaka),
                             r.Tutar.ToString(nfi),
                             Quote(r.Aciklama)
                         });
@@ -215,7 +224,7 @@ namespace TirSeferleriModernApp.Views
             return s;
         }
 
-        // Basit veri modeli
+        // Veri modeli
         public class VergiArac
         {
             public int VergiId { get; set; }
@@ -224,6 +233,9 @@ namespace TirSeferleriModernApp.Views
             public DateTime Tarih { get; set; }
             public string? VergiTuru { get; set; }
             public string? Donem { get; set; }
+            public string? VarlikTipi { get; set; } // Cekici/Dorse/Genel
+            public int? DorseId { get; set; }
+            public string? DorsePlaka { get; set; }
             public decimal Tutar { get; set; }
             public string? Aciklama { get; set; }
         }
