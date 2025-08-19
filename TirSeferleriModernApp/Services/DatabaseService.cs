@@ -764,5 +764,60 @@ WHERE s.DorseId IS NOT NULL AND d.DorseId IS NULL;";
             }
             return inserted;
         }
+
+        public static int RestoreMissingSoforlerFromSeferler()
+        {
+            int inserted = 0;
+            try
+            {
+                EnsureDatabaseFileStatic();
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+
+                // Seferlerdeki SoforId’lerden Soforler’de olmayanları, en son seferdeki isimle ekle
+                string query = @"
+WITH latest AS (
+    SELECT SoforId, MAX(SeferId) AS MaxSeferId
+    FROM Seferler
+    WHERE SoforId IS NOT NULL
+    GROUP BY SoforId
+), src AS (
+    SELECT s.SoforId, COALESCE(s.SoforAdi, 'Bilinmeyen') AS SoforAdi
+    FROM Seferler s
+    INNER JOIN latest l ON l.SoforId = s.SoforId AND l.MaxSeferId = s.SeferId
+)
+SELECT src.SoforId, src.SoforAdi
+FROM src
+LEFT JOIN Soforler f ON f.SoforId = src.SoforId
+WHERE f.SoforId IS NULL;";
+
+                using var selectCmd = new SqliteCommand(query, connection);
+                using var reader = selectCmd.ExecuteReader();
+                var items = new List<(int soforId, string soforAdi)>();
+                while (reader.Read())
+                {
+                    if (!reader.IsDBNull(0))
+                    {
+                        var id = reader.GetInt32(0);
+                        var adi = reader.IsDBNull(1) ? "Bilinmeyen" : reader.GetString(1);
+                        items.Add((id, adi));
+                    }
+                }
+                reader.Close();
+
+                foreach (var it in items)
+                {
+                    using var ins = new SqliteCommand("INSERT INTO Soforler (SoforId, SoforAdi, Telefon, Arsivli) VALUES (@id, @ad, '', 0)", connection);
+                    ins.Parameters.AddWithValue("@id", it.soforId);
+                    ins.Parameters.AddWithValue("@ad", it.soforAdi);
+                    inserted += ins.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] RestoreMissingSoforlerFromSeferler hata: {ex.Message}");
+            }
+            return inserted;
+        }
     }
 }
