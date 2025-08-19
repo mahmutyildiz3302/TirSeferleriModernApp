@@ -9,27 +9,28 @@
             <!-- Çekici Tanımı -->
             <Border Background="#E8F0FE" BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,0,5">
                 <StackPanel>
-                    <Border BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="10" >
-                    <StackPanel>
-                        <TextBlock Text="Çekici Tanımı" FontSize="18" FontWeight="Bold" Margin="0,0,0,5"/>
+                    <Border BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="10">
+                        <StackPanel>
+                            <TextBlock Text="Çekici Tanımı" FontSize="18" FontWeight="Bold" Margin="0,0,0,5"/>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                 <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
                                     <TextBox x:Name="txtCekiciPlaka" materialDesignControls:HintAssist.Hint="Yeni Çekici Plakası Giriniz" Width="300" Margin="0,0,10,5"/>
-                                    <ComboBox x:Name="cmbDorseId" materialDesignControls:HintAssist.Hint="Takılı Dorse Seçin" Width="300" Margin="0,0,10,5" DisplayMemberPath="Plaka" SelectedValuePath="DorseId" SelectedValue="{Binding SelectedDorseId}"/>
-                                    <ComboBox x:Name="cmbSoforId" materialDesignControls:HintAssist.Hint="Atanan Şoför Seçin" Width="300" Margin="0,0,10,5" DisplayMemberPath="AdSoyad" SelectedValuePath="SoforId" SelectedValue="{Binding SelectedSoforId}"/>
+                                    <ComboBox x:Name="cmbDorseId" materialDesignControls:HintAssist.Hint="Takılı Dorse Seçin" Width="300" Margin="0,0,10,5" DisplayMemberPath="Plaka" SelectedValuePath="DorseId"/>
+                                    <ComboBox x:Name="cmbSoforId" materialDesignControls:HintAssist.Hint="Atanan Şoför Seçin" Width="300" Margin="0,0,10,5" DisplayMemberPath="SoforAdi" SelectedValuePath="SoforId"/>
                                 </StackPanel>
                                 <StackPanel Orientation="Vertical" HorizontalAlignment="Center">
                                     <CheckBox x:Name="chkAktifMi" Content="Araç aktif çalışıyor mu?" Margin="0,0,0,10"/>
                                 </StackPanel>
                             </StackPanel>
-                            <!-- Cekici Kaydet / Sil / Eksikleri Düzelt Butonları -->
+                            <!-- Çekici Butonları -->
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                 <Button Content="Güncelle" Width="120" Margin="0,0,10,0" Style="{StaticResource MaterialDesignFlatButton}" BorderBrush="Gray" BorderThickness="1" Click="BtnCekiciGuncelle_Click"/>
                                 <Button Content="Kaydet" Width="120" Margin="0,0,10,0" Style="{StaticResource MaterialDesignFlatButton}" BorderBrush="Gray" BorderThickness="1" Click="BtnCekiciKaydet_Click"/>
                                 <Button Content="Sil" Width="120" Margin="0,0,10,0" Style="{StaticResource MaterialDesignFlatButton}" BorderBrush="Gray" BorderThickness="1" Click="Sil_Click"/>
+                                <Button Content="Arşiv" Width="120" Style="{StaticResource MaterialDesignFlatButton}" BorderBrush="Gray" BorderThickness="1" Click="BtnCekiciArsiv_Click"/>
                                 <Button Content="Eksikleri Düzelt" Width="140" Style="{StaticResource MaterialDesignFlatButton}" BorderBrush="Gray" BorderThickness="1" Click="BtnCekiciEksikleriniDuzelt_Click"/>
                             </StackPanel>
-                    </StackPanel>
+                        </StackPanel>
                     </Border>
                     <DataGrid x:Name="dgCekiciler" AutoGenerateColumns="True" IsReadOnly="True" Margin="0,10,0,0" Background="White"/>
                 </StackPanel>
@@ -38,18 +39,17 @@
             <!-- Dorse Tanımı -->
             <Border Background="#E8F0FE" BorderBrush="Gray" BorderThickness="1" Padding="10" Margin="0,0,0,5">
                 <StackPanel>
-                    <Border BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="10" >
+                    <Border BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="10">
                         <StackPanel>
-                            <StackPanel>
-                                <TextBlock Text="Dorse Tanımı" FontSize="18" FontWeight="Bold" Margin="0,0,0,5"/>
-                                <TextBox x:Name="txtDorsePlaka" materialDesignControls:HintAssist.Hint="Yeni Dorse Plakası Giriniz" Width="300" Margin="0,0,0,5"/>
-
-                                <!-- Dorse Kaydet ve Sil Butonları -->
-                                <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
-                                    <Button Content="Güncelle" Width="120" Margin="0,0,10,0" Style="{StaticResource MaterialDesignFlatButton}" BorderBrush="Gray" BorderThickness="1" Click="BtnDorseGuncelle_Click"/>
-                                    <Button Content="Kaydet" Width="120" Margin="0,0,10,0" Style="{StaticResource MaterialDesignFlatButton}" BorderBrush="Gray" BorderThickness="1" Click="BtnDorseKaydet_Click"/>
-                                    <Button Content="Sil" Width="120" Margin="0,0,0,0" Style="{StaticResource MaterialDesignFlatButton}" BorderBrush="Gray" BorderThickness="1" Click="Sil_Click"/>
-                                </StackPanel>
+                            <TextBlock Text="Dorse Tanımı" FontSize="18" FontWeight="Bold" Margin="0,0,0,5"/>
+                            <TextBox x:Name="txtDorsePlaka" materialDesignControls:HintAssist.Hint="Yeni Dorse Plakası Giriniz" Width="300" Margin="0,0,0,5"/>
+                            <!-- Dorse Butonları -->
+                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                <Button Content="Güncelle" Width="120" Margin="0,0,10,0" Style="{StaticResource MaterialDesignFlatButton}" BorderBrush="Gray" BorderThickness="1" Click="BtnDorseGuncelle_Click"/>
+                                <Button Content="Kaydet" Width="120" Margin="0,0,10,0" Style="{StaticResource MaterialDesignFlatButton}" BorderBrush="Gray" BorderThickness="1" Click="BtnDorseKaydet_Click"/>
+                                <Button Content="Sil" Width="120" Margin="0,0,10,0" Style="{StaticResource MaterialDesignFlatButton}" BorderBrush="Gray" BorderThickness="1" Click="Sil_Click"/>
+                                <Button Content="Arşiv" Width="120" Style="{StaticResource MaterialDesignFlatButton}" BorderBrush="Gray" BorderThickness="1" Click="BtnDorseArsiv_Click"/>
+                                <Button Content="Eksikleri Düzelt" Width="140" Style="{StaticResource MaterialDesignFlatButton}" BorderBrush="Gray" BorderThickness="1" Click="BtnDorseEksikleriniDuzelt_Click"/>
                             </StackPanel>
                         </StackPanel>
                     </Border>
@@ -64,21 +64,18 @@
                         <StackPanel>
                             <TextBlock Text="Şoför Tanımı" FontSize="18" FontWeight="Bold" Margin="0,0,0,5"/>
                             <TextBox x:Name="txtSoforAd" materialDesignControls:HintAssist.Hint="Yeni Şoför Adı Giriniz" Width="300" Margin="0,0,0,5"/>
-
-                            <!-- Şöför Kaydet / Sil / Arşiv Butonları -->
+                            <!-- Şoför Butonları -->
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                 <Button Content="Güncelle" Width="120" Margin="0,0,10,0" Style="{StaticResource MaterialDesignFlatButton}" BorderBrush="Gray" BorderThickness="1" Click="BtnSoforGuncelle_Click"/>
                                 <Button Content="Kaydet" Width="120" Margin="0,0,10,0" Style="{StaticResource MaterialDesignFlatButton}" BorderBrush="Gray" BorderThickness="1" Click="BtnSoforKaydet_Click"/>
                                 <Button Content="Sil" Width="120" Margin="0,0,10,0" Style="{StaticResource MaterialDesignFlatButton}" BorderBrush="Gray" BorderThickness="1" Click="Sil_Click"/>
                                 <Button x:Name="btnSoforArsiv" Content="Arşiv" Width="120" Style="{StaticResource MaterialDesignFlatButton}" BorderBrush="Gray" BorderThickness="1" Click="BtnSoforArsiv_Click"/>
                             </StackPanel>
-                         </StackPanel>
+                        </StackPanel>
                     </Border>
                     <DataGrid x:Name="dgSoforler" AutoGenerateColumns="True" IsReadOnly="True" Margin="0,10,0,0" Background="White"/>
                 </StackPanel>
             </Border>
-            
-            
         </StackPanel>
     </ScrollViewer>
 </UserControl>

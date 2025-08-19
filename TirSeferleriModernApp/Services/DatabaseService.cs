@@ -76,6 +76,8 @@ namespace TirSeferleriModernApp.Services
 
             // Soforler tablosunda Arsivli kolonu olduğundan emin ol
             EnsureSoforlerArsivliColumn();
+            EnsureCekicilerArsivliColumn();
+            EnsureDorselerArsivliColumn();
         }
 
         private void EnsureDatabaseFile()
@@ -181,6 +183,68 @@ namespace TirSeferleriModernApp.Services
             }
         }
 
+        public static void EnsureCekicilerArsivliColumn()
+        {
+            try
+            {
+                EnsureDatabaseFileStatic();
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                bool exists = false;
+                using (var cmd = connection.CreateCommand())
+                {
+                    cmd.CommandText = "PRAGMA table_info(Cekiciler);";
+                    using var reader = cmd.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        if (string.Equals(reader.GetString(1), "Arsivli", StringComparison.OrdinalIgnoreCase))
+                        { exists = true; break; }
+                    }
+                }
+                if (!exists)
+                {
+                    using var alter = connection.CreateCommand();
+                    alter.CommandText = "ALTER TABLE Cekiciler ADD COLUMN Arsivli INTEGER DEFAULT 0;";
+                    alter.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] EnsureCekicilerArsivliColumn hata: {ex.Message}");
+            }
+        }
+
+        public static void EnsureDorselerArsivliColumn()
+        {
+            try
+            {
+                EnsureDatabaseFileStatic();
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                bool exists = false;
+                using (var cmd = connection.CreateCommand())
+                {
+                    cmd.CommandText = "PRAGMA table_info(Dorseler);";
+                    using var reader = cmd.ExecuteReader();
+                    while (reader.Read())
+                    {
+                        if (string.Equals(reader.GetString(1), "Arsivli", StringComparison.OrdinalIgnoreCase))
+                        { exists = true; break; }
+                    }
+                }
+                if (!exists)
+                {
+                    using var alter = connection.CreateCommand();
+                    alter.CommandText = "ALTER TABLE Dorseler ADD COLUMN Arsivli INTEGER DEFAULT 0;";
+                    alter.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] EnsureDorselerArsivliColumn hata: {ex.Message}");
+            }
+        }
+
         public static int GetSeferCountBySoforId(int soforId)
         {
             try
@@ -196,6 +260,42 @@ namespace TirSeferleriModernApp.Services
             catch (Exception ex)
             {
                 Debug.WriteLine($"[DatabaseService] GetSeferCountBySoforId hata: {ex.Message}");
+                return 0;
+            }
+        }
+
+        public static int GetSeferCountByCekiciId(int cekiciId)
+        {
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "SELECT COUNT(1) FROM Seferler WHERE CekiciId = @id";
+                cmd.Parameters.AddWithValue("@id", cekiciId);
+                return Convert.ToInt32(cmd.ExecuteScalar());
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] GetSeferCountByCekiciId hata: {ex.Message}");
+                return 0;
+            }
+        }
+
+        public static int GetSeferCountByDorseId(int dorseId)
+        {
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "SELECT COUNT(1) FROM Seferler WHERE DorseId = @id";
+                cmd.Parameters.AddWithValue("@id", dorseId);
+                return Convert.ToInt32(cmd.ExecuteScalar());
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] GetSeferCountByDorseId hata: {ex.Message}");
                 return 0;
             }
         }
@@ -621,6 +721,46 @@ WHERE c.CekiciId IS NULL;";
             catch (Exception ex)
             {
                 Debug.WriteLine($"[DatabaseService] RestoreMissingCekicilerFromSeferler hata: {ex.Message}");
+            }
+            return inserted;
+        }
+
+        public static int RestoreMissingDorselerFromSeferler()
+        {
+            int inserted = 0;
+            try
+            {
+                EnsureDatabaseFileStatic();
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+
+                string query = @"
+SELECT DISTINCT s.DorseId
+FROM Seferler s
+LEFT JOIN Dorseler d ON d.DorseId = s.DorseId
+WHERE s.DorseId IS NOT NULL AND d.DorseId IS NULL;";
+
+                using var selectCmd = new SqliteCommand(query, connection);
+                using var reader = selectCmd.ExecuteReader();
+                var ids = new List<int>();
+                while (reader.Read())
+                {
+                    if (!reader.IsDBNull(0)) ids.Add(reader.GetInt32(0));
+                }
+                reader.Close();
+
+                foreach (var id in ids)
+                {
+                    using var ins = new SqliteCommand("INSERT INTO Dorseler (DorseId, Plaka, Tip, Arsivli) VALUES (@id, @plaka, @tip, 0)", connection);
+                    ins.Parameters.AddWithValue("@id", id);
+                    ins.Parameters.AddWithValue("@plaka", $"RESTORE-{id}");
+                    ins.Parameters.AddWithValue("@tip", "Unknown");
+                    inserted += ins.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] RestoreMissingDorselerFromSeferler hata: {ex.Message}");
             }
             return inserted;
         }
