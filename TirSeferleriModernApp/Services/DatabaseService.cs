@@ -975,5 +975,150 @@ WHERE f.SoforId IS NULL;";
             cmd.Parameters.AddWithValue("@Km", (object?)y.Km ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@Aciklama", (object?)y.Aciklama ?? DBNull.Value);
         }
+
+        // SanaiGider tablosu ile ilgili eklemeler
+        public static void CheckAndCreateOrUpdateSanaiGiderTablosu()
+        {
+            try
+            {
+                EnsureDatabaseFileStatic();
+                string createScript = @"CREATE TABLE IF NOT EXISTS SanaiGider (
+                    SanaiId INTEGER PRIMARY KEY AUTOINCREMENT,
+                    CekiciId INTEGER,
+                    Plaka TEXT,
+                    Tarih TEXT NOT NULL,
+                    Kalem TEXT,
+                    Tutar REAL,
+                    Km INTEGER,
+                    Aciklama TEXT
+                );";
+                string[] requiredColumns = [
+                    "CekiciId INTEGER",
+                    "Plaka TEXT",
+                    "Tarih TEXT",
+                    "Kalem TEXT",
+                    "Tutar REAL",
+                    "Km INTEGER",
+                    "Aciklama TEXT"
+                ];
+                EnsureTable("SanaiGider", createScript, requiredColumns);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] CheckAndCreateOrUpdateSanaiGiderTablosu hata: {ex.Message}");
+            }
+        }
+
+        public static int SanaiGiderEkle(SanaiGider s)
+        {
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = @"INSERT INTO SanaiGider (CekiciId, Plaka, Tarih, Kalem, Tutar, Km, Aciklama)
+                                    VALUES (@CekiciId, @Plaka, @Tarih, @Kalem, @Tutar, @Km, @Aciklama);
+                                    SELECT last_insert_rowid();";
+                BindSanaiParams(cmd, s);
+                var id = (long)cmd.ExecuteScalar()!;
+                return (int)id;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] SanaiGiderEkle hata: {ex.Message}");
+                return 0;
+            }
+        }
+
+        public static void SanaiGiderGuncelle(SanaiGider s)
+        {
+            if (s.SanaiId <= 0) return;
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = @"UPDATE SanaiGider SET
+                                    CekiciId=@CekiciId, Plaka=@Plaka, Tarih=@Tarih, Kalem=@Kalem,
+                                    Tutar=@Tutar, Km=@Km, Aciklama=@Aciklama
+                                   WHERE SanaiId=@Id";
+                BindSanaiParams(cmd, s);
+                cmd.Parameters.AddWithValue("@Id", s.SanaiId);
+                cmd.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] SanaiGiderGuncelle hata: {ex.Message}");
+            }
+        }
+
+        public static void SanaiGiderSil(int id)
+        {
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "DELETE FROM SanaiGider WHERE SanaiId=@Id";
+                cmd.Parameters.AddWithValue("@Id", id);
+                cmd.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] SanaiGiderSil hata: {ex.Message}");
+            }
+        }
+
+        public static List<SanaiGider> GetSanaiGiderleri(int? cekiciId, DateTime? baslangic, DateTime? bitis)
+        {
+            var list = new List<SanaiGider>();
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                var sql = "SELECT SanaiId, CekiciId, Plaka, Tarih, Kalem, Tutar, Km, Aciklama FROM SanaiGider WHERE 1=1";
+                if (cekiciId.HasValue) sql += " AND CekiciId=@Id";
+                if (baslangic.HasValue) sql += " AND Tarih >= @Bas";
+                if (bitis.HasValue) sql += " AND Tarih <= @Bit";
+                sql += " ORDER BY Tarih DESC, SanaiId DESC";
+                cmd.CommandText = sql;
+                if (cekiciId.HasValue) cmd.Parameters.AddWithValue("@Id", cekiciId.Value);
+                if (baslangic.HasValue) cmd.Parameters.AddWithValue("@Bas", baslangic.Value.ToString("yyyy-MM-dd"));
+                if (bitis.HasValue) cmd.Parameters.AddWithValue("@Bit", bitis.Value.ToString("yyyy-MM-dd"));
+
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    list.Add(new SanaiGider
+                    {
+                        SanaiId = reader.IsDBNull(0) ? 0 : reader.GetInt32(0),
+                        CekiciId = reader.IsDBNull(1) ? null : reader.GetInt32(1),
+                        Plaka = reader.IsDBNull(2) ? null : reader.GetString(2),
+                        Tarih = DateTime.TryParse(reader.IsDBNull(3) ? null : reader.GetString(3), out var d) ? d : DateTime.Today,
+                        Kalem = reader.IsDBNull(4) ? null : reader.GetString(4),
+                        Tutar = reader.IsDBNull(5) ? 0 : Convert.ToDecimal(reader.GetDouble(5)),
+                        Km = reader.IsDBNull(6) ? null : reader.GetInt32(6),
+                        Aciklama = reader.IsDBNull(7) ? null : reader.GetString(7)
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] GetSanaiGiderleri hata: {ex.Message}");
+            }
+            return list;
+        }
+
+        private static void BindSanaiParams(SqliteCommand cmd, SanaiGider s)
+        {
+            cmd.Parameters.AddWithValue("@CekiciId", (object?)s.CekiciId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Plaka", (object?)s.Plaka ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Tarih", s.Tarih.ToString("yyyy-MM-dd"));
+            cmd.Parameters.AddWithValue("@Kalem", (object?)s.Kalem ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Tutar", Convert.ToDouble(s.Tutar));
+            cmd.Parameters.AddWithValue("@Km", (object?)s.Km ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Aciklama", (object?)s.Aciklama ?? DBNull.Value);
+        }
     }
 }
