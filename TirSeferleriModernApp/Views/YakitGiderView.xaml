@@ -89,6 +89,17 @@
                     <DataGrid x:Name="dgYakitHeader" AutoGenerateColumns="False" IsReadOnly="True"
                               HeadersVisibility="Column" CanUserSortColumns="False" CanUserResizeRows="False" CanUserAddRows="False"
                               AlternatingRowBackground="#F7F9FC" RowHeight="34" SelectionMode="Single">
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="FontWeight" Value="Normal"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Aciklama}" Value="Toplam">
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                        <Setter Property="Background" Value="#FFFDE7"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.RowStyle>
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Id" Binding="{Binding YakitId}" Width="60"/>
                             <DataGridTextColumn Header="Plaka" Binding="{Binding Plaka}" Width="100"/>
@@ -108,6 +119,17 @@
                     <DataGrid x:Name="dgYakitBody" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="None"
                               MouseDoubleClick="dgYakit_MouseDoubleClick"
                               AlternatingRowBackground="#F7F9FC" RowHeight="34">
+                        <DataGrid.RowStyle>
+                            <Style TargetType="DataGridRow">
+                                <Setter Property="FontWeight" Value="Normal"/>
+                                <Style.Triggers>
+                                    <DataTrigger Binding="{Binding Aciklama}" Value="Toplam">
+                                        <Setter Property="FontWeight" Value="Bold"/>
+                                        <Setter Property="Background" Value="#FFFDE7"/>
+                                    </DataTrigger>
+                                </Style.Triggers>
+                            </Style>
+                        </DataGrid.RowStyle>
                         <DataGrid.Columns>
                             <DataGridTextColumn Binding="{Binding YakitId}" Width="60"/>
                             <DataGridTextColumn Binding="{Binding Plaka}" Width="100"/>
