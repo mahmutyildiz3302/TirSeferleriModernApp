@@ -108,6 +108,7 @@ namespace TirSeferleriModernApp.ViewModels
         public ICommand BtnSanaiCommand   { get; }
         public ICommand BtnGenelCommand   { get; }
         public ICommand BtnVergilerCommand { get; }
+        public ICommand BtnPersonelCommand { get; }
 
         public MainViewModel() : this(new SecimTakibi(), "TirSeferleri.db")
         {
@@ -138,6 +139,7 @@ namespace TirSeferleriModernApp.ViewModels
             BtnSanaiCommand    = new RelayCommand(() => CurrentContent = new SanaiGiderView());
             BtnGenelCommand    = new RelayCommand(() => CurrentContent = new GenelGiderView());
             BtnVergilerCommand = new RelayCommand(() => CurrentContent = new VergilerView());
+            BtnPersonelCommand = new RelayCommand(() => CurrentContent = new PersonelGiderView());
             
             Trace.WriteLine("[MainViewModel.cs:28] ViewModel oluşturuldu.");
         }

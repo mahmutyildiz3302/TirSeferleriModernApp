@@ -80,6 +80,7 @@ namespace TirSeferleriModernApp.Services
             EnsureDorselerArsivliColumn();
 
             CheckAndCreateOrUpdateGenelGiderTablosu();
+            CheckAndCreateOrUpdatePersonelGiderTablosu();
         }
 
         private void EnsureDatabaseFile()
@@ -1255,6 +1256,146 @@ WHERE f.SoforId IS NULL;";
             cmd.Parameters.AddWithValue("@CekiciId", (object?)g.CekiciId ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@Plaka", (object?)g.Plaka ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@Tarih", g.Tarih.ToString("yyyy-MM-dd"));
+            cmd.Parameters.AddWithValue("@Tutar", Convert.ToDouble(g.Tutar));
+            cmd.Parameters.AddWithValue("@Aciklama", (object?)g.Aciklama ?? DBNull.Value);
+        }
+
+        public static void CheckAndCreateOrUpdatePersonelGiderTablosu()
+        {
+            try
+            {
+                EnsureDatabaseFileStatic();
+                string createScript = @"CREATE TABLE IF NOT EXISTS PersonelGider (
+                    PersonelGiderId INTEGER PRIMARY KEY AUTOINCREMENT,
+                    CekiciId INTEGER,
+                    Plaka TEXT,
+                    Tarih TEXT NOT NULL,
+                    PersonelAdi TEXT,
+                    Tutar REAL,
+                    Aciklama TEXT
+                );";
+                string[] requiredColumns = [
+                    "CekiciId INTEGER",
+                    "Plaka TEXT",
+                    "Tarih TEXT",
+                    "PersonelAdi TEXT",
+                    "Tutar REAL",
+                    "Aciklama TEXT"
+                ];
+                EnsureTable("PersonelGider", createScript, requiredColumns);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] CheckAndCreateOrUpdatePersonelGiderTablosu hata: {ex.Message}");
+            }
+        }
+
+        public static int PersonelGiderEkle(PersonelGider g)
+        {
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = @"INSERT INTO PersonelGider (CekiciId, Plaka, Tarih, PersonelAdi, Tutar, Aciklama)
+                                    VALUES (@CekiciId, @Plaka, @Tarih, @PersonelAdi, @Tutar, @Aciklama);
+                                    SELECT last_insert_rowid();";
+                BindPersonelParams(cmd, g);
+                var id = (long)cmd.ExecuteScalar()!;
+                return (int)id;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] PersonelGiderEkle hata: {ex.Message}");
+                return 0;
+            }
+        }
+
+        public static void PersonelGiderGuncelle(PersonelGider g)
+        {
+            if (g.PersonelGiderId <= 0) return;
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = @"UPDATE PersonelGider SET
+                                    CekiciId=@CekiciId, Plaka=@Plaka, Tarih=@Tarih,
+                                    PersonelAdi=@PersonelAdi, Tutar=@Tutar, Aciklama=@Aciklama
+                                   WHERE PersonelGiderId=@Id";
+                BindPersonelParams(cmd, g);
+                cmd.Parameters.AddWithValue("@Id", g.PersonelGiderId);
+                cmd.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] PersonelGiderGuncelle hata: {ex.Message}");
+            }
+        }
+
+        public static void PersonelGiderSil(int id)
+        {
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "DELETE FROM PersonelGider WHERE PersonelGiderId=@Id";
+                cmd.Parameters.AddWithValue("@Id", id);
+                cmd.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] PersonelGiderSil hata: {ex.Message}");
+            }
+        }
+
+        public static List<PersonelGider> GetPersonelGiderleri(int? cekiciId, DateTime? baslangic, DateTime? bitis)
+        {
+            var list = new List<PersonelGider>();
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                var sql = "SELECT PersonelGiderId, CekiciId, Plaka, Tarih, PersonelAdi, Tutar, Aciklama FROM PersonelGider WHERE 1=1";
+                if (cekiciId.HasValue) sql += " AND CekiciId=@Id";
+                if (baslangic.HasValue) sql += " AND Tarih >= @Bas";
+                if (bitis.HasValue) sql += " AND Tarih <= @Bit";
+                sql += " ORDER BY Tarih DESC, PersonelGiderId DESC";
+                cmd.CommandText = sql;
+                if (cekiciId.HasValue) cmd.Parameters.AddWithValue("@Id", cekiciId.Value);
+                if (baslangic.HasValue) cmd.Parameters.AddWithValue("@Bas", baslangic.Value.ToString("yyyy-MM-dd"));
+                if (bitis.HasValue) cmd.Parameters.AddWithValue("@Bit", bitis.Value.ToString("yyyy-MM-dd"));
+
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    list.Add(new PersonelGider
+                    {
+                        PersonelGiderId = reader.IsDBNull(0) ? 0 : reader.GetInt32(0),
+                        CekiciId = reader.IsDBNull(1) ? null : reader.GetInt32(1),
+                        Plaka = reader.IsDBNull(2) ? null : reader.GetString(2),
+                        Tarih = DateTime.TryParse(reader.IsDBNull(3) ? null : reader.GetString(3), out var d) ? d : DateTime.Today,
+                        PersonelAdi = reader.IsDBNull(4) ? null : reader.GetString(4),
+                        Tutar = reader.IsDBNull(5) ? 0 : Convert.ToDecimal(reader.GetDouble(5)),
+                        Aciklama = reader.IsDBNull(6) ? null : reader.GetString(6)
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] GetPersonelGiderleri hata: {ex.Message}");
+            }
+            return list;
+        }
+
+        private static void BindPersonelParams(SqliteCommand cmd, PersonelGider g)
+        {
+            cmd.Parameters.AddWithValue("@CekiciId", (object?)g.CekiciId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Plaka", (object?)g.Plaka ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Tarih", g.Tarih.ToString("yyyy-MM-dd"));
+            cmd.Parameters.AddWithValue("@PersonelAdi", (object?)g.PersonelAdi ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@Tutar", Convert.ToDouble(g.Tutar));
             cmd.Parameters.AddWithValue("@Aciklama", (object?)g.Aciklama ?? DBNull.Value);
         }

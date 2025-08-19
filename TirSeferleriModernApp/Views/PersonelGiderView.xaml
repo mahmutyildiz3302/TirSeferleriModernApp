@@ -1,0 +1,94 @@
+<UserControl x:Class="TirSeferleriModernApp.Views.PersonelGiderView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
+             xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:conv="clr-namespace:TirSeferleriModernApp.Converters"
+             mc:Ignorable="d"
+             d:DesignHeight="600" d:DesignWidth="1000">
+    <Grid Background="White" Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Baslik ve filtre -->
+        <Border Background="#F0F4FF" BorderBrush="#D0D7F2" BorderThickness="0,0,0,1" Padding="10" Grid.Row="0">
+            <DockPanel LastChildFill="False">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" DockPanel.Dock="Left">
+                    <TextBlock Text="Personel Giderleri" FontSize="20" FontWeight="Bold"/>
+                    <TextBlock Text="|" Margin="10,0"/>
+                    <TextBlock Text="Cekici:" VerticalAlignment="Center"/>
+                    <ComboBox x:Name="cmbFiltreCekici" Width="180" DisplayMemberPath="Plaka" SelectedValuePath="CekiciId" Margin="6,0" SelectionChanged="OnFiltreChanged"/>
+                    <TextBlock Text="Bas" Margin="12,0,4,0" VerticalAlignment="Center"/>
+                    <DatePicker x:Name="dpBas" Width="130" SelectedDateChanged="OnFiltreChanged"/>
+                    <TextBlock Text="Bit" Margin="8,0,4,0" VerticalAlignment="Center"/>
+                    <DatePicker x:Name="dpBit" Width="130" SelectedDateChanged="OnFiltreChanged"/>
+                    <Button Content="Tumu" Margin="8,0,0,0" Padding="10,4" Click="BtnFiltreTum_Click"/>
+                </StackPanel>
+                <Button Content="CSV Disa Aktar" Padding="10,4" Margin="8,0,0,0" DockPanel.Dock="Right" Click="BtnCsv_Click"/>
+            </DockPanel>
+        </Border>
+
+        <Grid Grid.Row="1">
+            <Grid.ColumnDefinitions>
+                <ColumnDefinition Width="340"/>
+                <ColumnDefinition Width="*"/>
+            </Grid.ColumnDefinitions>
+
+            <!-- Sol: Form -->
+            <ScrollViewer Grid.Column="0" VerticalScrollBarVisibility="Auto">
+                <StackPanel Margin="10">
+                    <TextBlock Text="Yeni Kayit" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
+                    <TextBlock Text="Cekici"/>
+                    <ComboBox x:Name="cmbCekici" Width="300" DisplayMemberPath="Plaka" SelectedValuePath="CekiciId" Margin="0,2,0,8"/>
+
+                    <TextBlock Text="Tarih"/>
+                    <DatePicker x:Name="dpTarih" Width="300" Margin="0,2,0,8"/>
+
+                    <TextBlock Text="Personel"/>
+                    <TextBox x:Name="txtPersonel" Width="300" Margin="0,2,0,8"/>
+
+                    <TextBlock Text="Tutar"/>
+                    <TextBox x:Name="txtTutar" Width="300" Margin="0,2,0,8"/>
+
+                    <TextBlock Text="Aciklama"/>
+                    <TextBox x:Name="txtAciklama" Width="300" Margin="0,2,0,12"/>
+
+                    <StackPanel Orientation="Horizontal">
+                        <Button Content="Kaydet" Padding="14,6" Margin="0,0,8,0" Click="BtnKaydet_Click"/>
+                        <Button Content="Guncelle" Padding="14,6" Margin="0,0,8,0" Click="BtnGuncelle_Click"/>
+                        <Button Content="Sil" Padding="14,6" Margin="0,0,8,0" Click="BtnSil_Click"/>
+                        <Button Content="Temizle" Padding="14,6" Click="BtnTemizle_Click"/>
+                    </StackPanel>
+                </StackPanel>
+            </ScrollViewer>
+
+            <!-- Sag: Tek DataGrid -->
+            <Border Grid.Column="1" Margin="10,0,0,0" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="6">
+                <DataGrid x:Name="dgPersonel" AutoGenerateColumns="False" IsReadOnly="True" MouseDoubleClick="dgPersonel_MouseDoubleClick"
+                          AlternatingRowBackground="#F7F9FC" RowHeight="34">
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <Setter Property="FontWeight" Value="Normal"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Aciklama}" Value="Toplam">
+                                    <Setter Property="FontWeight" Value="Bold"/>
+                                    <Setter Property="Background" Value="#FFFDE7"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.RowStyle>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Id" Binding="{Binding PersonelGiderId}" Width="60"/>
+                        <DataGridTextColumn Header="Plaka" Binding="{Binding Plaka}" Width="100"/>
+                        <DataGridTextColumn Header="Tarih" Binding="{Binding Tarih, StringFormat=yyyy-MM-dd}" Width="110"/>
+                        <DataGridTextColumn Header="Personel" Binding="{Binding PersonelAdi}" Width="150"/>
+                        <DataGridTextColumn Header="Tutar" Binding="{Binding Tutar, Converter={StaticResource NumericTrConverter}, ConverterParameter=2}" Width="100"/>
+                        <DataGridTextColumn Header="Aciklama" Binding="{Binding Aciklama}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+        </Grid>
+    </Grid>
+</UserControl>
