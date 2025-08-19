@@ -107,7 +107,7 @@ namespace TirSeferleriModernApp.ViewModels
         public ICommand BtnYakitCommand   { get; }
         public ICommand BtnSanaiCommand   { get; }
         public ICommand BtnGenelCommand   { get; }
-        public ICommand BtnVergilerCommand { get; }
+        public ICommand BtnVergilerAracCommand { get; }
         public ICommand BtnPersonelCommand { get; }
 
         public MainViewModel() : this(new SecimTakibi(), "TirSeferleri.db")
@@ -135,11 +135,11 @@ namespace TirSeferleriModernApp.ViewModels
             AcTanimlarCommand = new RelayCommand(ExecuteTanimlar);
 
             // Alt gider komutları: ilgili view'ları açar
-            BtnYakitCommand    = new RelayCommand(() => CurrentContent = new YakitGiderView());
-            BtnSanaiCommand    = new RelayCommand(() => CurrentContent = new SanaiGiderView());
-            BtnGenelCommand    = new RelayCommand(() => CurrentContent = new GenelGiderView());
-            BtnVergilerCommand = new RelayCommand(() => CurrentContent = new VergilerView());
-            BtnPersonelCommand = new RelayCommand(() => CurrentContent = new PersonelGiderView());
+            BtnYakitCommand      = new RelayCommand(() => CurrentContent = new YakitGiderView());
+            BtnSanaiCommand      = new RelayCommand(() => CurrentContent = new SanaiGiderView());
+            BtnGenelCommand      = new RelayCommand(() => CurrentContent = new GenelGiderView());
+            BtnVergilerAracCommand = new RelayCommand(() => CurrentContent = new VergilerAracView());
+            BtnPersonelCommand   = new RelayCommand(() => CurrentContent = new PersonelGiderView());
             
             Trace.WriteLine("[MainViewModel.cs:28] ViewModel oluşturuldu.");
         }

@@ -5,6 +5,7 @@ using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
 using TirSeferleriModernApp.Models; // Sefer sınıfının bulunduğu namespace'i ekleyin
+using static TirSeferleriModernApp.Views.VergilerAracView; // VergiArac modelini kullanmak için
 
 namespace TirSeferleriModernApp.Services
 {
@@ -81,6 +82,7 @@ namespace TirSeferleriModernApp.Services
 
             CheckAndCreateOrUpdateGenelGiderTablosu();
             CheckAndCreateOrUpdatePersonelGiderTablosu();
+            CheckAndCreateOrUpdateVergiAracTablosu();
         }
 
         private void EnsureDatabaseFile()
@@ -1411,6 +1413,150 @@ WHERE f.SoforId IS NULL;";
             cmd.Parameters.AddWithValue("@VergiTuru", (object?)g.VergiTuru ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@Tutar", Convert.ToDouble(g.Tutar));
             cmd.Parameters.AddWithValue("@Aciklama", (object?)g.Aciklama ?? DBNull.Value);
+        }
+
+        public static void CheckAndCreateOrUpdateVergiAracTablosu()
+        {
+            try
+            {
+                EnsureDatabaseFileStatic();
+                string createScript = @"CREATE TABLE IF NOT EXISTS VergiArac (
+                    VergiId INTEGER PRIMARY KEY AUTOINCREMENT,
+                    CekiciId INTEGER,
+                    Plaka TEXT,
+                    Tarih TEXT NOT NULL,
+                    VergiTuru TEXT,
+                    Donem TEXT,
+                    Tutar REAL,
+                    Aciklama TEXT
+                );";
+                string[] requiredColumns = [
+                    "CekiciId INTEGER",
+                    "Plaka TEXT",
+                    "Tarih TEXT",
+                    "VergiTuru TEXT",
+                    "Donem TEXT",
+                    "Tutar REAL",
+                    "Aciklama TEXT"
+                ];
+                EnsureTable("VergiArac", createScript, requiredColumns);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] CheckAndCreateOrUpdateVergiAracTablosu hata: {ex.Message}");
+            }
+        }
+
+        public static int VergiAracEkle(VergiArac v)
+        {
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = @"INSERT INTO VergiArac (CekiciId, Plaka, Tarih, VergiTuru, Donem, Tutar, Aciklama)
+                                    VALUES (@CekiciId, @Plaka, @Tarih, @VergiTuru, @Donem, @Tutar, @Aciklama);
+                                    SELECT last_insert_rowid();";
+                BindVergiAracParams(cmd, v);
+                var id = (long)cmd.ExecuteScalar()!;
+                return (int)id;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] VergiAracEkle hata: {ex.Message}");
+                return 0;
+            }
+        }
+
+        public static void VergiAracGuncelle(VergiArac v)
+        {
+            if (v.VergiId <= 0) return;
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = @"UPDATE VergiArac SET
+                                    CekiciId=@CekiciId, Plaka=@Plaka, Tarih=@Tarih, VergiTuru=@VergiTuru, Donem=@Donem,
+                                    Tutar=@Tutar, Aciklama=@Aciklama
+                                   WHERE VergiId=@Id";
+                BindVergiAracParams(cmd, v);
+                cmd.Parameters.AddWithValue("@Id", v.VergiId);
+                cmd.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] VergiAracGuncelle hata: {ex.Message}");
+            }
+        }
+
+        public static void VergiAracSil(int id)
+        {
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "DELETE FROM VergiArac WHERE VergiId=@Id";
+                cmd.Parameters.AddWithValue("@Id", id);
+                cmd.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] VergiAracSil hata: {ex.Message}");
+            }
+        }
+
+        public static List<VergiArac> GetVergiAraclari(int? cekiciId, DateTime? baslangic, DateTime? bitis)
+        {
+            var list = new List<VergiArac>();
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                var sql = "SELECT VergiId, CekiciId, Plaka, Tarih, VergiTuru, Donem, Tutar, Aciklama FROM VergiArac WHERE 1=1";
+                if (cekiciId.HasValue) sql += " AND CekiciId=@Id";
+                if (baslangic.HasValue) sql += " AND Tarih >= @Bas";
+                if (bitis.HasValue) sql += " AND Tarih <= @Bit";
+                sql += " ORDER BY Tarih DESC, VergiId DESC";
+                cmd.CommandText = sql;
+                if (cekiciId.HasValue) cmd.Parameters.AddWithValue("@Id", cekiciId.Value);
+                if (baslangic.HasValue) cmd.Parameters.AddWithValue("@Bas", baslangic.Value.ToString("yyyy-MM-dd"));
+                if (bitis.HasValue) cmd.Parameters.AddWithValue("@Bit", bitis.Value.ToString("yyyy-MM-dd"));
+
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    list.Add(new VergiArac
+                    {
+                        VergiId = reader.IsDBNull(0) ? 0 : reader.GetInt32(0),
+                        CekiciId = reader.IsDBNull(1) ? null : reader.GetInt32(1),
+                        Plaka = reader.IsDBNull(2) ? null : reader.GetString(2),
+                        Tarih = DateTime.TryParse(reader.IsDBNull(3) ? null : reader.GetString(3), out var d) ? d : DateTime.Today,
+                        VergiTuru = reader.IsDBNull(4) ? null : reader.GetString(4),
+                        Donem = reader.IsDBNull(5) ? null : reader.GetString(5),
+                        Tutar = reader.IsDBNull(6) ? 0 : Convert.ToDecimal(reader.GetDouble(6)),
+                        Aciklama = reader.IsDBNull(7) ? null : reader.GetString(7)
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] GetVergiAraclari hata: {ex.Message}");
+            }
+            return list;
+        }
+
+        private static void BindVergiAracParams(SqliteCommand cmd, VergiArac v)
+        {
+            cmd.Parameters.AddWithValue("@CekiciId", (object?)v.CekiciId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Plaka", (object?)v.Plaka ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Tarih", v.Tarih.ToString("yyyy-MM-dd"));
+            cmd.Parameters.AddWithValue("@VergiTuru", (object?)v.VergiTuru ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Donem", (object?)v.Donem ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Tutar", Convert.ToDouble(v.Tutar));
+            cmd.Parameters.AddWithValue("@Aciklama", (object?)v.Aciklama ?? DBNull.Value);
         }
     }
 }
