@@ -296,5 +296,42 @@ namespace TirSeferleriModernApp.Views
             cmd.ExecuteNonQuery();
             LoadData();
         }
+
+        private void dgCekiciler_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (dgCekiciler.SelectedItem is DataRowView row)
+            {
+                txtCekiciPlaka.Text = row["Plaka"]?.ToString() ?? string.Empty;
+                // Sofor/Dorse comboboxları için ID kolonları arşivli/aktif görünüme göre farklı olabilir
+                if (row.Row.Table.Columns.Contains("SoforId") && int.TryParse(row["SoforId"]?.ToString(), out var sid))
+                    cmbSoforId.SelectedValue = sid;
+                else if (row.Row.Table.Columns.Contains("SoforAd"))
+                    cmbSoforId.SelectedIndex = -1; // gösterge amaçlı; isimden geri bağlamak zor olabilir
+
+                if (row.Row.Table.Columns.Contains("DorseId") && int.TryParse(row["DorseId"]?.ToString(), out var did))
+                    cmbDorseId.SelectedValue = did;
+                else if (row.Row.Table.Columns.Contains("DorsePlaka"))
+                    cmbDorseId.SelectedIndex = -1;
+
+                if (row.Row.Table.Columns.Contains("Aktif") && int.TryParse(row["Aktif"]?.ToString(), out var aktif))
+                    chkAktifMi.IsChecked = aktif == 1;
+            }
+        }
+
+        private void dgDorseler_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (dgDorseler.SelectedItem is DataRowView row)
+            {
+                txtDorsePlaka.Text = row["Plaka"]?.ToString() ?? string.Empty;
+            }
+        }
+
+        private void dgSoforler_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if (dgSoforler.SelectedItem is DataRowView row)
+            {
+                txtSoforAd.Text = row["SoforAdi"]?.ToString() ?? string.Empty;
+            }
+        }
     }
 }

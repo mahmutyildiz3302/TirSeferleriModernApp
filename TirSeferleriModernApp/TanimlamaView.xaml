@@ -40,7 +40,7 @@
                     </Border>
 
                     <!-- Sağ: DataGrid -->
-                    <DataGrid Grid.Column="1" x:Name="dgCekiciler" AutoGenerateColumns="True" IsReadOnly="True" Background="White" MinHeight="220" HorizontalAlignment="Stretch">
+                    <DataGrid Grid.Column="1" x:Name="dgCekiciler" AutoGenerateColumns="True" IsReadOnly="True" Background="White" MinHeight="220" HorizontalAlignment="Stretch" MouseDoubleClick="dgCekiciler_MouseDoubleClick">
                         <DataGrid.Columns>
                             <DataGridTemplateColumn x:Name="colCekiciUnarchive" Header="İşlem">
                                 <DataGridTemplateColumn.CellTemplate>
@@ -79,7 +79,7 @@
                     </Border>
 
                     <!-- Sağ: DataGrid -->
-                    <DataGrid Grid.Column="1" x:Name="dgDorseler" AutoGenerateColumns="True" IsReadOnly="True" Background="White" MinHeight="220" HorizontalAlignment="Stretch">
+                    <DataGrid Grid.Column="1" x:Name="dgDorseler" AutoGenerateColumns="True" IsReadOnly="True" Background="White" MinHeight="220" HorizontalAlignment="Stretch" MouseDoubleClick="dgDorseler_MouseDoubleClick">
                         <DataGrid.Columns>
                             <DataGridTemplateColumn x:Name="colDorseUnarchive" Header="İşlem">
                                 <DataGridTemplateColumn.CellTemplate>
@@ -118,7 +118,7 @@
                     </Border>
 
                     <!-- Sağ: DataGrid -->
-                    <DataGrid Grid.Column="1" x:Name="dgSoforler" AutoGenerateColumns="True" IsReadOnly="True" Background="White" MinHeight="220" HorizontalAlignment="Stretch">
+                    <DataGrid Grid.Column="1" x:Name="dgSoforler" AutoGenerateColumns="True" IsReadOnly="True" Background="White" MinHeight="220" HorizontalAlignment="Stretch" MouseDoubleClick="dgSoforler_MouseDoubleClick">
                         <DataGrid.Columns>
                             <DataGridTemplateColumn x:Name="colSoforUnarchive" Header="İşlem">
                                 <DataGridTemplateColumn.CellTemplate>

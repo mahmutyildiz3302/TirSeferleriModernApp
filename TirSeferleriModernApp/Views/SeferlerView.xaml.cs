@@ -13,6 +13,8 @@ using System.Windows.Media.Imaging;
 using System.Windows.Navigation;
 using System.Windows.Shapes;
 using System.Windows.Controls.Primitives;
+using TirSeferleriModernApp.Models;
+using TirSeferleriModernApp.Services;
 
 // bu dosya XAML'in arkasındaki code-behind dosyasıdır. 
 // DataGrid'e sağ tıklanınca açılan sütun görünürlüğü menüsünü (ContextMenu) burada tanımlanır.
@@ -54,6 +56,32 @@ namespace TirSeferleriModernApp.Views
 
             // DataGrid'e ContextMenu'yu ata
             dgSeferler.ContextMenu = contextMenu;
+        }
+
+        // Enter ile hücreyi commit et ve DB'ye yaz
+        private void dgSeferler_PreviewKeyDown(object sender, KeyEventArgs e)
+        {
+            if (e.Key == Key.Enter)
+            {
+                if (dgSeferler.CommitEdit(DataGridEditingUnit.Cell, true))
+                    dgSeferler.CommitEdit(DataGridEditingUnit.Row, true);
+                e.Handled = true;
+            }
+        }
+
+        private void dgSeferler_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+        {
+            if (e.Row?.Item is Sefer sefer && sefer.SeferId > 0)
+            {
+                try
+                {
+                    DatabaseService.SeferGuncelle(sefer);
+                }
+                catch (Exception ex)
+                {
+                    MessageBox.Show($"Güncelleme hatası: {ex.Message}");
+                }
+            }
         }
     }
 }

@@ -103,7 +103,7 @@
                           ItemsSource="{Binding SeferListesi}"
                           AutoGenerateColumns="False"
                           SelectedItem="{Binding SeciliSefer, Mode=TwoWay}"
-                          IsReadOnly="True"
+                          IsReadOnly="False"
                           HeadersVisibility="Column"
                           CanUserAddRows="False"
                           Background="White"
@@ -116,7 +116,9 @@
                           ColumnWidth="SizeToCells"
                           MinColumnWidth="60"
                           AlternationCount="1000000"
-                          ContextMenuOpening="dgSeferler_ContextMenuOpening">
+                          ContextMenuOpening="dgSeferler_ContextMenuOpening"
+                          CellEditEnding="dgSeferler_CellEditEnding"
+                          PreviewKeyDown="dgSeferler_PreviewKeyDown">
                     <DataGrid.Resources>
                         <Style TargetType="DataGridColumnHeader">
                             <Setter Property="Background" Value="LightSkyBlue"/>
@@ -150,20 +152,20 @@
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
-                        <DataGridTextColumn Header="Sefer ID" Binding="{Binding SeferId}" Visibility="Collapsed"/>
-                        <DataGridTextColumn Header="Konteyner No" Binding="{Binding KonteynerNo}"/>
-                        <DataGridTextColumn Header="Boyut" Binding="{Binding KonteynerBoyutu}"/>
-                        <DataGridTextColumn Header="Yükleme" Binding="{Binding YuklemeYeri}"/>
-                        <DataGridTextColumn Header="Boşaltma" Binding="{Binding BosaltmaYeri}"/>
-                        <DataGridTextColumn Header="Tarih" Binding="{Binding Tarih, StringFormat=dd.MM.yyyy}"/>
-                        <DataGridTextColumn Header="Saat" Binding="{Binding Saat}"/>
-                        <DataGridTextColumn Header="Fiyat" Binding="{Binding Fiyat}"/>
-                        <DataGridTextColumn Header="Açıklama" Binding="{Binding Aciklama}"/>
-                        <DataGridTextColumn Header="Çekici ID" Binding="{Binding CekiciId}" Visibility="Collapsed"/>
-                        <DataGridTextColumn Header="Çekici Plaka" Binding="{Binding CekiciPlaka}"/>
-                        <DataGridTextColumn Header="Dorse ID" Binding="{Binding DorseId}" Visibility="Collapsed"/>
-                        <DataGridTextColumn Header="Şoför ID" Binding="{Binding SoforId}" Visibility="Collapsed"/>
-                        <DataGridTextColumn Header="Şoför Adı" Binding="{Binding SoforAdi}"/>
+                        <DataGridTextColumn Header="Sefer ID" Binding="{Binding SeferId}" Visibility="Collapsed" IsReadOnly="True"/>
+                        <DataGridTextColumn Header="Konteyner No" Binding="{Binding KonteynerNo, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        <DataGridTextColumn Header="Boyut" Binding="{Binding KonteynerBoyutu, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        <DataGridTextColumn Header="Yükleme" Binding="{Binding YuklemeYeri, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        <DataGridTextColumn Header="Boşaltma" Binding="{Binding BosaltmaYeri, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        <DataGridTextColumn Header="Tarih" Binding="{Binding Tarih, Mode=TwoWay, StringFormat=dd.MM.yyyy}"/>
+                        <DataGridTextColumn Header="Saat" Binding="{Binding Saat, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        <DataGridTextColumn Header="Fiyat" Binding="{Binding Fiyat, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        <DataGridTextColumn Header="Açıklama" Binding="{Binding Aciklama, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        <DataGridTextColumn Header="Çekici ID" Binding="{Binding CekiciId}" Visibility="Collapsed" IsReadOnly="True"/>
+                        <DataGridTextColumn Header="Çekici Plaka" Binding="{Binding CekiciPlaka, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        <DataGridTextColumn Header="Dorse ID" Binding="{Binding DorseId}" Visibility="Collapsed" IsReadOnly="True"/>
+                        <DataGridTextColumn Header="Şoför ID" Binding="{Binding SoforId}" Visibility="Collapsed" IsReadOnly="True"/>
+                        <DataGridTextColumn Header="Şoför Adı" Binding="{Binding SoforAdi, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                     </DataGrid.Columns>
                 </DataGrid>
 
