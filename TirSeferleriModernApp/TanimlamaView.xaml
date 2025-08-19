@@ -10,12 +10,12 @@
             <Border Background="#E8F0FE" BorderBrush="Gray" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,0,5">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="480"/>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
                     <!-- Sol: Form -->
-                    <Border Grid.Column="0" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,10,0">
+                    <Border Grid.Column="0" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,10,0" HorizontalAlignment="Left">
                         <StackPanel>
                             <TextBlock Text="Çekici Tanımı" FontSize="18" FontWeight="Bold" Margin="0,0,0,5"/>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
@@ -40,7 +40,7 @@
                     </Border>
 
                     <!-- Sağ: DataGrid -->
-                    <DataGrid Grid.Column="1" x:Name="dgCekiciler" AutoGenerateColumns="True" IsReadOnly="True" Background="White" MinHeight="220">
+                    <DataGrid Grid.Column="1" x:Name="dgCekiciler" AutoGenerateColumns="True" IsReadOnly="True" Background="White" MinHeight="220" HorizontalAlignment="Stretch">
                         <DataGrid.Columns>
                             <DataGridTemplateColumn x:Name="colCekiciUnarchive" Header="İşlem">
                                 <DataGridTemplateColumn.CellTemplate>
@@ -58,12 +58,12 @@
             <Border Background="#E8F0FE" BorderBrush="Gray" BorderThickness="1" Padding="10" Margin="0,0,0,5">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="480"/>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
                     <!-- Sol: Form -->
-                    <Border Grid.Column="0" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,10,0">
+                    <Border Grid.Column="0" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,10,0" HorizontalAlignment="Left">
                         <StackPanel>
                             <TextBlock Text="Dorse Tanımı" FontSize="18" FontWeight="Bold" Margin="0,0,0,5"/>
                             <TextBox x:Name="txtDorsePlaka" materialDesignControls:HintAssist.Hint="Yeni Dorse Plakası Giriniz" Width="300" Margin="0,0,0,5"/>
@@ -79,7 +79,7 @@
                     </Border>
 
                     <!-- Sağ: DataGrid -->
-                    <DataGrid Grid.Column="1" x:Name="dgDorseler" AutoGenerateColumns="True" IsReadOnly="True" Background="White" MinHeight="220">
+                    <DataGrid Grid.Column="1" x:Name="dgDorseler" AutoGenerateColumns="True" IsReadOnly="True" Background="White" MinHeight="220" HorizontalAlignment="Stretch">
                         <DataGrid.Columns>
                             <DataGridTemplateColumn x:Name="colDorseUnarchive" Header="İşlem">
                                 <DataGridTemplateColumn.CellTemplate>
@@ -97,12 +97,12 @@
             <Border Background="#E8F0FE" BorderBrush="Gray" BorderThickness="1" Padding="10" Margin="0,0,0,10">
                 <Grid>
                     <Grid.ColumnDefinitions>
-                        <ColumnDefinition Width="480"/>
+                        <ColumnDefinition Width="Auto"/>
                         <ColumnDefinition Width="*"/>
                     </Grid.ColumnDefinitions>
 
                     <!-- Sol: Form -->
-                    <Border Grid.Column="0" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,10,0">
+                    <Border Grid.Column="0" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,10,0" HorizontalAlignment="Left">
                         <StackPanel>
                             <TextBlock Text="Şoför Tanımı" FontSize="18" FontWeight="Bold" Margin="0,0,0,5"/>
                             <TextBox x:Name="txtSoforAd" materialDesignControls:HintAssist.Hint="Yeni Şoför Adı Giriniz" Width="300" Margin="0,0,0,5"/>
@@ -118,7 +118,7 @@
                     </Border>
 
                     <!-- Sağ: DataGrid -->
-                    <DataGrid Grid.Column="1" x:Name="dgSoforler" AutoGenerateColumns="True" IsReadOnly="True" Background="White" MinHeight="220">
+                    <DataGrid Grid.Column="1" x:Name="dgSoforler" AutoGenerateColumns="True" IsReadOnly="True" Background="White" MinHeight="220" HorizontalAlignment="Stretch">
                         <DataGrid.Columns>
                             <DataGridTemplateColumn x:Name="colSoforUnarchive" Header="İşlem">
                                 <DataGridTemplateColumn.CellTemplate>
