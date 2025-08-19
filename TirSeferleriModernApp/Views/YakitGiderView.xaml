@@ -3,6 +3,7 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+             xmlns:conv="clr-namespace:TirSeferleriModernApp.Converters"
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="1000">
     <Grid Background="White" Margin="10">
@@ -101,14 +102,56 @@
                             </Style>
                         </DataGrid.RowStyle>
                         <DataGrid.Columns>
-                            <DataGridTextColumn Header="Id" Binding="{Binding YakitId}" Width="60"/>
-                            <DataGridTextColumn Header="Plaka" Binding="{Binding Plaka}" Width="100"/>
-                            <DataGridTextColumn Header="Tarih" Binding="{Binding Tarih, StringFormat=yyyy-MM-dd}" Width="110"/>
-                            <DataGridTextColumn Header="Istasyon" Binding="{Binding Istasyon}" Width="120"/>
+                            <DataGridTextColumn Header="Id">
+                                <DataGridTextColumn.Binding>
+                                    <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                        <Binding Path="YakitId"/>
+                                        <Binding Path="Aciklama"/>
+                                    </MultiBinding>
+                                </DataGridTextColumn.Binding>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="Plaka">
+                                <DataGridTextColumn.Binding>
+                                    <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                        <Binding Path="Plaka"/>
+                                        <Binding Path="Aciklama"/>
+                                    </MultiBinding>
+                                </DataGridTextColumn.Binding>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="Tarih">
+                                <DataGridTextColumn.Binding>
+                                    <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                        <Binding Path="Tarih"/>
+                                        <Binding Path="Aciklama"/>
+                                    </MultiBinding>
+                                </DataGridTextColumn.Binding>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn Header="Istasyon">
+                                <DataGridTextColumn.Binding>
+                                    <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                        <Binding Path="Istasyon"/>
+                                        <Binding Path="Aciklama"/>
+                                    </MultiBinding>
+                                </DataGridTextColumn.Binding>
+                            </DataGridTextColumn>
                             <DataGridTextColumn Header="Litre" Binding="{Binding Litre}" Width="80"/>
-                            <DataGridTextColumn Header="Birim Fiyat" Binding="{Binding BirimFiyat}" Width="100"/>
+                            <DataGridTextColumn Header="Birim Fiyat">
+                                <DataGridTextColumn.Binding>
+                                    <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                        <Binding Path="BirimFiyat"/>
+                                        <Binding Path="Aciklama"/>
+                                    </MultiBinding>
+                                </DataGridTextColumn.Binding>
+                            </DataGridTextColumn>
                             <DataGridTextColumn Header="Tutar" Binding="{Binding Tutar}" Width="100"/>
-                            <DataGridTextColumn Header="KM" Binding="{Binding Km}" Width="90"/>
+                            <DataGridTextColumn Header="KM">
+                                <DataGridTextColumn.Binding>
+                                    <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                        <Binding Path="Km"/>
+                                        <Binding Path="Aciklama"/>
+                                    </MultiBinding>
+                                </DataGridTextColumn.Binding>
+                            </DataGridTextColumn>
                             <DataGridTextColumn Header="Aciklama" Binding="{Binding Aciklama}" Width="*"/>
                         </DataGrid.Columns>
                     </DataGrid>
@@ -131,14 +174,56 @@
                             </Style>
                         </DataGrid.RowStyle>
                         <DataGrid.Columns>
-                            <DataGridTextColumn Binding="{Binding YakitId}" Width="60"/>
-                            <DataGridTextColumn Binding="{Binding Plaka}" Width="100"/>
-                            <DataGridTextColumn Binding="{Binding Tarih, StringFormat=yyyy-MM-dd}" Width="110"/>
-                            <DataGridTextColumn Binding="{Binding Istasyon}" Width="120"/>
+                            <DataGridTextColumn>
+                                <DataGridTextColumn.Binding>
+                                    <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                        <Binding Path="YakitId"/>
+                                        <Binding Path="Aciklama"/>
+                                    </MultiBinding>
+                                </DataGridTextColumn.Binding>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn>
+                                <DataGridTextColumn.Binding>
+                                    <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                        <Binding Path="Plaka"/>
+                                        <Binding Path="Aciklama"/>
+                                    </MultiBinding>
+                                </DataGridTextColumn.Binding>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn>
+                                <DataGridTextColumn.Binding>
+                                    <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                        <Binding Path="Tarih"/>
+                                        <Binding Path="Aciklama"/>
+                                    </MultiBinding>
+                                </DataGridTextColumn.Binding>
+                            </DataGridTextColumn>
+                            <DataGridTextColumn>
+                                <DataGridTextColumn.Binding>
+                                    <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                        <Binding Path="Istasyon"/>
+                                        <Binding Path="Aciklama"/>
+                                    </MultiBinding>
+                                </DataGridTextColumn.Binding>
+                            </DataGridTextColumn>
                             <DataGridTextColumn Binding="{Binding Litre}" Width="80"/>
-                            <DataGridTextColumn Binding="{Binding BirimFiyat}" Width="100"/>
+                            <DataGridTextColumn>
+                                <DataGridTextColumn.Binding>
+                                    <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                        <Binding Path="BirimFiyat"/>
+                                        <Binding Path="Aciklama"/>
+                                    </MultiBinding>
+                                </DataGridTextColumn.Binding>
+                            </DataGridTextColumn>
                             <DataGridTextColumn Binding="{Binding Tutar}" Width="100"/>
-                            <DataGridTextColumn Binding="{Binding Km}" Width="90"/>
+                            <DataGridTextColumn>
+                                <DataGridTextColumn.Binding>
+                                    <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                        <Binding Path="Km"/>
+                                        <Binding Path="Aciklama"/>
+                                    </MultiBinding>
+                                </DataGridTextColumn.Binding>
+                            </DataGridTextColumn>
                             <DataGridTextColumn Binding="{Binding Aciklama}" Width="*"/>
                         </DataGrid.Columns>
                     </DataGrid>
