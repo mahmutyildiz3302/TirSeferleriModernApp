@@ -78,6 +78,8 @@ namespace TirSeferleriModernApp.Services
             EnsureSoforlerArsivliColumn();
             EnsureCekicilerArsivliColumn();
             EnsureDorselerArsivliColumn();
+
+            CheckAndCreateOrUpdateGenelGiderTablosu();
         }
 
         private void EnsureDatabaseFile()
@@ -1119,6 +1121,142 @@ WHERE f.SoforId IS NULL;";
             cmd.Parameters.AddWithValue("@Tutar", Convert.ToDouble(s.Tutar));
             cmd.Parameters.AddWithValue("@Km", (object?)s.Km ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@Aciklama", (object?)s.Aciklama ?? DBNull.Value);
+        }
+
+        public static void CheckAndCreateOrUpdateGenelGiderTablosu()
+        {
+            try
+            {
+                EnsureDatabaseFileStatic();
+                string createScript = @"CREATE TABLE IF NOT EXISTS GenelGider (
+                    GiderId INTEGER PRIMARY KEY AUTOINCREMENT,
+                    CekiciId INTEGER,
+                    Plaka TEXT,
+                    Tarih TEXT NOT NULL,
+                    Tutar REAL,
+                    Aciklama TEXT
+                );";
+                string[] requiredColumns = [
+                    "CekiciId INTEGER",
+                    "Plaka TEXT",
+                    "Tarih TEXT",
+                    "Tutar REAL",
+                    "Aciklama TEXT"
+                ];
+                EnsureTable("GenelGider", createScript, requiredColumns);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] CheckAndCreateOrUpdateGenelGiderTablosu hata: {ex.Message}");
+            }
+        }
+
+        public static int GenelGiderEkle(GenelGider g)
+        {
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = @"INSERT INTO GenelGider (CekiciId, Plaka, Tarih, Tutar, Aciklama)
+                                    VALUES (@CekiciId, @Plaka, @Tarih, @Tutar, @Aciklama);
+                                    SELECT last_insert_rowid();";
+                BindGenelParams(cmd, g);
+                var id = (long)cmd.ExecuteScalar()!;
+                return (int)id;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] GenelGiderEkle hata: {ex.Message}");
+                return 0;
+            }
+        }
+
+        public static void GenelGiderGuncelle(GenelGider g)
+        {
+            if (g.GiderId <= 0) return;
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = @"UPDATE GenelGider SET
+                                    CekiciId=@CekiciId, Plaka=@Plaka, Tarih=@Tarih,
+                                    Tutar=@Tutar, Aciklama=@Aciklama
+                                   WHERE GiderId=@Id";
+                BindGenelParams(cmd, g);
+                cmd.Parameters.AddWithValue("@Id", g.GiderId);
+                cmd.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] GenelGiderGuncelle hata: {ex.Message}");
+            }
+        }
+
+        public static void GenelGiderSil(int id)
+        {
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "DELETE FROM GenelGider WHERE GiderId=@Id";
+                cmd.Parameters.AddWithValue("@Id", id);
+                cmd.ExecuteNonQuery();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] GenelGiderSil hata: {ex.Message}");
+            }
+        }
+
+        public static List<GenelGider> GetGenelGiderleri(int? cekiciId, DateTime? baslangic, DateTime? bitis)
+        {
+            var list = new List<GenelGider>();
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                var sql = "SELECT GiderId, CekiciId, Plaka, Tarih, Tutar, Aciklama FROM GenelGider WHERE 1=1";
+                if (cekiciId.HasValue) sql += " AND CekiciId=@Id";
+                if (baslangic.HasValue) sql += " AND Tarih >= @Bas";
+                if (bitis.HasValue) sql += " AND Tarih <= @Bit";
+                sql += " ORDER BY Tarih DESC, GiderId DESC";
+                cmd.CommandText = sql;
+                if (cekiciId.HasValue) cmd.Parameters.AddWithValue("@Id", cekiciId.Value);
+                if (baslangic.HasValue) cmd.Parameters.AddWithValue("@Bas", baslangic.Value.ToString("yyyy-MM-dd"));
+                if (bitis.HasValue) cmd.Parameters.AddWithValue("@Bit", bitis.Value.ToString("yyyy-MM-dd"));
+
+                using var reader = cmd.ExecuteReader();
+                while (reader.Read())
+                {
+                    list.Add(new GenelGider
+                    {
+                        GiderId = reader.IsDBNull(0) ? 0 : reader.GetInt32(0),
+                        CekiciId = reader.IsDBNull(1) ? null : reader.GetInt32(1),
+                        Plaka = reader.IsDBNull(2) ? null : reader.GetString(2),
+                        Tarih = DateTime.TryParse(reader.IsDBNull(3) ? null : reader.GetString(3), out var d) ? d : DateTime.Today,
+                        Tutar = reader.IsDBNull(4) ? 0 : Convert.ToDecimal(reader.GetDouble(4)),
+                        Aciklama = reader.IsDBNull(5) ? null : reader.GetString(5)
+                    });
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] GetGenelGiderleri hata: {ex.Message}");
+            }
+            return list;
+        }
+
+        private static void BindGenelParams(SqliteCommand cmd, GenelGider g)
+        {
+            cmd.Parameters.AddWithValue("@CekiciId", (object?)g.CekiciId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Plaka", (object?)g.Plaka ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Tarih", g.Tarih.ToString("yyyy-MM-dd"));
+            cmd.Parameters.AddWithValue("@Tutar", Convert.ToDouble(g.Tutar));
+            cmd.Parameters.AddWithValue("@Aciklama", (object?)g.Aciklama ?? DBNull.Value);
         }
     }
 }
