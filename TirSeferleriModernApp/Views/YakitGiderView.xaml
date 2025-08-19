@@ -78,157 +78,76 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- Sag: Liste (iki DataGrid: ust sabit toplam + alt veri+footer) -->
-            <Grid Grid.Column="1" Margin="10,0,0,0">
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="Auto"/>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
-
-                <!-- Ust: baslikli sabit toplam satiri -->
-                <Border Grid.Row="0" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4,4,0,0" Padding="6,0,6,6">
-                    <DataGrid x:Name="dgYakitHeader" AutoGenerateColumns="False" IsReadOnly="True"
-                              HeadersVisibility="Column" CanUserSortColumns="False" CanUserResizeRows="False" CanUserAddRows="False"
-                              AlternatingRowBackground="#F7F9FC" RowHeight="34" SelectionMode="Single">
-                        <DataGrid.RowStyle>
-                            <Style TargetType="DataGridRow">
-                                <Setter Property="FontWeight" Value="Normal"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Aciklama}" Value="Toplam">
-                                        <Setter Property="FontWeight" Value="Bold"/>
-                                        <Setter Property="Background" Value="#FFFDE7"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </DataGrid.RowStyle>
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Id">
-                                <DataGridTextColumn.Binding>
-                                    <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
-                                        <Binding Path="YakitId"/>
-                                        <Binding Path="Aciklama"/>
-                                    </MultiBinding>
-                                </DataGridTextColumn.Binding>
-                            </DataGridTextColumn>
-                            <DataGridTextColumn Header="Plaka">
-                                <DataGridTextColumn.Binding>
-                                    <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
-                                        <Binding Path="Plaka"/>
-                                        <Binding Path="Aciklama"/>
-                                    </MultiBinding>
-                                </DataGridTextColumn.Binding>
-                            </DataGridTextColumn>
-                            <DataGridTextColumn Header="Tarih">
-                                <DataGridTextColumn.Binding>
-                                    <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
-                                        <Binding Path="Tarih"/>
-                                        <Binding Path="Aciklama"/>
-                                    </MultiBinding>
-                                </DataGridTextColumn.Binding>
-                            </DataGridTextColumn>
-                            <DataGridTextColumn Header="Istasyon">
-                                <DataGridTextColumn.Binding>
-                                    <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
-                                        <Binding Path="Istasyon"/>
-                                        <Binding Path="Aciklama"/>
-                                    </MultiBinding>
-                                </DataGridTextColumn.Binding>
-                            </DataGridTextColumn>
-                            <DataGridTextColumn Header="Litre" Binding="{Binding Litre}" Width="80"/>
-                            <DataGridTextColumn Header="Birim Fiyat">
-                                <DataGridTextColumn.Binding>
-                                    <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
-                                        <Binding Path="BirimFiyat"/>
-                                        <Binding Path="Aciklama"/>
-                                    </MultiBinding>
-                                </DataGridTextColumn.Binding>
-                            </DataGridTextColumn>
-                            <DataGridTextColumn Header="Tutar" Binding="{Binding Tutar}" Width="100"/>
-                            <DataGridTextColumn Header="KM">
-                                <DataGridTextColumn.Binding>
-                                    <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
-                                        <Binding Path="Km"/>
-                                        <Binding Path="Aciklama"/>
-                                    </MultiBinding>
-                                </DataGridTextColumn.Binding>
-                            </DataGridTextColumn>
-                            <DataGridTextColumn Header="Aciklama" Binding="{Binding Aciklama}" Width="*"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-                </Border>
-
-                <!-- Alt: veri + hareketli toplam satiri (headers yok) -->
-                <Border Grid.Row="1" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="0,0,4,4" Padding="6">
-                    <DataGrid x:Name="dgYakitBody" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="None"
-                              MouseDoubleClick="dgYakit_MouseDoubleClick"
-                              AlternatingRowBackground="#F7F9FC" RowHeight="34">
-                        <DataGrid.RowStyle>
-                            <Style TargetType="DataGridRow">
-                                <Setter Property="FontWeight" Value="Normal"/>
-                                <Style.Triggers>
-                                    <DataTrigger Binding="{Binding Aciklama}" Value="Toplam">
-                                        <Setter Property="FontWeight" Value="Bold"/>
-                                        <Setter Property="Background" Value="#FFFDE7"/>
-                                    </DataTrigger>
-                                </Style.Triggers>
-                            </Style>
-                        </DataGrid.RowStyle>
-                        <DataGrid.Columns>
-                            <DataGridTextColumn>
-                                <DataGridTextColumn.Binding>
-                                    <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
-                                        <Binding Path="YakitId"/>
-                                        <Binding Path="Aciklama"/>
-                                    </MultiBinding>
-                                </DataGridTextColumn.Binding>
-                            </DataGridTextColumn>
-                            <DataGridTextColumn>
-                                <DataGridTextColumn.Binding>
-                                    <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
-                                        <Binding Path="Plaka"/>
-                                        <Binding Path="Aciklama"/>
-                                    </MultiBinding>
-                                </DataGridTextColumn.Binding>
-                            </DataGridTextColumn>
-                            <DataGridTextColumn>
-                                <DataGridTextColumn.Binding>
-                                    <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
-                                        <Binding Path="Tarih"/>
-                                        <Binding Path="Aciklama"/>
-                                    </MultiBinding>
-                                </DataGridTextColumn.Binding>
-                            </DataGridTextColumn>
-                            <DataGridTextColumn>
-                                <DataGridTextColumn.Binding>
-                                    <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
-                                        <Binding Path="Istasyon"/>
-                                        <Binding Path="Aciklama"/>
-                                    </MultiBinding>
-                                </DataGridTextColumn.Binding>
-                            </DataGridTextColumn>
-                            <DataGridTextColumn Binding="{Binding Litre}" Width="80"/>
-                            <DataGridTextColumn>
-                                <DataGridTextColumn.Binding>
-                                    <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
-                                        <Binding Path="BirimFiyat"/>
-                                        <Binding Path="Aciklama"/>
-                                    </MultiBinding>
-                                </DataGridTextColumn.Binding>
-                            </DataGridTextColumn>
-                            <DataGridTextColumn Binding="{Binding Tutar}" Width="100"/>
-                            <DataGridTextColumn>
-                                <DataGridTextColumn.Binding>
-                                    <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
-                                        <Binding Path="Km"/>
-                                        <Binding Path="Aciklama"/>
-                                    </MultiBinding>
-                                </DataGridTextColumn.Binding>
-                            </DataGridTextColumn>
-                            <DataGridTextColumn Binding="{Binding Aciklama}" Width="*"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-                </Border>
-            </Grid>
+            <!-- Sag: Tek DataGrid -->
+            <Border Grid.Column="1" Margin="10,0,0,0" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="6">
+                <DataGrid x:Name="dgYakit" AutoGenerateColumns="False" IsReadOnly="True" MouseDoubleClick="dgYakit_MouseDoubleClick"
+                          AlternatingRowBackground="#F7F9FC" RowHeight="34">
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <Setter Property="FontWeight" Value="Normal"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Aciklama}" Value="Toplam">
+                                    <Setter Property="FontWeight" Value="Bold"/>
+                                    <Setter Property="Background" Value="#FFFDE7"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.RowStyle>
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Id">
+                            <DataGridTextColumn.Binding>
+                                <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                    <Binding Path="YakitId"/>
+                                    <Binding Path="Aciklama"/>
+                                </MultiBinding>
+                            </DataGridTextColumn.Binding>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Plaka">
+                            <DataGridTextColumn.Binding>
+                                <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                    <Binding Path="Plaka"/>
+                                    <Binding Path="Aciklama"/>
+                                </MultiBinding>
+                            </DataGridTextColumn.Binding>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Tarih">
+                            <DataGridTextColumn.Binding>
+                                <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                    <Binding Path="Tarih"/>
+                                    <Binding Path="Aciklama"/>
+                                </MultiBinding>
+                            </DataGridTextColumn.Binding>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Istasyon">
+                            <DataGridTextColumn.Binding>
+                                <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                    <Binding Path="Istasyon"/>
+                                    <Binding Path="Aciklama"/>
+                                </MultiBinding>
+                            </DataGridTextColumn.Binding>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Litre" Binding="{Binding Litre}" Width="80"/>
+                        <DataGridTextColumn Header="Birim Fiyat">
+                            <DataGridTextColumn.Binding>
+                                <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                    <Binding Path="BirimFiyat"/>
+                                    <Binding Path="Aciklama"/>
+                                </MultiBinding>
+                            </DataGridTextColumn.Binding>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Tutar" Binding="{Binding Tutar}" Width="100"/>
+                        <DataGridTextColumn Header="KM">
+                            <DataGridTextColumn.Binding>
+                                <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                    <Binding Path="Km"/>
+                                    <Binding Path="Aciklama"/>
+                                </MultiBinding>
+                            </DataGridTextColumn.Binding>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Aciklama" Binding="{Binding Aciklama}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
         </Grid>
     </Grid>
 </UserControl>
