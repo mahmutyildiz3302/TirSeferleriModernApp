@@ -45,7 +45,7 @@
                 <StackPanel Margin="10">
                     <TextBlock Text="Yeni Kayit" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
                     <TextBlock Text="Cekici"/>
-                    <ComboBox x:Name="cmbCekici" Width="300" DisplayMemberPath="Plaka" SelectedValuePath="CekiciId" Margin="0,2,0,8" SelectionChanged="cmbCekici_SelectionChanged"/>
+                    <ComboBox x:Name="cmbCekici" Width="300" DisplayMemberPath="Plaka" SelectedValuePath="CekiciId" Margin="0,2,0,8"/>
 
                     <TextBlock Text="Tarih"/>
                     <DatePicker x:Name="dpTarih" Width="300" Margin="0,2,0,8"/>
@@ -77,11 +77,18 @@
                 </StackPanel>
             </ScrollViewer>
 
-            <!-- Sag: Liste -->
-            <DockPanel Grid.Column="1" Margin="10,0,0,0">
-                <Border DockPanel.Dock="Top" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="6">
-                    <DataGrid x:Name="dgYakit" AutoGenerateColumns="False" IsReadOnly="True" MouseDoubleClick="dgYakit_MouseDoubleClick"
-                              AlternatingRowBackground="#F7F9FC" RowHeight="34">
+            <!-- Sag: Liste (iki DataGrid: ust sabit toplam + alt veri+footer) -->
+            <Grid Grid.Column="1" Margin="10,0,0,0">
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="Auto"/>
+                    <RowDefinition Height="*"/>
+                </Grid.RowDefinitions>
+
+                <!-- Ust: baslikli sabit toplam satiri -->
+                <Border Grid.Row="0" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4,4,0,0" Padding="6,0,6,6">
+                    <DataGrid x:Name="dgYakitHeader" AutoGenerateColumns="False" IsReadOnly="True"
+                              HeadersVisibility="Column" CanUserSortColumns="False" CanUserResizeRows="False" CanUserAddRows="False"
+                              AlternatingRowBackground="#F7F9FC" RowHeight="34" SelectionMode="Single">
                         <DataGrid.Columns>
                             <DataGridTextColumn Header="Id" Binding="{Binding YakitId}" Width="60"/>
                             <DataGridTextColumn Header="Plaka" Binding="{Binding Plaka}" Width="100"/>
@@ -95,16 +102,26 @@
                         </DataGrid.Columns>
                     </DataGrid>
                 </Border>
-                <StatusBar DockPanel.Dock="Bottom">
-                    <StatusBarItem>
-                        <TextBlock x:Name="txtToplamLitre" FontWeight="Bold" Text="Toplam Litre: 0,00"/>
-                    </StatusBarItem>
-                    <Separator />
-                    <StatusBarItem>
-                        <TextBlock x:Name="txtToplam" FontWeight="Bold" Text="Toplam: 0,00"/>
-                    </StatusBarItem>
-                </StatusBar>
-            </DockPanel>
+
+                <!-- Alt: veri + hareketli toplam satiri (headers yok) -->
+                <Border Grid.Row="1" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="0,0,4,4" Padding="6">
+                    <DataGrid x:Name="dgYakitBody" AutoGenerateColumns="False" IsReadOnly="True" HeadersVisibility="None"
+                              MouseDoubleClick="dgYakit_MouseDoubleClick"
+                              AlternatingRowBackground="#F7F9FC" RowHeight="34">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Binding="{Binding YakitId}" Width="60"/>
+                            <DataGridTextColumn Binding="{Binding Plaka}" Width="100"/>
+                            <DataGridTextColumn Binding="{Binding Tarih, StringFormat=yyyy-MM-dd}" Width="110"/>
+                            <DataGridTextColumn Binding="{Binding Istasyon}" Width="120"/>
+                            <DataGridTextColumn Binding="{Binding Litre}" Width="80"/>
+                            <DataGridTextColumn Binding="{Binding BirimFiyat}" Width="100"/>
+                            <DataGridTextColumn Binding="{Binding Tutar}" Width="100"/>
+                            <DataGridTextColumn Binding="{Binding Km}" Width="90"/>
+                            <DataGridTextColumn Binding="{Binding Aciklama}" Width="*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+            </Grid>
         </Grid>
     </Grid>
 </UserControl>

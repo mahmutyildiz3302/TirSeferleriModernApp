@@ -52,16 +52,31 @@ namespace TirSeferleriModernApp.Views
             DateTime? bas = dpBas.SelectedDate;
             DateTime? bit = dpBit.SelectedDate;
             _sonListe = DatabaseService.GetYakitGiderleri(cekiciId, bas, bit);
-            dgYakit.ItemsSource = _sonListe;
-            UpdateToplam();
+
+            // alt grid: veri + hareketli toplam satýrý
+            var toplamSatir = BuildToplamSatir(_sonListe);
+            var body = new List<YakitGider>(_sonListe);
+            body.Add(toplamSatir);
+            dgYakitBody.ItemsSource = body;
+
+            // üst grid: yalnýzca sabit toplam satýrý
+            dgYakitHeader.ItemsSource = new List<YakitGider> { toplamSatir };
         }
 
-        private void UpdateToplam()
+        private YakitGider BuildToplamSatir(IEnumerable<YakitGider> list)
         {
-            decimal toplamTutar = _sonListe.Sum(x => x.Tutar);
-            decimal toplamLitre = _sonListe.Sum(x => x.Litre);
-            txtToplam.Text = $"Toplam: {toplamTutar:0.00}";
-            txtToplamLitre.Text = $"Toplam Litre: {toplamLitre:0.00}";
+            return new YakitGider
+            {
+                YakitId = 0,
+                Plaka = "",
+                Tarih = DateTime.Today,
+                Istasyon = "",
+                Litre = list.Sum(x => x.Litre),
+                BirimFiyat = 0,
+                Tutar = list.Sum(x => x.Tutar),
+                Km = null,
+                Aciklama = "Toplam"
+            };
         }
 
         private void BtnKaydet_Click(object sender, RoutedEventArgs e)
@@ -135,8 +150,10 @@ namespace TirSeferleriModernApp.Views
 
         private void dgYakit_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
         {
-            if (dgYakit.SelectedItem is YakitGider row)
+            if ((sender as DataGrid)?.SelectedItem is YakitGider row)
             {
+                // toplam satirina tiklanmissa secme
+                if (row.Aciklama == "Toplam" && row.YakitId == 0) return;
                 _secili = row;
                 var cekiciler = (IEnumerable<CekiciItem>)cmbCekici.ItemsSource;
                 cmbCekici.SelectedItem = cekiciler.FirstOrDefault(x => x.CekiciId == row.CekiciId) ?? cekiciler.FirstOrDefault(x => x.Plaka == row.Plaka);
@@ -183,12 +200,13 @@ namespace TirSeferleriModernApp.Views
                     char decSep = '.';
                     if (cmbOndalik.SelectedItem is ComboBoxItem ci && ci.Tag is string tag && tag == ",")
                         decSep = ',';
-                    var nfi = (NumberFormatInfo)CultureInfo.InvariantCulture.NumberFormat.Clone();
+                    var nfi = (NumberFormatInfo)System.Globalization.CultureInfo.InvariantCulture.NumberFormat.Clone();
                     nfi.NumberDecimalSeparator = decSep.ToString();
 
+                    var exportList = _sonListe; // toplam satir hariç
                     var sb = new StringBuilder();
                     sb.AppendLine("Id,Plaka,Tarih,Istasyon,Litre,BirimFiyat,Tutar,Km,Aciklama");
-                    foreach (var r in _sonListe)
+                    foreach (var r in exportList)
                     {
                         string litre = r.Litre.ToString(nfi);
                         string bf = r.BirimFiyat.ToString(nfi);
@@ -224,11 +242,6 @@ namespace TirSeferleriModernApp.Views
             if (s.Contains(',') || s.Contains('"') || s.Contains('\n'))
                 return '"' + s + '"';
             return s;
-        }
-
-        private void cmbCekici_SelectionChanged(object sender, SelectionChangedEventArgs e)
-        {
-
         }
     }
 }
