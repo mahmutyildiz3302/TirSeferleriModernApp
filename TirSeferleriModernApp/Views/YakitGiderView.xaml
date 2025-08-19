@@ -126,7 +126,14 @@
                                 </MultiBinding>
                             </DataGridTextColumn.Binding>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Header="Litre" Binding="{Binding Litre}" Width="80"/>
+                        <DataGridTextColumn Header="Litre">
+                            <DataGridTextColumn.Binding>
+                                <MultiBinding Converter="{StaticResource ToplamNumberConverter}" ConverterParameter="2">
+                                    <Binding Path="Litre"/>
+                                    <Binding Path="Aciklama"/>
+                                </MultiBinding>
+                            </DataGridTextColumn.Binding>
+                        </DataGridTextColumn>
                         <DataGridTextColumn Header="Birim Fiyat">
                             <DataGridTextColumn.Binding>
                                 <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
@@ -135,7 +142,14 @@
                                 </MultiBinding>
                             </DataGridTextColumn.Binding>
                         </DataGridTextColumn>
-                        <DataGridTextColumn Header="Tutar" Binding="{Binding Tutar}" Width="100"/>
+                        <DataGridTextColumn Header="Tutar">
+                            <DataGridTextColumn.Binding>
+                                <MultiBinding Converter="{StaticResource ToplamNumberConverter}" ConverterParameter="2">
+                                    <Binding Path="Tutar"/>
+                                    <Binding Path="Aciklama"/>
+                                </MultiBinding>
+                            </DataGridTextColumn.Binding>
+                        </DataGridTextColumn>
                         <DataGridTextColumn Header="KM">
                             <DataGridTextColumn.Binding>
                                 <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
