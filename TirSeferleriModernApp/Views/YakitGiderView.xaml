@@ -24,6 +24,11 @@
                     <TextBlock Text="Bit" Margin="8,0,4,0" VerticalAlignment="Center"/>
                     <DatePicker x:Name="dpBit" Width="130" SelectedDateChanged="OnFiltreChanged"/>
                     <Button Content="Tumu" Margin="8,0,0,0" Padding="10,4" Click="BtnFiltreTum_Click"/>
+                    <TextBlock Text="Ondalik:" Margin="12,0,4,0" VerticalAlignment="Center"/>
+                    <ComboBox x:Name="cmbOndalik" Width="130" SelectedIndex="1" ToolTip="CSV icin ondalik ayirici">
+                        <ComboBoxItem Content="Nokta (.)" Tag="."/>
+                        <ComboBoxItem Content="Virgul (,)" Tag=","/>
+                    </ComboBox>
                 </StackPanel>
                 <Button Content="CSV Disa Aktar" Padding="10,4" Margin="8,0,0,0" DockPanel.Dock="Right" Click="BtnCsv_Click"/>
             </DockPanel>
@@ -40,7 +45,7 @@
                 <StackPanel Margin="10">
                     <TextBlock Text="Yeni Kayit" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
                     <TextBlock Text="Cekici"/>
-                    <ComboBox x:Name="cmbCekici" Width="300" DisplayMemberPath="Plaka" SelectedValuePath="CekiciId" Margin="0,2,0,8"/>
+                    <ComboBox x:Name="cmbCekici" Width="300" DisplayMemberPath="Plaka" SelectedValuePath="CekiciId" Margin="0,2,0,8" SelectionChanged="cmbCekici_SelectionChanged"/>
 
                     <TextBlock Text="Tarih"/>
                     <DatePicker x:Name="dpTarih" Width="300" Margin="0,2,0,8"/>
@@ -91,6 +96,10 @@
                     </DataGrid>
                 </Border>
                 <StatusBar DockPanel.Dock="Bottom">
+                    <StatusBarItem>
+                        <TextBlock x:Name="txtToplamLitre" FontWeight="Bold" Text="Toplam Litre: 0,00"/>
+                    </StatusBarItem>
+                    <Separator />
                     <StatusBarItem>
                         <TextBlock x:Name="txtToplam" FontWeight="Bold" Text="Toplam: 0,00"/>
                     </StatusBarItem>

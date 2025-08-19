@@ -1,6 +1,7 @@
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.IO;
 using System.Linq;
 using System.Text;
@@ -57,8 +58,10 @@ namespace TirSeferleriModernApp.Views
 
         private void UpdateToplam()
         {
-            decimal toplam = _sonListe.Sum(x => x.Tutar);
-            txtToplam.Text = $"Toplam: {toplam:0.00}";
+            decimal toplamTutar = _sonListe.Sum(x => x.Tutar);
+            decimal toplamLitre = _sonListe.Sum(x => x.Litre);
+            txtToplam.Text = $"Toplam: {toplamTutar:0.00}";
+            txtToplamLitre.Text = $"Toplam Litre: {toplamLitre:0.00}";
         }
 
         private void BtnKaydet_Click(object sender, RoutedEventArgs e)
@@ -176,19 +179,29 @@ namespace TirSeferleriModernApp.Views
                 };
                 if (sfd.ShowDialog() == true)
                 {
+                    // Kullanýcýnýn seçtiði ondalýk ayracý
+                    char decSep = '.';
+                    if (cmbOndalik.SelectedItem is ComboBoxItem ci && ci.Tag is string tag && tag == ",")
+                        decSep = ',';
+                    var nfi = (NumberFormatInfo)CultureInfo.InvariantCulture.NumberFormat.Clone();
+                    nfi.NumberDecimalSeparator = decSep.ToString();
+
                     var sb = new StringBuilder();
                     sb.AppendLine("Id,Plaka,Tarih,Istasyon,Litre,BirimFiyat,Tutar,Km,Aciklama");
                     foreach (var r in _sonListe)
                     {
+                        string litre = r.Litre.ToString(nfi);
+                        string bf = r.BirimFiyat.ToString(nfi);
+                        string tutar = r.Tutar.ToString(nfi);
                         string line = string.Join(",", new[]
                         {
                             r.YakitId.ToString(),
                             Quote(r.Plaka),
                             r.Tarih.ToString("yyyy-MM-dd"),
                             Quote(r.Istasyon),
-                            r.Litre.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                            r.BirimFiyat.ToString(System.Globalization.CultureInfo.InvariantCulture),
-                            r.Tutar.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                            litre,
+                            bf,
+                            tutar,
                             (r.Km ?? 0).ToString(),
                             Quote(r.Aciklama)
                         });
@@ -211,6 +224,11 @@ namespace TirSeferleriModernApp.Views
             if (s.Contains(',') || s.Contains('"') || s.Contains('\n'))
                 return '"' + s + '"';
             return s;
+        }
+
+        private void cmbCekici_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+
         }
     }
 }
