@@ -4,6 +4,7 @@ using System.Windows;
 using System.Windows.Controls;
 using TirSeferleriModernApp.Services;
 using System.Collections.Generic;
+using System.Linq;
 
 namespace TirSeferleriModernApp.Views
 {
@@ -29,7 +30,27 @@ namespace TirSeferleriModernApp.Views
             LoadData();
             LoadDorseler();
             LoadSoforler();
+            LoadDorseTipleri();
             UpdateUnarchiveColumnsVisibility();
+        }
+
+        private void LoadDorseTipleri()
+        {
+            try
+            {
+                using var conn = new SqliteConnection(ConnectionString); conn.Open();
+                // Mevcut Dorseler tablosundaki Tip alanlarından benzersiz liste
+                using var cmd = new SqliteCommand("SELECT DISTINCT IFNULL(TRIM(Tip),'') FROM Dorseler WHERE IFNULL(TRIM(Tip),'') <> '' ORDER BY 1", conn);
+                using var rdr = cmd.ExecuteReader();
+                var list = new List<string>();
+                while (rdr.Read()) list.Add(rdr.GetString(0));
+                // Varsayılan öneriler
+                var defaults = new[] { "Standard", "Tenteli", "Frigo", "Sal", "Diğer" };
+                foreach (var d in defaults)
+                    if (!list.Contains(d)) list.Add(d);
+                cmbDorseTip.ItemsSource = list;
+            }
+            catch { /* sessiz geç */ }
         }
 
         private void LoadData()
@@ -176,13 +197,13 @@ namespace TirSeferleriModernApp.Views
         private void BtnDorseKaydet_Click(object sender, RoutedEventArgs e)
         {
             var plaka = txtDorsePlaka.Text?.Trim(); if (string.IsNullOrWhiteSpace(plaka)) { MessageBox.Show("Dorse plakası girin"); return; }
-            var tip = (cmbDorseTip.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? cmbDorseTip.Text?.Trim();
+            var tip = cmbDorseTip.Text?.Trim();
             using var conn = new SqliteConnection(ConnectionString); conn.Open();
             using var cmd = new SqliteCommand("INSERT INTO Dorseler (Plaka, Tip, Arsivli) VALUES (@p,@t,0)", conn);
             cmd.Parameters.AddWithValue("@p", plaka);
             cmd.Parameters.AddWithValue("@t", (object?)tip ?? System.DBNull.Value);
             cmd.ExecuteNonQuery();
-            LoadData(); LoadDorseler();
+            LoadData(); LoadDorseler(); LoadDorseTipleri();
         }
 
         private void BtnDorseGuncelle_Click(object sender, RoutedEventArgs e)
@@ -190,14 +211,14 @@ namespace TirSeferleriModernApp.Views
             if (dgDorseler.SelectedItem is not DataRowView row) { MessageBox.Show("Güncellenecek dorsayı listeden seçin"); return; }
             var id = row["DorseId"]?.ToString(); if (string.IsNullOrEmpty(id)) { MessageBox.Show("ID bulunamadı"); return; }
             var plaka = txtDorsePlaka.Text?.Trim(); if (string.IsNullOrWhiteSpace(plaka)) { MessageBox.Show("Dorse plakası girin"); return; }
-            var tip = (cmbDorseTip.SelectedItem as ComboBoxItem)?.Content?.ToString() ?? cmbDorseTip.Text?.Trim();
+            var tip = cmbDorseTip.Text?.Trim();
             using var conn = new SqliteConnection(ConnectionString); conn.Open();
             using var cmd = new SqliteCommand("UPDATE Dorseler SET Plaka=@p, Tip=@t WHERE DorseId=@id", conn);
             cmd.Parameters.AddWithValue("@p", plaka);
             cmd.Parameters.AddWithValue("@t", (object?)tip ?? System.DBNull.Value);
             cmd.Parameters.AddWithValue("@id", id);
             cmd.ExecuteNonQuery();
-            LoadData(); LoadDorseler();
+            LoadData(); LoadDorseler(); LoadDorseTipleri();
         }
 
         private void BtnSoforKaydet_Click(object sender, RoutedEventArgs e)

@@ -67,13 +67,7 @@
                         <StackPanel>
                             <TextBlock Text="Dorse Tanımı" FontSize="18" FontWeight="Bold" Margin="0,0,0,5"/>
                             <TextBox x:Name="txtDorsePlaka" materialDesignControls:HintAssist.Hint="Yeni Dorse Plakası Giriniz" Width="300" Margin="0,0,0,5"/>
-                            <ComboBox x:Name="cmbDorseTip" materialDesignControls:HintAssist.Hint="Dorse Tipi" Width="300" Margin="0,0,0,5" IsEditable="True">
-                                <ComboBoxItem Content="Standard"/>
-                                <ComboBoxItem Content="Tenteli"/>
-                                <ComboBoxItem Content="Frigo"/>
-                                <ComboBoxItem Content="Sal"/>
-                                <ComboBoxItem Content="Diğer"/>
-                            </ComboBox>
+                            <ComboBox x:Name="cmbDorseTip" materialDesignControls:HintAssist.Hint="Dorse Tipi" Width="300" Margin="0,0,0,5" IsEditable="True"/>
                             <!-- Dorse Butonları -->
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
                                 <Button Content="Güncelle" Width="120" Margin="0,0,10,0" Style="{StaticResource MaterialDesignFlatButton}" BorderBrush="Gray" BorderThickness="1" Click="BtnDorseGuncelle_Click"/>
