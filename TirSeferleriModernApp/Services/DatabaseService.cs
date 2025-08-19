@@ -917,6 +917,9 @@ WHERE f.SoforId IS NULL;";
         }
 
         public static List<YakitGider> GetYakitGiderleri(int? cekiciId)
+            => GetYakitGiderleri(cekiciId, null, null);
+
+        public static List<YakitGider> GetYakitGiderleri(int? cekiciId, DateTime? baslangic, DateTime? bitis)
         {
             var list = new List<YakitGider>();
             try
@@ -924,10 +927,17 @@ WHERE f.SoforId IS NULL;";
                 using var connection = new SqliteConnection(ConnectionString);
                 connection.Open();
                 using var cmd = connection.CreateCommand();
-                cmd.CommandText = cekiciId.HasValue
-                    ? "SELECT YakitId, CekiciId, Plaka, Tarih, Istasyon, Litre, BirimFiyat, Tutar, Km, Aciklama FROM YakitGider WHERE CekiciId=@Id ORDER BY Tarih DESC, YakitId DESC"
-                    : "SELECT YakitId, CekiciId, Plaka, Tarih, Istasyon, Litre, BirimFiyat, Tutar, Km, Aciklama FROM YakitGider ORDER BY Tarih DESC, YakitId DESC";
+
+                var sql = "SELECT YakitId, CekiciId, Plaka, Tarih, Istasyon, Litre, BirimFiyat, Tutar, Km, Aciklama FROM YakitGider WHERE 1=1";
+                if (cekiciId.HasValue) sql += " AND CekiciId=@Id";
+                if (baslangic.HasValue) sql += " AND Tarih >= @Bas";
+                if (bitis.HasValue) sql += " AND Tarih <= @Bit";
+                sql += " ORDER BY Tarih DESC, YakitId DESC";
+                cmd.CommandText = sql;
                 if (cekiciId.HasValue) cmd.Parameters.AddWithValue("@Id", cekiciId.Value);
+                if (baslangic.HasValue) cmd.Parameters.AddWithValue("@Bas", baslangic.Value.ToString("yyyy-MM-dd"));
+                if (bitis.HasValue) cmd.Parameters.AddWithValue("@Bit", bitis.Value.ToString("yyyy-MM-dd"));
+
                 using var reader = cmd.ExecuteReader();
                 while (reader.Read())
                 {

@@ -1,7 +1,9 @@
 using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
+using System.Text;
 using System.Windows;
 using System.Windows.Controls;
 using TirSeferleriModernApp.Models;
@@ -13,14 +15,17 @@ namespace TirSeferleriModernApp.Views
     {
         private class CekiciItem { public int CekiciId { get; set; } public string Plaka { get; set; } = string.Empty; }
         private YakitGider? _secili; // seçili kayýt
+        private List<YakitGider> _sonListe = new();
 
         public YakitGiderView()
         {
             InitializeComponent();
             DatabaseService.CheckAndCreateOrUpdateYakitGiderTablosu();
             LoadCekiciler();
-            LoadListe();
             dpTarih.SelectedDate = DateTime.Today;
+            dpBas.SelectedDate = DateTime.Today.AddDays(-30);
+            dpBit.SelectedDate = DateTime.Today;
+            LoadListe();
         }
 
         private void LoadCekiciler()
@@ -43,8 +48,17 @@ namespace TirSeferleriModernApp.Views
         private void LoadListe()
         {
             int? cekiciId = cmbFiltreCekici.SelectedValue as int?;
-            var data = DatabaseService.GetYakitGiderleri(cekiciId);
-            dgYakit.ItemsSource = data;
+            DateTime? bas = dpBas.SelectedDate;
+            DateTime? bit = dpBit.SelectedDate;
+            _sonListe = DatabaseService.GetYakitGiderleri(cekiciId, bas, bit);
+            dgYakit.ItemsSource = _sonListe;
+            UpdateToplam();
+        }
+
+        private void UpdateToplam()
+        {
+            decimal toplam = _sonListe.Sum(x => x.Tutar);
+            txtToplam.Text = $"Toplam: {toplam:0.00}";
         }
 
         private void BtnKaydet_Click(object sender, RoutedEventArgs e)
@@ -121,7 +135,6 @@ namespace TirSeferleriModernApp.Views
             if (dgYakit.SelectedItem is YakitGider row)
             {
                 _secili = row;
-                // form doldur
                 var cekiciler = (IEnumerable<CekiciItem>)cmbCekici.ItemsSource;
                 cmbCekici.SelectedItem = cekiciler.FirstOrDefault(x => x.CekiciId == row.CekiciId) ?? cekiciler.FirstOrDefault(x => x.Plaka == row.Plaka);
                 dpTarih.SelectedDate = row.Tarih;
@@ -142,7 +155,62 @@ namespace TirSeferleriModernApp.Views
                 txtTutar.Text = string.Empty;
         }
 
-        private void cmbFiltreCekici_SelectionChanged(object sender, SelectionChangedEventArgs e) => LoadListe();
-        private void BtnFiltreTum_Click(object sender, RoutedEventArgs e) { cmbFiltreCekici.SelectedIndex = -1; LoadListe(); }
+        private void OnFiltreChanged(object sender, RoutedEventArgs e) => LoadListe();
+
+        private void BtnFiltreTum_Click(object sender, RoutedEventArgs e)
+        {
+            cmbFiltreCekici.SelectedIndex = -1;
+            dpBas.SelectedDate = null;
+            dpBit.SelectedDate = null;
+            LoadListe();
+        }
+
+        private void BtnCsv_Click(object sender, RoutedEventArgs e)
+        {
+            try
+            {
+                var sfd = new Microsoft.Win32.SaveFileDialog
+                {
+                    Filter = "CSV Files (*.csv)|*.csv",
+                    FileName = $"yakit_{DateTime.Now:yyyyMMdd_HHmm}.csv"
+                };
+                if (sfd.ShowDialog() == true)
+                {
+                    var sb = new StringBuilder();
+                    sb.AppendLine("Id,Plaka,Tarih,Istasyon,Litre,BirimFiyat,Tutar,Km,Aciklama");
+                    foreach (var r in _sonListe)
+                    {
+                        string line = string.Join(",", new[]
+                        {
+                            r.YakitId.ToString(),
+                            Quote(r.Plaka),
+                            r.Tarih.ToString("yyyy-MM-dd"),
+                            Quote(r.Istasyon),
+                            r.Litre.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                            r.BirimFiyat.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                            r.Tutar.ToString(System.Globalization.CultureInfo.InvariantCulture),
+                            (r.Km ?? 0).ToString(),
+                            Quote(r.Aciklama)
+                        });
+                        sb.AppendLine(line);
+                    }
+                    File.WriteAllText(sfd.FileName, sb.ToString(), Encoding.UTF8);
+                    MessageBox.Show("CSV oluþturuldu.");
+                }
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show("CSV hatasý: " + ex.Message);
+            }
+        }
+
+        private static string Quote(string? s)
+        {
+            if (string.IsNullOrEmpty(s)) return "";
+            s = s.Replace("\"", "\"\"");
+            if (s.Contains(',') || s.Contains('"') || s.Contains('\n'))
+                return '"' + s + '"';
+            return s;
+        }
     }
 }

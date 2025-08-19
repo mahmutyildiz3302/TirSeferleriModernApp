@@ -13,13 +13,20 @@
 
         <!-- Baslik ve filtre -->
         <Border Background="#F0F4FF" BorderBrush="#D0D7F2" BorderThickness="0,0,0,1" Padding="10" Grid.Row="0">
-            <StackPanel Orientation="Horizontal" VerticalAlignment="Center">
-                <TextBlock Text="Yakit Giderleri" FontSize="20" FontWeight="Bold"/>
-                <TextBlock Text="|" Margin="10,0"/>
-                <TextBlock Text="Cekici:" VerticalAlignment="Center"/>
-                <ComboBox x:Name="cmbFiltreCekici" Width="180" DisplayMemberPath="Plaka" SelectedValuePath="CekiciId" Margin="6,0" SelectionChanged="cmbFiltreCekici_SelectionChanged"/>
-                <Button Content="Tumu" Margin="6,0,0,0" Padding="10,4" Click="BtnFiltreTum_Click"/>
-            </StackPanel>
+            <DockPanel LastChildFill="False">
+                <StackPanel Orientation="Horizontal" VerticalAlignment="Center" DockPanel.Dock="Left">
+                    <TextBlock Text="Yakit Giderleri" FontSize="20" FontWeight="Bold"/>
+                    <TextBlock Text="|" Margin="10,0"/>
+                    <TextBlock Text="Cekici:" VerticalAlignment="Center"/>
+                    <ComboBox x:Name="cmbFiltreCekici" Width="180" DisplayMemberPath="Plaka" SelectedValuePath="CekiciId" Margin="6,0" SelectionChanged="OnFiltreChanged"/>
+                    <TextBlock Text="Bas" Margin="12,0,4,0" VerticalAlignment="Center"/>
+                    <DatePicker x:Name="dpBas" Width="130" SelectedDateChanged="OnFiltreChanged"/>
+                    <TextBlock Text="Bit" Margin="8,0,4,0" VerticalAlignment="Center"/>
+                    <DatePicker x:Name="dpBit" Width="130" SelectedDateChanged="OnFiltreChanged"/>
+                    <Button Content="Tumu" Margin="8,0,0,0" Padding="10,4" Click="BtnFiltreTum_Click"/>
+                </StackPanel>
+                <Button Content="CSV Disa Aktar" Padding="10,4" Margin="8,0,0,0" DockPanel.Dock="Right" Click="BtnCsv_Click"/>
+            </DockPanel>
         </Border>
 
         <Grid Grid.Row="1">
@@ -66,22 +73,29 @@
             </ScrollViewer>
 
             <!-- Sag: Liste -->
-            <Border Grid.Column="1" Margin="10,0,0,0" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="6">
-                <DataGrid x:Name="dgYakit" AutoGenerateColumns="False" IsReadOnly="True" MouseDoubleClick="dgYakit_MouseDoubleClick"
-                          AlternatingRowBackground="#F7F9FC" RowHeight="34">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Id" Binding="{Binding YakitId}" Width="60"/>
-                        <DataGridTextColumn Header="Plaka" Binding="{Binding Plaka}" Width="100"/>
-                        <DataGridTextColumn Header="Tarih" Binding="{Binding Tarih, StringFormat=yyyy-MM-dd}" Width="110"/>
-                        <DataGridTextColumn Header="Istasyon" Binding="{Binding Istasyon}" Width="120"/>
-                        <DataGridTextColumn Header="Litre" Binding="{Binding Litre}" Width="80"/>
-                        <DataGridTextColumn Header="Birim Fiyat" Binding="{Binding BirimFiyat}" Width="100"/>
-                        <DataGridTextColumn Header="Tutar" Binding="{Binding Tutar}" Width="100"/>
-                        <DataGridTextColumn Header="KM" Binding="{Binding Km}" Width="90"/>
-                        <DataGridTextColumn Header="Aciklama" Binding="{Binding Aciklama}" Width="*"/>
-                    </DataGrid.Columns>
-                </DataGrid>
-            </Border>
+            <DockPanel Grid.Column="1" Margin="10,0,0,0">
+                <Border DockPanel.Dock="Top" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="6">
+                    <DataGrid x:Name="dgYakit" AutoGenerateColumns="False" IsReadOnly="True" MouseDoubleClick="dgYakit_MouseDoubleClick"
+                              AlternatingRowBackground="#F7F9FC" RowHeight="34">
+                        <DataGrid.Columns>
+                            <DataGridTextColumn Header="Id" Binding="{Binding YakitId}" Width="60"/>
+                            <DataGridTextColumn Header="Plaka" Binding="{Binding Plaka}" Width="100"/>
+                            <DataGridTextColumn Header="Tarih" Binding="{Binding Tarih, StringFormat=yyyy-MM-dd}" Width="110"/>
+                            <DataGridTextColumn Header="Istasyon" Binding="{Binding Istasyon}" Width="120"/>
+                            <DataGridTextColumn Header="Litre" Binding="{Binding Litre}" Width="80"/>
+                            <DataGridTextColumn Header="Birim Fiyat" Binding="{Binding BirimFiyat}" Width="100"/>
+                            <DataGridTextColumn Header="Tutar" Binding="{Binding Tutar}" Width="100"/>
+                            <DataGridTextColumn Header="KM" Binding="{Binding Km}" Width="90"/>
+                            <DataGridTextColumn Header="Aciklama" Binding="{Binding Aciklama}" Width="*"/>
+                        </DataGrid.Columns>
+                    </DataGrid>
+                </Border>
+                <StatusBar DockPanel.Dock="Bottom">
+                    <StatusBarItem>
+                        <TextBlock x:Name="txtToplam" FontWeight="Bold" Text="Toplam: 0,00"/>
+                    </StatusBarItem>
+                </StatusBar>
+            </DockPanel>
         </Grid>
     </Grid>
 </UserControl>
