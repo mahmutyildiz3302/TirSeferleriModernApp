@@ -6,6 +6,7 @@ namespace TirSeferleriModernApp.Models
     {
         public string Ad { get; set; } = string.Empty;
         public decimal Tutar { get; set; }
+        public string? Plaka { get; set; }
     }
 
     public class KarOzet

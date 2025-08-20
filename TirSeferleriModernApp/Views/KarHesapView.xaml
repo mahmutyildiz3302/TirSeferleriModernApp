@@ -121,6 +121,7 @@
                         </Style>
                     </DataGrid.RowStyle>
                     <DataGrid.Columns>
+                        <DataGridTextColumn Header="Plaka" Binding="{Binding Plaka}" Width="120"/>
                         <DataGridTextColumn Header="Kalem" Binding="{Binding Ad}" Width="*"/>
                         <DataGridTextColumn Header="Tutar" Binding="{Binding Tutar, StringFormat={}{0:N2}}" Width="150"/>
                     </DataGrid.Columns>

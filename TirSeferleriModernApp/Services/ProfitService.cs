@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
 using TirSeferleriModernApp.Models;
+using TirSeferleriModernApp.Services;
 
 namespace TirSeferleriModernApp.Services
 {
@@ -29,10 +30,11 @@ namespace TirSeferleriModernApp.Services
 
             decimal toplamGider = 0m;
             var kalemDto = new List<KarKalem>();
+            var plakaText = string.IsNullOrWhiteSpace(plaka) ? "Tümü" : plaka;
             foreach (var k in kalemler)
             {
                 toplamGider += k.tutar;
-                kalemDto.Add(new KarKalem { Ad = k.ad, Tutar = k.tutar });
+                kalemDto.Add(new KarKalem { Ad = k.ad, Tutar = k.tutar, Plaka = plakaText });
             }
 
             return new KarOzet
