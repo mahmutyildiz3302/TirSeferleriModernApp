@@ -234,6 +234,11 @@
                             Margin="10,5,10,0"
                             Style="{StaticResource SubMenuButtonStyle}"
                             Command="{Binding AcTanimlarCommand}"/>
+                    <!-- Yeni: Kâr butonu -->
+                    <Button Content="Kâr"
+                            Margin="10,5,10,6"
+                            Style="{StaticResource SubMenuButtonStyle}"
+                            Command="{Binding BtnKarCommand}"/>
                 </StackPanel>
             </StackPanel>
         </DockPanel>
