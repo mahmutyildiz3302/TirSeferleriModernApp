@@ -83,6 +83,7 @@ namespace TirSeferleriModernApp.Services
             CheckAndCreateOrUpdateGenelGiderTablosu();
             CheckAndCreateOrUpdatePersonelGiderTablosu();
             CheckAndCreateOrUpdateVergiAracTablosu();
+            CheckAndCreateOrUpdateDepoTablosu();
         }
 
         private void EnsureDatabaseFile()
@@ -980,7 +981,7 @@ WHERE f.SoforId IS NULL;";
             cmd.Parameters.AddWithValue("@Km", (object?)y.Km ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@Aciklama", (object?)y.Aciklama ?? DBNull.Value);
         }
-
+        
         // SanaiGider tablosu ile ilgili eklemeler
         public static void CheckAndCreateOrUpdateSanaiGiderTablosu()
         {
@@ -1570,6 +1571,28 @@ WHERE f.SoforId IS NULL;";
             cmd.Parameters.AddWithValue("@DorsePlaka", (object?)v.DorsePlaka ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@Tutar", Convert.ToDouble(v.Tutar));
             cmd.Parameters.AddWithValue("@Aciklama", (object?)v.Aciklama ?? DBNull.Value);
+        }
+
+        public static void CheckAndCreateOrUpdateDepoTablosu()
+        {
+            try
+            {
+                EnsureDatabaseFileStatic();
+                string createScript = @"CREATE TABLE IF NOT EXISTS Depolar (
+                    DepoId INTEGER PRIMARY KEY AUTOINCREMENT,
+                    DepoAdi TEXT NOT NULL,
+                    Aciklama TEXT
+                );";
+                string[] requiredColumns = [
+                    "DepoAdi TEXT",
+                    "Aciklama TEXT"
+                ];
+                EnsureTable("Depolar", createScript, requiredColumns);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] CheckAndCreateOrUpdateDepoTablosu hata: {ex.Message}");
+            }
         }
     }
 }

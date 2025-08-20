@@ -22,17 +22,21 @@ namespace TirSeferleriModernApp.Views
         private class DorseItem { public int DorseId { get; set; } public string Plaka { get; set; } = string.Empty; }
         private class SoforItem { public int SoforId { get; set; } public string SoforAdi { get; set; } = string.Empty; }
 
+        private DataRowView? _seciliDepo;
+
         public TanimlamaView()
         {
             InitializeComponent();
             DatabaseService.EnsureSoforlerArsivliColumn();
             DatabaseService.EnsureCekicilerArsivliColumn();
             DatabaseService.EnsureDorselerArsivliColumn();
+            DatabaseService.CheckAndCreateOrUpdateDepoTablosu();
             LoadData();
             LoadDorseler();
             LoadSoforler();
             LoadDorseTipleri();
             UpdateUnarchiveColumnsVisibility();
+            LoadDepolar();
         }
 
         private void LoadDorseTipleri()
@@ -59,7 +63,17 @@ namespace TirSeferleriModernApp.Views
             dgCekiciler.ItemsSource = LoadTable("Cekiciler").DefaultView;
             dgDorseler.ItemsSource = LoadTable("Dorseler").DefaultView;
             dgSoforler.ItemsSource = LoadTable("Soforler").DefaultView;
+            LoadDepolar();
             UpdateUnarchiveColumnsVisibility();
+        }
+
+        private void LoadDepolar()
+        {
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            using var cmd = new SqliteCommand("SELECT DepoId, DepoAdi, Aciklama FROM Depolar ORDER BY DepoAdi", conn);
+            using var rdr = cmd.ExecuteReader();
+            var dt = new DataTable(); dt.Load(rdr);
+            dgDepolar.ItemsSource = dt.DefaultView;
         }
 
         private void UpdateUnarchiveColumnsVisibility()
@@ -399,6 +413,56 @@ namespace TirSeferleriModernApp.Views
             var win = new PersonelDetayWindow(id) { Owner = Window.GetWindow(this) };
             win.ShowDialog();
             LoadData();
+        }
+
+        private void BtnDepoKaydet_Click(object sender, RoutedEventArgs e)
+        {
+            var ad = txtDepoAdi.Text?.Trim();
+            var ack = txtDepoAciklama.Text?.Trim();
+            if (string.IsNullOrWhiteSpace(ad)) { MessageBox.Show("Depo adı girin"); return; }
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            using var cmd = new SqliteCommand("INSERT INTO Depolar (DepoAdi, Aciklama) VALUES (@a, @c)", conn);
+            cmd.Parameters.AddWithValue("@a", ad);
+            cmd.Parameters.AddWithValue("@c", (object?)ack ?? System.DBNull.Value);
+            cmd.ExecuteNonQuery();
+            txtDepoAdi.Text = string.Empty; txtDepoAciklama.Text = string.Empty; _seciliDepo = null; LoadDepolar();
+        }
+
+        private void BtnDepoGuncelle_Click(object sender, RoutedEventArgs e)
+        {
+            if (_seciliDepo == null) { MessageBox.Show("Güncellenecek depo seçin"); return; }
+            var ad = txtDepoAdi.Text?.Trim();
+            var ack = txtDepoAciklama.Text?.Trim();
+            if (string.IsNullOrWhiteSpace(ad)) { MessageBox.Show("Depo adı girin"); return; }
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            using var cmd = new SqliteCommand("UPDATE Depolar SET DepoAdi=@a, Aciklama=@c WHERE DepoId=@id", conn);
+            cmd.Parameters.AddWithValue("@a", ad);
+            cmd.Parameters.AddWithValue("@c", (object?)ack ?? System.DBNull.Value);
+            cmd.Parameters.AddWithValue("@id", _seciliDepo.Row["DepoId"]);
+            cmd.ExecuteNonQuery();
+            txtDepoAdi.Text = string.Empty; txtDepoAciklama.Text = string.Empty; _seciliDepo = null; LoadDepolar();
+        }
+
+        private void BtnDepoSil_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgDepolar.SelectedItem is not DataRowView row) { MessageBox.Show("Silinecek depoyu seçin"); return; }
+            if (MessageBox.Show("Silinsin mi?", "Onay", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            using var cmd = new SqliteCommand("DELETE FROM Depolar WHERE DepoId=@id", conn);
+            cmd.Parameters.AddWithValue("@id", row["DepoId"]);
+            cmd.ExecuteNonQuery();
+            if (_seciliDepo != null && Equals(_seciliDepo.Row["DepoId"], row["DepoId"])) _seciliDepo = null;
+            LoadDepolar();
+        }
+
+        private void dgDepolar_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if ((sender as DataGrid)?.SelectedItem is DataRowView row)
+            {
+                _seciliDepo = row;
+                txtDepoAdi.Text = row["DepoAdi"]?.ToString() ?? string.Empty;
+                txtDepoAciklama.Text = row["Aciklama"]?.ToString() ?? string.Empty;
+            }
         }
     }
 }
