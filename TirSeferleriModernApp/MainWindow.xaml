@@ -95,7 +95,7 @@
         </StatusBar>
 
         <!-- Sol MENU -->
-        <DockPanel x:Name="LeftMenuPanel" Width="300" Background="#2E3A59" VerticalAlignment="Stretch" DockPanel.Dock="Left">
+        <DockPanel x:Name="LeftMenuPanel" Width="300" Background="#2E3A59" VerticalAlignment="Stretch" DockPanel.Dock="Left" LastChildFill="False">
             <!-- Geri Dön Butonu -->
             <Button x:Name="BtnGeriDon"
                     Content="🔙 Geri Dön"
