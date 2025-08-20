@@ -14,9 +14,17 @@ namespace TirSeferleriModernApp.Views
     {
         private class PlakaItem { public string Plaka { get; set; } = string.Empty; public override string ToString() => Plaka; }
 
-        public KarHesapView()
+        private readonly bool _fixedMode;
+        private readonly string? _fixedPlaka;
+
+        public KarHesapView() : this(null) { }
+
+        public KarHesapView(string? fixedPlaka)
         {
             InitializeComponent();
+            _fixedMode = !string.IsNullOrWhiteSpace(fixedPlaka);
+            _fixedPlaka = fixedPlaka;
+
             // İlgili tabloların garanti altına alınması
             DatabaseService.CheckAndCreateOrUpdateSeferlerTablosu();
             DatabaseService.CheckAndCreateOrUpdateYakitGiderTablosu();
@@ -26,6 +34,20 @@ namespace TirSeferleriModernApp.Views
             DatabaseService.CheckAndCreateOrUpdateVergiAracTablosu();
 
             LoadPlakalar();
+
+            if (_fixedMode)
+            {
+                // Plaka seçim alanını gizle ve sabitle
+                try { spPlaka.Visibility = Visibility.Collapsed; } catch { }
+                if (!string.IsNullOrWhiteSpace(_fixedPlaka))
+                {
+                    // Listedeyse seç, yoksa metin olarak ata
+                    var list = cmbPlaka.ItemsSource as IEnumerable<PlakaItem>;
+                    var item = list?.FirstOrDefault(i => string.Equals(i.Plaka, _fixedPlaka, StringComparison.OrdinalIgnoreCase));
+                    if (item != null) cmbPlaka.SelectedItem = item; else cmbPlaka.Text = _fixedPlaka;
+                }
+            }
+
             dpBas.SelectedDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
             dpBit.SelectedDate = DateTime.Today;
 
@@ -49,7 +71,7 @@ namespace TirSeferleriModernApp.Views
                     if (!string.IsNullOrWhiteSpace(p)) items.Add(new PlakaItem { Plaka = p });
                 }
                 cmbPlaka.ItemsSource = items;
-                if (items.Count > 0) cmbPlaka.SelectedIndex = 0;
+                if (!_fixedMode && items.Count > 0) cmbPlaka.SelectedIndex = 0;
             }
             catch
             {
@@ -59,7 +81,15 @@ namespace TirSeferleriModernApp.Views
 
         private void HesaplaVeGoster()
         {
-            string? plaka = (cmbPlaka.SelectedItem as PlakaItem)?.Plaka ?? (cmbPlaka.Text?.Trim() ?? string.Empty);
+            string? plaka;
+            if (_fixedMode)
+            {
+                plaka = _fixedPlaka;
+            }
+            else
+            {
+                plaka = (cmbPlaka.SelectedItem as PlakaItem)?.Plaka ?? (cmbPlaka.Text?.Trim() ?? string.Empty);
+            }
             DateTime? bas = dpBas.SelectedDate;
             DateTime? bit = dpBit.SelectedDate;
 
@@ -70,8 +100,16 @@ namespace TirSeferleriModernApp.Views
             dgKalemler.ItemsSource = ozet.Kalemler;
         }
 
-        private void cmbPlaka_SelectionChanged(object sender, SelectionChangedEventArgs e) => HesaplaVeGoster();
-        private void cmbPlaka_LostFocus(object sender, RoutedEventArgs e) => HesaplaVeGoster();
+        private void cmbPlaka_SelectionChanged(object sender, SelectionChangedEventArgs e)
+        {
+            if (_fixedMode) return;
+            HesaplaVeGoster();
+        }
+        private void cmbPlaka_LostFocus(object sender, RoutedEventArgs e)
+        {
+            if (_fixedMode) return;
+            HesaplaVeGoster();
+        }
         private void dpBas_SelectedDateChanged(object sender, SelectionChangedEventArgs e) => HesaplaVeGoster();
         private void dpBit_SelectedDateChanged(object sender, SelectionChangedEventArgs e) => HesaplaVeGoster();
     }

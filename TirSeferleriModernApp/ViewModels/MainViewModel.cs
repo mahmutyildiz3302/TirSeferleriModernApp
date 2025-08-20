@@ -241,7 +241,13 @@ namespace TirSeferleriModernApp.ViewModels
                 return;
             }
             AktifAltMenu = "📊 Kar Hesap";
-            CurrentContent = new KarHesapView();
+
+            // Seçili plaka (araç menüsünden) varsa bu plakayı sabitleyerek aç
+            if (!string.IsNullOrWhiteSpace(SelectedPlaka))
+                CurrentContent = new KarHesapSeciliView(SelectedPlaka);
+            else
+                CurrentContent = new KarHesapView();
+
             StatusText = "Kar Hesap açıldı.";
         }
 

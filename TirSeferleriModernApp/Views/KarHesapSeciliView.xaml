@@ -1,9 +1,8 @@
-﻿<UserControl x:Class="TirSeferleriModernApp.Views.KarHesapView"
+<UserControl x:Class="TirSeferleriModernApp.Views.KarHesapSeciliView"
              xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006" 
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
-             xmlns:local="clr-namespace:TirSeferleriModernApp.Views"
              mc:Ignorable="d" 
              d:DesignHeight="450" d:DesignWidth="900">
     <Grid Background="#FAFAFA" Margin="8">
@@ -12,7 +11,6 @@
             <RowDefinition Height="*"/>
         </Grid.RowDefinitions>
 
-        <!-- Filtre Alanı -->
         <Border Padding="10" Margin="0,0,0,8" Background="White" CornerRadius="6" BorderBrush="#DDD" BorderThickness="1">
             <Grid>
                 <Grid.ColumnDefinitions>
@@ -21,25 +19,22 @@
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
 
-                <StackPanel x:Name="spPlaka" Orientation="Vertical" Margin="4">
+                <StackPanel Orientation="Vertical" Margin="4">
                     <TextBlock Text="Plaka" FontWeight="SemiBold"/>
-                    <ComboBox x:Name="cmbPlaka" MinWidth="200" IsEditable="True"
-                              SelectionChanged="cmbPlaka_SelectionChanged"
-                              LostFocus="cmbPlaka_LostFocus"/>
+                    <TextBlock x:Name="txtPlaka" FontSize="14" FontWeight="Bold"/>
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Vertical" Margin="4">
-                    <TextBlock Text="Başlangıç" FontWeight="SemiBold"/>
+                    <TextBlock Text="Baslangic" FontWeight="SemiBold"/>
                     <DatePicker x:Name="dpBas" SelectedDateChanged="dpBas_SelectedDateChanged"/>
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Vertical" Margin="4">
-                    <TextBlock Text="Bitiş" FontWeight="SemiBold"/>
+                    <TextBlock Text="Bitis" FontWeight="SemiBold"/>
                     <DatePicker x:Name="dpBit" SelectedDateChanged="dpBit_SelectedDateChanged"/>
                 </StackPanel>
             </Grid>
         </Border>
 
-        <!-- Sonuçlar -->
         <Grid Grid.Row="1">
             <Grid.RowDefinitions>
                 <RowDefinition Height="Auto"/>
