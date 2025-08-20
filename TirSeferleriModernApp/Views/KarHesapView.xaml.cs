@@ -56,9 +56,20 @@ namespace TirSeferleriModernApp.Views
         {
             var (plaka, isAll) = GetSelectedPlakaOrAll();
             var ozet = KarHesapShared.Hesapla(plaka, dpBas.SelectedDate, dpBit.SelectedDate);
-            txtGelir.Text = ozet.Gelir.ToString("N2", CultureInfo.CurrentCulture);
+            // Önce ozet bilgilerini yaz
             txtGider.Text = ozet.ToplamGider.ToString("N2", CultureInfo.CurrentCulture);
             txtKar.Text   = ozet.Kar.ToString("N2", CultureInfo.CurrentCulture);
+
+            // Gelirler: [Toplam] + veri + [Toplam]
+            var gelirler = KarHesapShared.GetGelirler(plaka, dpBas.SelectedDate, dpBit.SelectedDate);
+            var toplamGelir = gelirler.Sum(x => x.Fiyat);
+            txtGelir.Text = toplamGelir.ToString("N2", CultureInfo.CurrentCulture);
+            var gelirHeader = BuildGelirToplam(gelirler);
+            var gelirFooter = BuildGelirToplam(gelirler);
+            var gelirList = new List<Sefer> { gelirHeader };
+            gelirList.AddRange(gelirler);
+            gelirList.Add(gelirFooter);
+            dgGelirler.ItemsSource = gelirList;
 
             // Giderler: [Toplam] + veri + [Toplam]
             var giderHeader = BuildGiderToplam(ozet.Kalemler);
@@ -67,15 +78,6 @@ namespace TirSeferleriModernApp.Views
             giderList.AddRange(ozet.Kalemler);
             giderList.Add(giderFooter);
             dgKalemler.ItemsSource = giderList;
-
-            // Gelirler: [Toplam] + veri + [Toplam]
-            var gelirler = KarHesapShared.GetGelirler(plaka, dpBas.SelectedDate, dpBit.SelectedDate);
-            var gelirHeader = BuildGelirToplam(gelirler);
-            var gelirFooter = BuildGelirToplam(gelirler);
-            var gelirList = new List<Sefer> { gelirHeader };
-            gelirList.AddRange(gelirler);
-            gelirList.Add(gelirFooter);
-            dgGelirler.ItemsSource = gelirList;
         }
 
         private static KarKalem BuildGiderToplam(IEnumerable<KarKalem> list)

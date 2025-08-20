@@ -27,11 +27,13 @@ namespace TirSeferleriModernApp.Views
         private void HesaplaVeGoster()
         {
             var ozet = KarHesapShared.Hesapla(_plaka, dpBas.SelectedDate, dpBit.SelectedDate);
-            txtGelir.Text = ozet.Gelir.ToString("N2", CultureInfo.CurrentCulture);
             txtGider.Text = ozet.ToplamGider.ToString("N2", CultureInfo.CurrentCulture);
             txtKar.Text   = ozet.Kar.ToString("N2", CultureInfo.CurrentCulture);
 
-            // Giderler: [Toplam] + veri + [Toplam]
+            var gelirler = KarHesapShared.GetGelirler(_plaka, dpBas.SelectedDate, dpBit.SelectedDate);
+            var toplamGelir = gelirler.Sum(x => x.Fiyat);
+            txtGelir.Text = toplamGelir.ToString("N2", CultureInfo.CurrentCulture);
+
             var giderHeader = new KarKalem { Ad = "Toplam", Tutar = ozet.Kalemler.Sum(x => x.Tutar) };
             var giderFooter = new KarKalem { Ad = "Toplam", Tutar = ozet.Kalemler.Sum(x => x.Tutar) };
             var giderList = new System.Collections.Generic.List<KarKalem> { giderHeader };
@@ -39,10 +41,8 @@ namespace TirSeferleriModernApp.Views
             giderList.Add(giderFooter);
             dgKalemler.ItemsSource = giderList;
 
-            // Gelirler: [Toplam] + veri + [Toplam]
-            var gelirler = KarHesapShared.GetGelirler(_plaka, dpBas.SelectedDate, dpBit.SelectedDate);
-            var gelirHeader = new Sefer { SeferId = 0, KonteynerNo = string.Empty, Tarih = DateTime.Today, Fiyat = gelirler.Sum(x => x.Fiyat), Aciklama = "Toplam", CekiciPlaka = string.Empty };
-            var gelirFooter = new Sefer { SeferId = 0, KonteynerNo = string.Empty, Tarih = DateTime.Today, Fiyat = gelirler.Sum(x => x.Fiyat), Aciklama = "Toplam", CekiciPlaka = string.Empty };
+            var gelirHeader = new Sefer { SeferId = 0, KonteynerNo = string.Empty, Tarih = DateTime.Today, Fiyat = toplamGelir, Aciklama = "Toplam", CekiciPlaka = string.Empty };
+            var gelirFooter = new Sefer { SeferId = 0, KonteynerNo = string.Empty, Tarih = DateTime.Today, Fiyat = toplamGelir, Aciklama = "Toplam", CekiciPlaka = string.Empty };
             var gelirList = new System.Collections.Generic.List<Sefer> { gelirHeader };
             gelirList.AddRange(gelirler);
             gelirList.Add(gelirFooter);
