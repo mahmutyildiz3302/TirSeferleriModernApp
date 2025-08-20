@@ -76,6 +76,20 @@
             <!-- Gelirler Grid -->
             <Border Grid.Row="2" Background="White" CornerRadius="6" Padding="8" BorderBrush="#DDD" BorderThickness="1" Margin="0,0,0,8">
                 <DataGrid x:Name="dgGelirler" AutoGenerateColumns="False" CanUserAddRows="False" HeadersVisibility="Column" IsReadOnly="True">
+                    <DataGrid.ColumnHeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="FontWeight" Value="Bold"/>
+                        </Style>
+                    </DataGrid.ColumnHeaderStyle>
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Aciklama}" Value="Toplam">
+                                    <Setter Property="FontWeight" Value="Bold"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.RowStyle>
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Tarih" Binding="{Binding Tarih, StringFormat={}{0:yyyy-MM-dd}}" Width="120"/>
                         <DataGridTextColumn Header="Plaka" Binding="{Binding CekiciPlaka}" Width="120"/>
@@ -92,6 +106,20 @@
             <!-- Giderler Grid -->
             <Border Grid.Row="4" Background="White" CornerRadius="6" Padding="8" BorderBrush="#DDD" BorderThickness="1">
                 <DataGrid x:Name="dgKalemler" AutoGenerateColumns="False" CanUserAddRows="False" HeadersVisibility="Column" IsReadOnly="True">
+                    <DataGrid.ColumnHeaderStyle>
+                        <Style TargetType="DataGridColumnHeader">
+                            <Setter Property="FontWeight" Value="Bold"/>
+                        </Style>
+                    </DataGrid.ColumnHeaderStyle>
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding Ad}" Value="Toplam">
+                                    <Setter Property="FontWeight" Value="Bold"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.RowStyle>
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Kalem" Binding="{Binding Ad}" Width="*"/>
                         <DataGridTextColumn Header="Tutar" Binding="{Binding Tutar, StringFormat={}{0:N2}}" Width="150"/>
