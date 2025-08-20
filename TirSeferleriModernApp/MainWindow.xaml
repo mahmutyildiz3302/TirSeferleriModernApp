@@ -242,16 +242,19 @@
                     </StackPanel.Style>
 
                     <Button Content="Çekici, Dorse ve Şoför Tanımla"
-                            Margin="10,5,10,0"
-                            Style="{StaticResource SubMenuButtonStyle}"
-                            Command="{Binding AcTanimlarCommand}"/>
-                    <!-- Yeni: Kâr butonu -->
-                    <Button Content="Kâr"
                             Margin="10,5,10,6"
                             Style="{StaticResource SubMenuButtonStyle}"
-                            Command="{Binding BtnKarCommand}"/>
+                            Command="{Binding AcTanimlarCommand}"/>
                 </StackPanel>
             </StackPanel>
+
+            <!-- İSTENEN: Tanımların bir alt satırında Kâr butonu (üst seviye) -->
+            <Button x:Name="BtnKar"
+                    Content="Kâr"
+                    Command="{Binding BtnKarCommand}"
+                    Style="{StaticResource MenuButtonStyle}"
+                    Margin="10,5,10,0"
+                    DockPanel.Dock="Top"/>
         </DockPanel>
 
         <!-- İçerik Alanı -->
