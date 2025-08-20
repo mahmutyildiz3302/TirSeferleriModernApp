@@ -50,6 +50,14 @@ namespace TirSeferleriModernApp.ViewModels
             set => SetProperty(ref _showTanimlar, value);
         }
 
+        // Tanımlar alt menüsünü aç/kapat durumu
+        private bool _tanimlarMenuAcik;
+        public bool TanimlarMenuAcik
+        {
+            get => _tanimlarMenuAcik;
+            set => SetProperty(ref _tanimlarMenuAcik, value);
+        }
+
         private string _statusText = "Hazır.";
         public string StatusText
         {
@@ -122,6 +130,7 @@ namespace TirSeferleriModernApp.ViewModels
             _databaseService = new DatabaseService(dbFile);
 
             _araclarMenuAcik = false;
+            _tanimlarMenuAcik = false;
 
             BtnGeriDonCommand = new RelayCommand(ExecuteGeriDon);
             BtnAraclarCommand  = new RelayCommand(ExecuteAraclar);
@@ -131,7 +140,7 @@ namespace TirSeferleriModernApp.ViewModels
             BtnKarCommand      = new RelayCommand(ExecuteKar);
             DebugListesiKomutu = new RelayCommand(ExecuteDebugListesi);
             SelectAracCommand  = new RelayCommand<string>(ExecuteSelectArac);
-            ToggleTanimlarMenuCommand = new RelayCommand(ExecuteTanimlar);
+            ToggleTanimlarMenuCommand = new RelayCommand(ExecuteToggleTanimlar);
             AcTanimlarCommand = new RelayCommand(ExecuteTanimlar);
 
             // Alt gider komutları: ilgili view'ları açar
@@ -142,6 +151,11 @@ namespace TirSeferleriModernApp.ViewModels
             BtnPersonelCommand   = new RelayCommand(() => CurrentContent = new PersonelGiderView());
             
             Trace.WriteLine("[MainViewModel.cs:28] ViewModel oluşturuldu.");
+        }
+
+        private void ExecuteToggleTanimlar()
+        {
+            TanimlarMenuAcik = !TanimlarMenuAcik;
         }
 
         private void ExecuteTanimlar()

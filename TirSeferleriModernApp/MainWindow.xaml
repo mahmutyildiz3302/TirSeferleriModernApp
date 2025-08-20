@@ -229,7 +229,18 @@
                         Command="{Binding ToggleTanimlarMenuCommand}"
                         Style="{StaticResource MenuButtonStyle}"
                         Visibility="{Binding ShowTanimlar, Converter={StaticResource BoolToVis}}" />
-                <StackPanel x:Name="TanimlarMenu" Background="#3A4A6F" Margin="0,0,0,0" Visibility="Collapsed">
+                <StackPanel x:Name="TanimlarMenu" Background="#3A4A6F" Margin="0,0,0,0">
+                    <StackPanel.Style>
+                        <Style TargetType="StackPanel">
+                            <Setter Property="Visibility" Value="Collapsed"/>
+                            <Style.Triggers>
+                                <DataTrigger Binding="{Binding TanimlarMenuAcik}" Value="True">
+                                    <Setter Property="Visibility" Value="Visible"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </StackPanel.Style>
+
                     <Button Content="Çekici, Dorse ve Şoför Tanımla"
                             Margin="10,5,10,0"
                             Style="{StaticResource SubMenuButtonStyle}"
