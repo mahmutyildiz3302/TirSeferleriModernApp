@@ -13,7 +13,12 @@ namespace TirSeferleriModernApp.Views
 {
     public partial class KarHesapView : UserControl
     {
-        private class PlakaItem { public string Plaka { get; set; } = string.Empty; public override string ToString() => Plaka; }
+        private class PlakaItem
+        {
+            public string Plaka { get; set; } = string.Empty;
+            public bool IsAll { get; set; }
+            public override string ToString() => Plaka;
+        }
 
         public KarHesapView()
         {
@@ -28,15 +33,32 @@ namespace TirSeferleriModernApp.Views
         private void LoadPlakalar()
         {
             var plakalar = KarHesapShared.GetActivePlakalar();
-            var items = plakalar.Select(p => new PlakaItem { Plaka = p }).ToList();
+            var items = new List<PlakaItem>();
+            // "Tümü" seçeneği en başa ekle
+            items.Add(new PlakaItem { Plaka = "Tümü", IsAll = true });
+            items.AddRange(plakalar.Select(p => new PlakaItem { Plaka = p }));
             cmbPlaka.ItemsSource = items;
-            if (items.Count > 0) cmbPlaka.SelectedIndex = 0;
+            cmbPlaka.SelectedIndex = 0; // varsayılan: Tümü
         }
 
         private void HesaplaVeGoster()
         {
-            string? plaka = (cmbPlaka.SelectedItem as PlakaItem)?.Plaka ?? (cmbPlaka.Text?.Trim() ?? string.Empty);
-            var ozet = KarHesapShared.Hesapla(string.IsNullOrWhiteSpace(plaka) ? null : plaka, dpBas.SelectedDate, dpBit.SelectedDate);
+            string? plaka = null;
+            if (cmbPlaka.SelectedItem is PlakaItem sel)
+            {
+                plaka = sel.IsAll ? null : sel.Plaka;
+            }
+            else
+            {
+                // Elle yazılan metin
+                var text = cmbPlaka.Text?.Trim();
+                if (!string.IsNullOrWhiteSpace(text) && !string.Equals(text, "Tümü", StringComparison.OrdinalIgnoreCase))
+                    plaka = text;
+                else
+                    plaka = null; // Tümü veya boş => tüm plakalar
+            }
+
+            var ozet = KarHesapShared.Hesapla(plaka, dpBas.SelectedDate, dpBit.SelectedDate);
             txtGelir.Text = ozet.Gelir.ToString("N2", CultureInfo.CurrentCulture);
             txtGider.Text = ozet.ToplamGider.ToString("N2", CultureInfo.CurrentCulture);
             txtKar.Text   = ozet.Kar.ToString("N2", CultureInfo.CurrentCulture);
