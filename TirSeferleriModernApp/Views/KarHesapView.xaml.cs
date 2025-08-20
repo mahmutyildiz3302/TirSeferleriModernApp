@@ -28,6 +28,9 @@ namespace TirSeferleriModernApp.Views
             LoadPlakalar();
             dpBas.SelectedDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
             dpBit.SelectedDate = DateTime.Today;
+
+            // İlk yüklemede hesapla
+            HesaplaVeGoster();
         }
 
         private void LoadPlakalar()
@@ -54,7 +57,7 @@ namespace TirSeferleriModernApp.Views
             }
         }
 
-        private void btnHesapla_Click(object sender, RoutedEventArgs e)
+        private void HesaplaVeGoster()
         {
             string? plaka = (cmbPlaka.SelectedItem as PlakaItem)?.Plaka ?? (cmbPlaka.Text?.Trim() ?? string.Empty);
             DateTime? bas = dpBas.SelectedDate;
@@ -66,5 +69,10 @@ namespace TirSeferleriModernApp.Views
             txtKar.Text   = ozet.Kar.ToString("N2", CultureInfo.CurrentCulture);
             dgKalemler.ItemsSource = ozet.Kalemler;
         }
+
+        private void cmbPlaka_SelectionChanged(object sender, SelectionChangedEventArgs e) => HesaplaVeGoster();
+        private void cmbPlaka_LostFocus(object sender, RoutedEventArgs e) => HesaplaVeGoster();
+        private void dpBas_SelectedDateChanged(object sender, SelectionChangedEventArgs e) => HesaplaVeGoster();
+        private void dpBit_SelectedDateChanged(object sender, SelectionChangedEventArgs e) => HesaplaVeGoster();
     }
 }

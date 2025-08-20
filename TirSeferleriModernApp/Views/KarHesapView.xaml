@@ -19,25 +19,22 @@
                     <ColumnDefinition Width="2*"/>
                     <ColumnDefinition Width="*"/>
                     <ColumnDefinition Width="*"/>
-                    <ColumnDefinition Width="Auto"/>
                 </Grid.ColumnDefinitions>
 
                 <StackPanel Orientation="Vertical" Margin="4">
                     <TextBlock Text="Plaka" FontWeight="SemiBold"/>
-                    <ComboBox x:Name="cmbPlaka" MinWidth="200" IsEditable="True"/>
+                    <ComboBox x:Name="cmbPlaka" MinWidth="200" IsEditable="True"
+                              SelectionChanged="cmbPlaka_SelectionChanged"
+                              LostFocus="cmbPlaka_LostFocus"/>
                 </StackPanel>
 
                 <StackPanel Grid.Column="1" Orientation="Vertical" Margin="4">
                     <TextBlock Text="Başlangıç" FontWeight="SemiBold"/>
-                    <DatePicker x:Name="dpBas"/>
+                    <DatePicker x:Name="dpBas" SelectedDateChanged="dpBas_SelectedDateChanged"/>
                 </StackPanel>
                 <StackPanel Grid.Column="2" Orientation="Vertical" Margin="4">
                     <TextBlock Text="Bitiş" FontWeight="SemiBold"/>
-                    <DatePicker x:Name="dpBit"/>
-                </StackPanel>
-
-                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="4">
-                    <Button x:Name="btnHesapla" Content="Hesapla" Padding="16,8" Margin="4" Click="btnHesapla_Click"/>
+                    <DatePicker x:Name="dpBit" SelectedDateChanged="dpBit_SelectedDateChanged"/>
                 </StackPanel>
             </Grid>
         </Border>
