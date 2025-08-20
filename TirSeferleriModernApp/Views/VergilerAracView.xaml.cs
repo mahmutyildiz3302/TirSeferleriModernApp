@@ -7,21 +7,71 @@ using System.Linq;
 using System.Text;
 using System.Windows;
 using System.Windows.Controls;
+using TirSeferleriModernApp.Models;
 using TirSeferleriModernApp.Services;
 
 namespace TirSeferleriModernApp.Views
 {
     public partial class VergilerAracView : UserControl
     {
+        // Bu view içinde kullanýlan model (DatabaseService bu içi sýnýfý kullanýr)
+        public class VergiArac
+        {
+            public int VergiId { get; set; }
+            public int? CekiciId { get; set; }
+            public string? Plaka { get; set; }
+            public DateTime Tarih { get; set; }
+            public string? VergiTuru { get; set; }
+            public string? Donem { get; set; }
+            public string? VarlikTipi { get; set; }
+            public int? DorseId { get; set; }
+            public string? DorsePlaka { get; set; }
+            public decimal Tutar { get; set; }
+            public string? Aciklama { get; set; }
+        }
+
         private class CekiciItem { public int CekiciId { get; set; } public string Plaka { get; set; } = string.Empty; }
         private VergiArac? _secili;
         private List<VergiArac> _sonListe = new();
 
-        public VergilerAracView()
+        private readonly bool _fixedMode;
+        private readonly string? _fixedPlaka;
+        private int? _fixedCekiciId;
+
+        public VergilerAracView() : this(null) { }
+
+        public VergilerAracView(string? fixedPlaka)
         {
             InitializeComponent();
+            _fixedMode = !string.IsNullOrWhiteSpace(fixedPlaka);
+            _fixedPlaka = fixedPlaka;
+
             DatabaseService.CheckAndCreateOrUpdateVergiAracTablosu();
             LoadCekiciler();
+
+            if (_fixedMode)
+            {
+                var txtFilt = (TextBlock)FindName("txtSeciliPlakaFilt");
+                var cmbFilt = (ComboBox)FindName("cmbFiltreCekici");
+                if (txtFilt != null && cmbFilt != null)
+                {
+                    txtFilt.Visibility = Visibility.Visible;
+                    cmbFilt.Visibility = Visibility.Collapsed;
+                    txtFilt.Text = _fixedPlaka;
+                }
+                var txtForm = (TextBlock)FindName("txtSeciliPlakaForm");
+                var cmbForm = (ComboBox)FindName("cmbCekici");
+                if (txtForm != null && cmbForm != null)
+                {
+                    txtForm.Visibility = Visibility.Visible;
+                    cmbForm.Visibility = Visibility.Collapsed;
+                    txtForm.Text = _fixedPlaka;
+                }
+
+                var info = DatabaseService.GetVehicleInfoByCekiciPlaka(_fixedPlaka!);
+                _fixedCekiciId = info.cekiciId;
+            }
+
             dpTarih.SelectedDate = DateTime.Today;
             dpBas.SelectedDate = DateTime.Today.AddDays(-30);
             dpBit.SelectedDate = DateTime.Today;
@@ -47,7 +97,7 @@ namespace TirSeferleriModernApp.Views
 
         private void LoadListe()
         {
-            int? cekiciId = cmbFiltreCekici.SelectedValue as int?;
+            int? cekiciId = _fixedMode ? _fixedCekiciId : cmbFiltreCekici.SelectedValue as int?;
             DateTime? bas = dpBas.SelectedDate;
             DateTime? bit = dpBit.SelectedDate;
             _sonListe = DatabaseService.GetVergiAraclari(cekiciId, bas, bit);
@@ -65,7 +115,7 @@ namespace TirSeferleriModernApp.Views
             return new VergiArac
             {
                 VergiId = 0,
-                Plaka = string.Empty,
+                Plaka = _fixedMode ? _fixedPlaka : string.Empty,
                 Tarih = DateTime.Today,
                 VergiTuru = string.Empty,
                 Donem = string.Empty,
@@ -114,7 +164,7 @@ namespace TirSeferleriModernApp.Views
         private void ClearForm()
         {
             _secili = null;
-            cmbCekici.SelectedIndex = -1;
+            if (!_fixedMode) cmbCekici.SelectedIndex = -1;
             cmbVergiTuru.SelectedIndex = -1;
             txtDonem.Text = string.Empty;
             txtTutar.Text = string.Empty;
@@ -125,7 +175,12 @@ namespace TirSeferleriModernApp.Views
         private bool TryParseForm(out VergiArac g)
         {
             g = new VergiArac();
-            if (cmbCekici.SelectedItem is CekiciItem item)
+            if (_fixedMode)
+            {
+                g.CekiciId = _fixedCekiciId;
+                g.Plaka = _fixedPlaka;
+            }
+            else if (cmbCekici.SelectedItem is CekiciItem item)
             {
                 g.CekiciId = item.CekiciId;
                 g.Plaka = item.Plaka;
@@ -133,7 +188,7 @@ namespace TirSeferleriModernApp.Views
             g.Tarih = dpTarih.SelectedDate ?? DateTime.Today;
             g.VergiTuru = (cmbVergiTuru.SelectedItem as ComboBoxItem)?.Content?.ToString();
             g.Donem = txtDonem.Text?.Trim();
-            g.VarlikTipi = "Cekici"; // Þimdilik çekici odaklý; ihtiyaç olursa UI’dan seçilebilir
+            g.VarlikTipi = "Cekici"; // varsayýlan
             g.DorseId = null;
             g.DorsePlaka = null;
             if (!decimal.TryParse(txtTutar.Text, out var tutar)) tutar = 0;
@@ -148,13 +203,16 @@ namespace TirSeferleriModernApp.Views
             {
                 if (row.Aciklama == "Toplam" && row.VergiId == 0) return;
                 _secili = row;
-                var cekiciler = (IEnumerable<CekiciItem>)cmbCekici.ItemsSource;
-                cmbCekici.SelectedItem = cekiciler.FirstOrDefault(x => x.CekiciId == row.CekiciId) ?? cekiciler.FirstOrDefault(x => x.Plaka == row.Plaka);
-                dpTarih.SelectedDate = row.Tarih;
-                foreach (var it in cmbVergiTuru.Items)
+                if (!_fixedMode)
                 {
-                    if (it is ComboBoxItem ci && string.Equals(ci.Content?.ToString(), row.VergiTuru, StringComparison.OrdinalIgnoreCase))
-                    { cmbVergiTuru.SelectedItem = it; break; }
+                    var cekiciler = (IEnumerable<CekiciItem>)cmbCekici.ItemsSource;
+                    cmbCekici.SelectedItem = cekiciler.FirstOrDefault(x => x.CekiciId == row.CekiciId) ?? cekiciler.FirstOrDefault(x => x.Plaka == row.Plaka);
+                }
+                dpTarih.SelectedDate = row.Tarih;
+                foreach (var item in cmbVergiTuru.Items)
+                {
+                    if (item is ComboBoxItem ci && string.Equals(ci.Content?.ToString(), row.VergiTuru, StringComparison.OrdinalIgnoreCase))
+                    { cmbVergiTuru.SelectedItem = item; break; }
                 }
                 txtDonem.Text = row.Donem;
                 txtTutar.Text = row.Tutar.ToString("0.00");
@@ -166,9 +224,17 @@ namespace TirSeferleriModernApp.Views
 
         private void BtnFiltreTum_Click(object sender, RoutedEventArgs e)
         {
-            cmbFiltreCekici.SelectedIndex = -1;
-            dpBas.SelectedDate = null;
-            dpBit.SelectedDate = null;
+            if (_fixedMode)
+            {
+                dpBas.SelectedDate = null;
+                dpBit.SelectedDate = null;
+            }
+            else
+            {
+                cmbFiltreCekici.SelectedIndex = -1;
+                dpBas.SelectedDate = null;
+                dpBit.SelectedDate = null;
+            }
             LoadListe();
         }
 
@@ -198,7 +264,7 @@ namespace TirSeferleriModernApp.Views
                             Quote(r.VergiTuru),
                             Quote(r.Donem),
                             Quote(r.VarlikTipi),
-                            r.DorseId?.ToString() ?? "",
+                            (r.DorseId ?? 0).ToString(),
                             Quote(r.DorsePlaka),
                             r.Tutar.ToString(nfi),
                             Quote(r.Aciklama)
@@ -222,22 +288,6 @@ namespace TirSeferleriModernApp.Views
             if (s.Contains(',') || s.Contains('"') || s.Contains('\n'))
                 return '"' + s + '"';
             return s;
-        }
-
-        // Veri modeli
-        public class VergiArac
-        {
-            public int VergiId { get; set; }
-            public int? CekiciId { get; set; }
-            public string? Plaka { get; set; }
-            public DateTime Tarih { get; set; }
-            public string? VergiTuru { get; set; }
-            public string? Donem { get; set; }
-            public string? VarlikTipi { get; set; } // Cekici/Dorse/Genel
-            public int? DorseId { get; set; }
-            public string? DorsePlaka { get; set; }
-            public decimal Tutar { get; set; }
-            public string? Aciklama { get; set; }
         }
     }
 }

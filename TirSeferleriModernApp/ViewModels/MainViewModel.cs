@@ -143,12 +143,12 @@ namespace TirSeferleriModernApp.ViewModels
             ToggleTanimlarMenuCommand = new RelayCommand(ExecuteToggleTanimlar);
             AcTanimlarCommand = new RelayCommand(ExecuteTanimlar);
 
-            // Alt gider komutları: ilgili view'ları açar
-            BtnYakitCommand      = new RelayCommand(() => CurrentContent = new YakitGiderView());
-            BtnSanaiCommand      = new RelayCommand(() => CurrentContent = new SanaiGiderView());
-            BtnGenelCommand      = new RelayCommand(() => CurrentContent = new GenelGiderView());
-            BtnVergilerAracCommand = new RelayCommand(() => CurrentContent = new VergilerAracView());
-            BtnPersonelCommand   = new RelayCommand(() => CurrentContent = new PersonelGiderView());
+            // Alt gider komutları: seçili plaka zorunlu
+            BtnYakitCommand        = new RelayCommand(() => OpenGiderWithPlaka(plaka => CurrentContent = new YakitGiderView(plaka)));
+            BtnSanaiCommand        = new RelayCommand(() => OpenGiderWithPlaka(plaka => CurrentContent = new SanaiGiderView(plaka)));
+            BtnGenelCommand        = new RelayCommand(() => OpenGiderWithPlaka(plaka => CurrentContent = new GenelGiderView(plaka)));
+            BtnVergilerAracCommand = new RelayCommand(() => OpenGiderWithPlaka(plaka => CurrentContent = new VergilerAracView(plaka)));
+            BtnPersonelCommand     = new RelayCommand(() => OpenGiderWithPlaka(plaka => CurrentContent = new PersonelGiderView(plaka)));
             
             Trace.WriteLine("[MainViewModel.cs:28] ViewModel oluşturuldu.");
         }
@@ -319,6 +319,16 @@ namespace TirSeferleriModernApp.ViewModels
             SeciliPlakaAltMenu.Add(new AltMenuOgesi("💸 Giderler", BtnGiderlerCommand));
             SeciliPlakaAltMenu.Add(new AltMenuOgesi("📊 Kar Hesap", BtnKarCommand));
             Trace.WriteLine($"[MainViewModel.cs] {plaka} için alt menü oluşturuldu. Öğe sayısı: {SeciliPlakaAltMenu.Count}");
+        }
+
+        private void OpenGiderWithPlaka(System.Action<string> opener)
+        {
+            if (string.IsNullOrWhiteSpace(SelectedPlaka))
+            {
+                MessageQueue.Enqueue("Önce araç seçin.");
+                return;
+            }
+            opener(SelectedPlaka!);
         }
     }
 }

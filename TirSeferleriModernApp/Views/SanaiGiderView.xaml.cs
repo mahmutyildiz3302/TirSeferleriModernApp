@@ -18,11 +18,34 @@ namespace TirSeferleriModernApp.Views
         private SanaiGider? _secili;
         private List<SanaiGider> _sonListe = new();
 
-        public SanaiGiderView()
+        private readonly bool _fixedMode;
+        private readonly string? _fixedPlaka;
+        private int? _fixedCekiciId;
+
+        public SanaiGiderView() : this(null) { }
+
+        public SanaiGiderView(string? fixedPlaka)
         {
             InitializeComponent();
+            _fixedMode = !string.IsNullOrWhiteSpace(fixedPlaka);
+            _fixedPlaka = fixedPlaka;
+
             DatabaseService.CheckAndCreateOrUpdateSanaiGiderTablosu();
             LoadCekiciler();
+
+            if (_fixedMode)
+            {
+                txtSeciliPlakaFilt.Visibility = Visibility.Visible;
+                cmbFiltreCekici.Visibility = Visibility.Collapsed;
+                txtSeciliPlakaForm.Visibility = Visibility.Visible;
+                cmbCekici.Visibility = Visibility.Collapsed;
+                txtSeciliPlakaFilt.Text = _fixedPlaka;
+                txtSeciliPlakaForm.Text = _fixedPlaka;
+
+                var info = DatabaseService.GetVehicleInfoByCekiciPlaka(_fixedPlaka!);
+                _fixedCekiciId = info.cekiciId;
+            }
+
             dpTarih.SelectedDate = DateTime.Today;
             dpBas.SelectedDate = DateTime.Today.AddDays(-30);
             dpBit.SelectedDate = DateTime.Today;
@@ -48,7 +71,7 @@ namespace TirSeferleriModernApp.Views
 
         private void LoadListe()
         {
-            int? cekiciId = cmbFiltreCekici.SelectedValue as int?;
+            int? cekiciId = _fixedMode ? _fixedCekiciId : cmbFiltreCekici.SelectedValue as int?;
             DateTime? bas = dpBas.SelectedDate;
             DateTime? bit = dpBit.SelectedDate;
             _sonListe = DatabaseService.GetSanaiGiderleri(cekiciId, bas, bit);
@@ -66,7 +89,7 @@ namespace TirSeferleriModernApp.Views
             return new SanaiGider
             {
                 SanaiId = 0,
-                Plaka = string.Empty,
+                Plaka = _fixedMode ? _fixedPlaka : string.Empty,
                 Tarih = DateTime.Today,
                 Kalem = string.Empty,
                 Tutar = list.Sum(x => x.Tutar),
@@ -112,7 +135,7 @@ namespace TirSeferleriModernApp.Views
         private void ClearForm()
         {
             _secili = null;
-            cmbCekici.SelectedIndex = -1;
+            if (!_fixedMode) cmbCekici.SelectedIndex = -1;
             txtKalem.Text = string.Empty;
             txtTutar.Text = string.Empty;
             txtKm.Text = string.Empty;
@@ -123,7 +146,12 @@ namespace TirSeferleriModernApp.Views
         private bool TryParseForm(out SanaiGider s)
         {
             s = new SanaiGider();
-            if (cmbCekici.SelectedItem is CekiciItem item)
+            if (_fixedMode)
+            {
+                s.CekiciId = _fixedCekiciId;
+                s.Plaka = _fixedPlaka;
+            }
+            else if (cmbCekici.SelectedItem is CekiciItem item)
             {
                 s.CekiciId = item.CekiciId;
                 s.Plaka = item.Plaka;
@@ -144,8 +172,11 @@ namespace TirSeferleriModernApp.Views
             {
                 if (row.Aciklama == "Toplam" && row.SanaiId == 0) return;
                 _secili = row;
-                var cekiciler = (IEnumerable<CekiciItem>)cmbCekici.ItemsSource;
-                cmbCekici.SelectedItem = cekiciler.FirstOrDefault(x => x.CekiciId == row.CekiciId) ?? cekiciler.FirstOrDefault(x => x.Plaka == row.Plaka);
+                if (!_fixedMode)
+                {
+                    var cekiciler = (IEnumerable<CekiciItem>)cmbCekici.ItemsSource;
+                    cmbCekici.SelectedItem = cekiciler.FirstOrDefault(x => x.CekiciId == row.CekiciId) ?? cekiciler.FirstOrDefault(x => x.Plaka == row.Plaka);
+                }
                 dpTarih.SelectedDate = row.Tarih;
                 txtKalem.Text = row.Kalem;
                 txtTutar.Text = row.Tutar.ToString("0.00");
@@ -158,9 +189,17 @@ namespace TirSeferleriModernApp.Views
 
         private void BtnFiltreTum_Click(object sender, RoutedEventArgs e)
         {
-            cmbFiltreCekici.SelectedIndex = -1;
-            dpBas.SelectedDate = null;
-            dpBit.SelectedDate = null;
+            if (_fixedMode)
+            {
+                dpBas.SelectedDate = null;
+                dpBit.SelectedDate = null;
+            }
+            else
+            {
+                cmbFiltreCekici.SelectedIndex = -1;
+                dpBas.SelectedDate = null;
+                dpBit.SelectedDate = null;
+            }
             LoadListe();
         }
 

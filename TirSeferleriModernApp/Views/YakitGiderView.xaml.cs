@@ -18,11 +18,44 @@ namespace TirSeferleriModernApp.Views
         private YakitGider? _secili; // seçili kayýt
         private List<YakitGider> _sonListe = new(); // sadece veri kayýtlarý
 
-        public YakitGiderView()
+        private readonly bool _fixedMode;
+        private readonly string? _fixedPlaka;
+        private int? _fixedCekiciId;
+
+        public YakitGiderView() : this(null) { }
+
+        public YakitGiderView(string? fixedPlaka)
         {
             InitializeComponent();
+            _fixedMode = !string.IsNullOrWhiteSpace(fixedPlaka);
+            _fixedPlaka = fixedPlaka;
+
             DatabaseService.CheckAndCreateOrUpdateYakitGiderTablosu();
             LoadCekiciler();
+
+            if (_fixedMode)
+            {
+                var txtFilt = (TextBlock)FindName("txtSeciliPlakaFilt");
+                var cmbFilt = (ComboBox)FindName("cmbFiltreCekici");
+                var txtForm = (TextBlock)FindName("txtSeciliPlakaForm");
+                var cmbForm = (ComboBox)FindName("cmbCekici");
+                if (txtFilt != null && cmbFilt != null)
+                {
+                    txtFilt.Visibility = Visibility.Visible;
+                    cmbFilt.Visibility = Visibility.Collapsed;
+                    txtFilt.Text = _fixedPlaka;
+                }
+                if (txtForm != null && cmbForm != null)
+                {
+                    txtForm.Visibility = Visibility.Visible;
+                    cmbForm.Visibility = Visibility.Collapsed;
+                    txtForm.Text = _fixedPlaka;
+                }
+
+                var info = DatabaseService.GetVehicleInfoByCekiciPlaka(_fixedPlaka!);
+                _fixedCekiciId = info.cekiciId;
+            }
+
             dpTarih.SelectedDate = DateTime.Today;
             dpBas.SelectedDate = DateTime.Today.AddDays(-30);
             dpBit.SelectedDate = DateTime.Today;
@@ -48,7 +81,7 @@ namespace TirSeferleriModernApp.Views
 
         private void LoadListe()
         {
-            int? cekiciId = cmbFiltreCekici.SelectedValue as int?;
+            int? cekiciId = _fixedMode ? _fixedCekiciId : cmbFiltreCekici.SelectedValue as int?;
             DateTime? bas = dpBas.SelectedDate;
             DateTime? bit = dpBit.SelectedDate;
             _sonListe = DatabaseService.GetYakitGiderleri(cekiciId, bas, bit);
@@ -67,7 +100,7 @@ namespace TirSeferleriModernApp.Views
             return new YakitGider
             {
                 YakitId = 0,
-                Plaka = "",
+                Plaka = _fixedMode ? _fixedPlaka : "",
                 Tarih = DateTime.Today,
                 Istasyon = "",
                 Litre = list.Sum(x => x.Litre),
@@ -115,7 +148,7 @@ namespace TirSeferleriModernApp.Views
         private void ClearForm()
         {
             _secili = null;
-            cmbCekici.SelectedIndex = -1;
+            if (!_fixedMode) cmbCekici.SelectedIndex = -1;
             txtIstasyon.Text = string.Empty;
             txtLitre.Text = string.Empty;
             txtBirimFiyat.Text = string.Empty;
@@ -128,7 +161,12 @@ namespace TirSeferleriModernApp.Views
         private bool TryParseForm(out YakitGider y)
         {
             y = new YakitGider();
-            if (cmbCekici.SelectedItem is CekiciItem item)
+            if (_fixedMode)
+            {
+                y.CekiciId = _fixedCekiciId;
+                y.Plaka = _fixedPlaka;
+            }
+            else if (cmbCekici.SelectedItem is CekiciItem item)
             {
                 y.CekiciId = item.CekiciId;
                 y.Plaka = item.Plaka;
@@ -153,8 +191,11 @@ namespace TirSeferleriModernApp.Views
             {
                 if (row.Aciklama == "Toplam" && row.YakitId == 0) return; // toplam satýrý açma
                 _secili = row;
-                var cekiciler = (IEnumerable<CekiciItem>)cmbCekici.ItemsSource;
-                cmbCekici.SelectedItem = cekiciler.FirstOrDefault(x => x.CekiciId == row.CekiciId) ?? cekiciler.FirstOrDefault(x => x.Plaka == row.Plaka);
+                if (!_fixedMode)
+                {
+                    var cekiciler = (IEnumerable<CekiciItem>)cmbCekici.ItemsSource;
+                    cmbCekici.SelectedItem = cekiciler.FirstOrDefault(x => x.CekiciId == row.CekiciId) ?? cekiciler.FirstOrDefault(x => x.Plaka == row.Plaka);
+                }
                 dpTarih.SelectedDate = row.Tarih;
                 txtIstasyon.Text = row.Istasyon;
                 txtLitre.Text = row.Litre.ToString();
@@ -177,9 +218,18 @@ namespace TirSeferleriModernApp.Views
 
         private void BtnFiltreTum_Click(object sender, RoutedEventArgs e)
         {
-            cmbFiltreCekici.SelectedIndex = -1;
-            dpBas.SelectedDate = null;
-            dpBit.SelectedDate = null;
+            if (_fixedMode)
+            {
+                // sabit modda tümü butonu sadece tarih filtrelerini temizlesin
+                dpBas.SelectedDate = null;
+                dpBit.SelectedDate = null;
+            }
+            else
+            {
+                cmbFiltreCekici.SelectedIndex = -1;
+                dpBas.SelectedDate = null;
+                dpBit.SelectedDate = null;
+            }
             LoadListe();
         }
 

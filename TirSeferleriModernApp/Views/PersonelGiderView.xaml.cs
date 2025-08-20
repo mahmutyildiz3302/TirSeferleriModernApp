@@ -18,11 +18,46 @@ namespace TirSeferleriModernApp.Views
         private PersonelGider? _secili;
         private List<PersonelGider> _sonListe = new();
 
-        public PersonelGiderView()
+        private readonly bool _fixedMode;
+        private readonly string? _fixedPlaka;
+        private int? _fixedCekiciId;
+
+        public PersonelGiderView() : this(null) { }
+
+        public PersonelGiderView(string? fixedPlaka)
         {
             InitializeComponent();
+            _fixedMode = !string.IsNullOrWhiteSpace(fixedPlaka);
+            _fixedPlaka = fixedPlaka;
+
             DatabaseService.CheckAndCreateOrUpdatePersonelGiderTablosu();
             LoadCekiciler();
+
+            if (_fixedMode)
+            {
+                // üst filtrede
+                var txtFilt = (TextBlock)FindName("txtSeciliPlakaFilt");
+                var cmbFilt = (ComboBox)FindName("cmbFiltreCekici");
+                if (txtFilt != null && cmbFilt != null)
+                {
+                    txtFilt.Visibility = Visibility.Visible;
+                    cmbFilt.Visibility = Visibility.Collapsed;
+                    txtFilt.Text = _fixedPlaka;
+                }
+                // formda
+                var txtForm = (TextBlock)FindName("txtSeciliPlakaForm");
+                var cmbForm = (ComboBox)FindName("cmbCekici");
+                if (txtForm != null && cmbForm != null)
+                {
+                    txtForm.Visibility = Visibility.Visible;
+                    cmbForm.Visibility = Visibility.Collapsed;
+                    txtForm.Text = _fixedPlaka;
+                }
+
+                var info = DatabaseService.GetVehicleInfoByCekiciPlaka(_fixedPlaka!);
+                _fixedCekiciId = info.cekiciId;
+            }
+
             dpTarih.SelectedDate = DateTime.Today;
             dpBas.SelectedDate = DateTime.Today.AddDays(-30);
             dpBit.SelectedDate = DateTime.Today;
@@ -48,7 +83,7 @@ namespace TirSeferleriModernApp.Views
 
         private void LoadListe()
         {
-            int? cekiciId = cmbFiltreCekici.SelectedValue as int?;
+            int? cekiciId = _fixedMode ? _fixedCekiciId : cmbFiltreCekici.SelectedValue as int?;
             DateTime? bas = dpBas.SelectedDate;
             DateTime? bit = dpBit.SelectedDate;
             _sonListe = DatabaseService.GetPersonelGiderleri(cekiciId, bas, bit);
@@ -66,7 +101,7 @@ namespace TirSeferleriModernApp.Views
             return new PersonelGider
             {
                 PersonelGiderId = 0,
-                Plaka = string.Empty,
+                Plaka = _fixedMode ? _fixedPlaka : string.Empty,
                 Tarih = DateTime.Today,
                 PersonelAdi = string.Empty,
                 OdemeTuru = "",
@@ -114,7 +149,7 @@ namespace TirSeferleriModernApp.Views
         private void ClearForm()
         {
             _secili = null;
-            cmbCekici.SelectedIndex = -1;
+            if (!_fixedMode) cmbCekici.SelectedIndex = -1;
             txtPersonel.Text = string.Empty;
             cmbOdemeTuru.SelectedIndex = -1;
             txtSgkDonem.Text = string.Empty;
@@ -127,7 +162,12 @@ namespace TirSeferleriModernApp.Views
         private bool TryParseForm(out PersonelGider g)
         {
             g = new PersonelGider();
-            if (cmbCekici.SelectedItem is CekiciItem item)
+            if (_fixedMode)
+            {
+                g.CekiciId = _fixedCekiciId;
+                g.Plaka = _fixedPlaka;
+            }
+            else if (cmbCekici.SelectedItem is CekiciItem item)
             {
                 g.CekiciId = item.CekiciId;
                 g.Plaka = item.Plaka;
@@ -149,11 +189,13 @@ namespace TirSeferleriModernApp.Views
             {
                 if (row.Aciklama == "Toplam" && row.PersonelGiderId == 0) return;
                 _secili = row;
-                var cekiciler = (IEnumerable<CekiciItem>)cmbCekici.ItemsSource;
-                cmbCekici.SelectedItem = cekiciler.FirstOrDefault(x => x.CekiciId == row.CekiciId) ?? cekiciler.FirstOrDefault(x => x.Plaka == row.Plaka);
+                if (!_fixedMode)
+                {
+                    var cekiciler = (IEnumerable<CekiciItem>)cmbCekici.ItemsSource;
+                    cmbCekici.SelectedItem = cekiciler.FirstOrDefault(x => x.CekiciId == row.CekiciId) ?? cekiciler.FirstOrDefault(x => x.Plaka == row.Plaka);
+                }
                 dpTarih.SelectedDate = row.Tarih;
                 txtPersonel.Text = row.PersonelAdi;
-                // set odeme turu
                 foreach (var item in cmbOdemeTuru.Items)
                 {
                     if (item is ComboBoxItem ci && string.Equals(ci.Content?.ToString(), row.OdemeTuru, StringComparison.OrdinalIgnoreCase))
@@ -170,9 +212,17 @@ namespace TirSeferleriModernApp.Views
 
         private void BtnFiltreTum_Click(object sender, RoutedEventArgs e)
         {
-            cmbFiltreCekici.SelectedIndex = -1;
-            dpBas.SelectedDate = null;
-            dpBit.SelectedDate = null;
+            if (_fixedMode)
+            {
+                dpBas.SelectedDate = null;
+                dpBit.SelectedDate = null;
+            }
+            else
+            {
+                cmbFiltreCekici.SelectedIndex = -1;
+                dpBas.SelectedDate = null;
+                dpBit.SelectedDate = null;
+            }
             LoadListe();
         }
 

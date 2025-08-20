@@ -20,6 +20,7 @@
                     <TextBlock Text="|" Margin="10,0"/>
                     <TextBlock Text="Cekici:" VerticalAlignment="Center"/>
                     <ComboBox x:Name="cmbFiltreCekici" Width="180" DisplayMemberPath="Plaka" SelectedValuePath="CekiciId" Margin="6,0" SelectionChanged="OnFiltreChanged"/>
+                    <TextBlock x:Name="txtSeciliPlakaFilt" Visibility="Collapsed" Margin="6,0" VerticalAlignment="Center" FontWeight="Bold"/>
                     <TextBlock Text="Bas" Margin="12,0,4,0" VerticalAlignment="Center"/>
                     <DatePicker x:Name="dpBas" Width="130" SelectedDateChanged="OnFiltreChanged"/>
                     <TextBlock Text="Bit" Margin="8,0,4,0" VerticalAlignment="Center"/>
@@ -42,6 +43,7 @@
                     <TextBlock Text="Yeni Kayit" FontSize="16" FontWeight="Bold" Margin="0,0,0,10"/>
                     <TextBlock Text="Cekici"/>
                     <ComboBox x:Name="cmbCekici" Width="300" DisplayMemberPath="Plaka" SelectedValuePath="CekiciId" Margin="0,2,0,8"/>
+                    <TextBlock x:Name="txtSeciliPlakaForm" Visibility="Collapsed" FontWeight="Bold" Margin="0,2,0,8"/>
 
                     <TextBlock Text="Tarih"/>
                     <DatePicker x:Name="dpTarih" Width="300" Margin="0,2,0,8"/>
