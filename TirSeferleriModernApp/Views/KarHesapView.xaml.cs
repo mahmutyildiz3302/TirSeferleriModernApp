@@ -34,11 +34,10 @@ namespace TirSeferleriModernApp.Views
         {
             var plakalar = KarHesapShared.GetActivePlakalar();
             var items = new List<PlakaItem>();
-            // "Tümü" seçeneği en başa ekle
             items.Add(new PlakaItem { Plaka = "Tümü", IsAll = true });
             items.AddRange(plakalar.Select(p => new PlakaItem { Plaka = p }));
             cmbPlaka.ItemsSource = items;
-            cmbPlaka.SelectedIndex = 0; // varsayılan: Tümü
+            cmbPlaka.SelectedIndex = 0;
         }
 
         private (string? plaka, bool isAll) GetSelectedPlakaOrAll()
@@ -60,11 +59,45 @@ namespace TirSeferleriModernApp.Views
             txtGelir.Text = ozet.Gelir.ToString("N2", CultureInfo.CurrentCulture);
             txtGider.Text = ozet.ToplamGider.ToString("N2", CultureInfo.CurrentCulture);
             txtKar.Text   = ozet.Kar.ToString("N2", CultureInfo.CurrentCulture);
-            dgKalemler.ItemsSource = ozet.Kalemler;
 
-            // Gelir listesi
+            // Giderler: [Toplam] + veri + [Toplam]
+            var giderHeader = BuildGiderToplam(ozet.Kalemler);
+            var giderFooter = BuildGiderToplam(ozet.Kalemler);
+            var giderList = new List<KarKalem> { giderHeader };
+            giderList.AddRange(ozet.Kalemler);
+            giderList.Add(giderFooter);
+            dgKalemler.ItemsSource = giderList;
+
+            // Gelirler: [Toplam] + veri + [Toplam]
             var gelirler = KarHesapShared.GetGelirler(plaka, dpBas.SelectedDate, dpBit.SelectedDate);
-            dgGelirler.ItemsSource = gelirler;
+            var gelirHeader = BuildGelirToplam(gelirler);
+            var gelirFooter = BuildGelirToplam(gelirler);
+            var gelirList = new List<Sefer> { gelirHeader };
+            gelirList.AddRange(gelirler);
+            gelirList.Add(gelirFooter);
+            dgGelirler.ItemsSource = gelirList;
+        }
+
+        private static KarKalem BuildGiderToplam(IEnumerable<KarKalem> list)
+        {
+            return new KarKalem
+            {
+                Ad = "Toplam",
+                Tutar = list?.Sum(x => x?.Tutar ?? 0) ?? 0
+            };
+        }
+
+        private static Sefer BuildGelirToplam(IEnumerable<Sefer> list)
+        {
+            return new Sefer
+            {
+                SeferId = 0,
+                KonteynerNo = string.Empty,
+                Tarih = DateTime.Today,
+                Fiyat = list?.Sum(x => x?.Fiyat ?? 0) ?? 0,
+                Aciklama = "Toplam",
+                CekiciPlaka = string.Empty
+            };
         }
 
         private void cmbPlaka_SelectionChanged(object sender, SelectionChangedEventArgs e) => HesaplaVeGoster();

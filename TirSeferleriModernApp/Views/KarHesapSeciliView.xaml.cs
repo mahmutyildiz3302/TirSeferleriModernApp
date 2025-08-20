@@ -1,7 +1,9 @@
 using System;
 using System.Globalization;
+using System.Linq;
 using System.Windows.Controls;
 using TirSeferleriModernApp.Views.Shared;
+using TirSeferleriModernApp.Models;
 
 namespace TirSeferleriModernApp.Views
 {
@@ -25,14 +27,26 @@ namespace TirSeferleriModernApp.Views
         private void HesaplaVeGoster()
         {
             var ozet = KarHesapShared.Hesapla(_plaka, dpBas.SelectedDate, dpBit.SelectedDate);
-            txtGelir.Text = ozet.Gelir.ToString("N2", System.Globalization.CultureInfo.CurrentCulture);
-            txtGider.Text = ozet.ToplamGider.ToString("N2", System.Globalization.CultureInfo.CurrentCulture);
-            txtKar.Text   = ozet.Kar.ToString("N2", System.Globalization.CultureInfo.CurrentCulture);
-            dgKalemler.ItemsSource = ozet.Kalemler;
+            txtGelir.Text = ozet.Gelir.ToString("N2", CultureInfo.CurrentCulture);
+            txtGider.Text = ozet.ToplamGider.ToString("N2", CultureInfo.CurrentCulture);
+            txtKar.Text   = ozet.Kar.ToString("N2", CultureInfo.CurrentCulture);
 
-            // Gelir grid'ini doldur
+            // Giderler: [Toplam] + veri + [Toplam]
+            var giderHeader = new KarKalem { Ad = "Toplam", Tutar = ozet.Kalemler.Sum(x => x.Tutar) };
+            var giderFooter = new KarKalem { Ad = "Toplam", Tutar = ozet.Kalemler.Sum(x => x.Tutar) };
+            var giderList = new System.Collections.Generic.List<KarKalem> { giderHeader };
+            giderList.AddRange(ozet.Kalemler);
+            giderList.Add(giderFooter);
+            dgKalemler.ItemsSource = giderList;
+
+            // Gelirler: [Toplam] + veri + [Toplam]
             var gelirler = KarHesapShared.GetGelirler(_plaka, dpBas.SelectedDate, dpBit.SelectedDate);
-            dgGelirler.ItemsSource = gelirler;
+            var gelirHeader = new Sefer { SeferId = 0, KonteynerNo = string.Empty, Tarih = DateTime.Today, Fiyat = gelirler.Sum(x => x.Fiyat), Aciklama = "Toplam", CekiciPlaka = string.Empty };
+            var gelirFooter = new Sefer { SeferId = 0, KonteynerNo = string.Empty, Tarih = DateTime.Today, Fiyat = gelirler.Sum(x => x.Fiyat), Aciklama = "Toplam", CekiciPlaka = string.Empty };
+            var gelirList = new System.Collections.Generic.List<Sefer> { gelirHeader };
+            gelirList.AddRange(gelirler);
+            gelirList.Add(gelirFooter);
+            dgGelirler.ItemsSource = gelirList;
         }
 
         private void dpBas_SelectedDateChanged(object sender, SelectionChangedEventArgs e) => HesaplaVeGoster();
