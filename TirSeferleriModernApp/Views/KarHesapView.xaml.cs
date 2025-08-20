@@ -1,25 +1,70 @@
-﻿using System;
+﻿using Microsoft.Data.Sqlite;
+using System;
 using System.Collections.Generic;
+using System.Globalization;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Data;
-using System.Windows.Documents;
-using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
+using TirSeferleriModernApp.Models;
+using TirSeferleriModernApp.Services;
 
 namespace TirSeferleriModernApp.Views
 {
     public partial class KarHesapView : UserControl
     {
+        private class PlakaItem { public string Plaka { get; set; } = string.Empty; public override string ToString() => Plaka; }
+
         public KarHesapView()
         {
             InitializeComponent();
+            // İlgili tabloların garanti altına alınması
+            DatabaseService.CheckAndCreateOrUpdateSeferlerTablosu();
+            DatabaseService.CheckAndCreateOrUpdateYakitGiderTablosu();
+            DatabaseService.CheckAndCreateOrUpdateSanaiGiderTablosu();
+            DatabaseService.CheckAndCreateOrUpdateGenelGiderTablosu();
+            DatabaseService.CheckAndCreateOrUpdatePersonelGiderTablosu();
+            DatabaseService.CheckAndCreateOrUpdateVergiAracTablosu();
+
+            LoadPlakalar();
+            dpBas.SelectedDate = new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1);
+            dpBit.SelectedDate = DateTime.Today;
+        }
+
+        private void LoadPlakalar()
+        {
+            try
+            {
+                var items = new List<PlakaItem>();
+                using var con = new SqliteConnection(DatabaseService.ConnectionString);
+                con.Open();
+                using var cmd = con.CreateCommand();
+                cmd.CommandText = "SELECT DISTINCT Plaka FROM Cekiciler WHERE IFNULL(Arsivli,0)=0 ORDER BY Plaka";
+                using var rdr = cmd.ExecuteReader();
+                while (rdr.Read())
+                {
+                    var p = rdr.IsDBNull(0) ? string.Empty : rdr.GetString(0);
+                    if (!string.IsNullOrWhiteSpace(p)) items.Add(new PlakaItem { Plaka = p });
+                }
+                cmbPlaka.ItemsSource = items;
+                if (items.Count > 0) cmbPlaka.SelectedIndex = 0;
+            }
+            catch
+            {
+                // ignore
+            }
+        }
+
+        private void btnHesapla_Click(object sender, RoutedEventArgs e)
+        {
+            string? plaka = (cmbPlaka.SelectedItem as PlakaItem)?.Plaka ?? (cmbPlaka.Text?.Trim() ?? string.Empty);
+            DateTime? bas = dpBas.SelectedDate;
+            DateTime? bit = dpBit.SelectedDate;
+
+            var ozet = ProfitService.Hesapla(string.IsNullOrWhiteSpace(plaka) ? null : plaka, bas, bit);
+            txtGelir.Text = ozet.Gelir.ToString("N2", CultureInfo.CurrentCulture);
+            txtGider.Text = ozet.ToplamGider.ToString("N2", CultureInfo.CurrentCulture);
+            txtKar.Text   = ozet.Kar.ToString("N2", CultureInfo.CurrentCulture);
+            dgKalemler.ItemsSource = ozet.Kalemler;
         }
     }
 }

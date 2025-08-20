@@ -5,8 +5,79 @@
              xmlns:d="http://schemas.microsoft.com/expression/blend/2008" 
              xmlns:local="clr-namespace:TirSeferleriModernApp.Views"
              mc:Ignorable="d" 
-             d:DesignHeight="450" d:DesignWidth="800">
-    <Grid Background="White">
-        <TextBlock Text="📊 Kar Hesaplama Ekranı" FontSize="24" FontWeight="Bold" Margin="20"/>
+             d:DesignHeight="450" d:DesignWidth="900">
+    <Grid Background="#FAFAFA" Margin="8">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Filtre Alanı -->
+        <Border Padding="10" Margin="0,0,0,8" Background="White" CornerRadius="6" BorderBrush="#DDD" BorderThickness="1">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="2*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
+                </Grid.ColumnDefinitions>
+
+                <StackPanel Orientation="Vertical" Margin="4">
+                    <TextBlock Text="Plaka" FontWeight="SemiBold"/>
+                    <ComboBox x:Name="cmbPlaka" MinWidth="200" IsEditable="True"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="1" Orientation="Vertical" Margin="4">
+                    <TextBlock Text="Başlangıç" FontWeight="SemiBold"/>
+                    <DatePicker x:Name="dpBas"/>
+                </StackPanel>
+                <StackPanel Grid.Column="2" Orientation="Vertical" Margin="4">
+                    <TextBlock Text="Bitiş" FontWeight="SemiBold"/>
+                    <DatePicker x:Name="dpBit"/>
+                </StackPanel>
+
+                <StackPanel Grid.Column="3" Orientation="Horizontal" VerticalAlignment="Bottom" Margin="4">
+                    <Button x:Name="btnHesapla" Content="Hesapla" Padding="16,8" Margin="4" Click="btnHesapla_Click"/>
+                </StackPanel>
+            </Grid>
+        </Border>
+
+        <!-- Sonuçlar -->
+        <Grid Grid.Row="1">
+            <Grid.RowDefinitions>
+                <RowDefinition Height="Auto"/>
+                <RowDefinition Height="*"/>
+            </Grid.RowDefinitions>
+
+            <UniformGrid Columns="3" Margin="0,0,0,8">
+                <Border Background="#FFF" CornerRadius="6" Padding="12" Margin="4" BorderBrush="#DDD" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Gelir" FontWeight="Bold"/>
+                        <TextBlock x:Name="txtGelir" FontSize="18" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Border>
+                <Border Background="#FFF" CornerRadius="6" Padding="12" Margin="4" BorderBrush="#DDD" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Toplam Gider" FontWeight="Bold"/>
+                        <TextBlock x:Name="txtGider" FontSize="18" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Border>
+                <Border Background="#FFF" CornerRadius="6" Padding="12" Margin="4" BorderBrush="#DDD" BorderThickness="1">
+                    <StackPanel>
+                        <TextBlock Text="Net Kar" FontWeight="Bold"/>
+                        <TextBlock x:Name="txtKar" FontSize="18" FontWeight="SemiBold"/>
+                    </StackPanel>
+                </Border>
+            </UniformGrid>
+
+            <Border Grid.Row="1" Background="White" CornerRadius="6" Padding="8" BorderBrush="#DDD" BorderThickness="1">
+                <DataGrid x:Name="dgKalemler" AutoGenerateColumns="False" CanUserAddRows="False" HeadersVisibility="Column" IsReadOnly="True">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Kalem" Binding="{Binding Ad}" Width="*"/>
+                        <DataGridTextColumn Header="Tutar" Binding="{Binding Tutar, StringFormat={}{0:N2}}" Width="150"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+            </Border>
+        </Grid>
     </Grid>
 </UserControl>
