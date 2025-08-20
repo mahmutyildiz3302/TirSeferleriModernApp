@@ -218,16 +218,16 @@ namespace TirSeferleriModernApp.ViewModels
         private void ExecuteGiderler()
         {
             Trace.WriteLine("[MainViewModel.cs:58] Giderler menüsü işlemleri başlatıldı.");
-            // Toggle mantığı: aynı menüye tekrar basılırsa kapat
+            // Toggle: aynı menüye tekrar basılırsa kapat
             if (AktifAltMenu == "💸 Giderler")
             {
                 AktifAltMenu = null;
                 StatusText = "Giderler alt menü kapatıldı.";
                 return;
             }
+            // Sadece alt menüyü aç; herhangi bir sayfa açma
             AktifAltMenu = "💸 Giderler";
-            CurrentContent = new YakitGiderView();
-            StatusText = "Giderler açıldı.";
+            StatusText = "Giderler alt menü açıldı.";
         }
 
         private void ExecuteKar()
