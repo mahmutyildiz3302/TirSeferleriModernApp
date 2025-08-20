@@ -41,28 +41,30 @@ namespace TirSeferleriModernApp.Views
             cmbPlaka.SelectedIndex = 0; // varsayılan: Tümü
         }
 
-        private void HesaplaVeGoster()
+        private (string? plaka, bool isAll) GetSelectedPlakaOrAll()
         {
-            string? plaka = null;
             if (cmbPlaka.SelectedItem is PlakaItem sel)
             {
-                plaka = sel.IsAll ? null : sel.Plaka;
+                return (sel.IsAll ? null : sel.Plaka, sel.IsAll);
             }
-            else
-            {
-                // Elle yazılan metin
-                var text = cmbPlaka.Text?.Trim();
-                if (!string.IsNullOrWhiteSpace(text) && !string.Equals(text, "Tümü", StringComparison.OrdinalIgnoreCase))
-                    plaka = text;
-                else
-                    plaka = null; // Tümü veya boş => tüm plakalar
-            }
+            var text = cmbPlaka.Text?.Trim();
+            if (!string.IsNullOrWhiteSpace(text) && !string.Equals(text, "Tümü", StringComparison.OrdinalIgnoreCase))
+                return (text, false);
+            return (null, true);
+        }
 
+        private void HesaplaVeGoster()
+        {
+            var (plaka, isAll) = GetSelectedPlakaOrAll();
             var ozet = KarHesapShared.Hesapla(plaka, dpBas.SelectedDate, dpBit.SelectedDate);
             txtGelir.Text = ozet.Gelir.ToString("N2", CultureInfo.CurrentCulture);
             txtGider.Text = ozet.ToplamGider.ToString("N2", CultureInfo.CurrentCulture);
             txtKar.Text   = ozet.Kar.ToString("N2", CultureInfo.CurrentCulture);
             dgKalemler.ItemsSource = ozet.Kalemler;
+
+            // Gelir listesi
+            var gelirler = KarHesapShared.GetGelirler(plaka, dpBas.SelectedDate, dpBit.SelectedDate);
+            dgGelirler.ItemsSource = gelirler;
         }
 
         private void cmbPlaka_SelectionChanged(object sender, SelectionChangedEventArgs e) => HesaplaVeGoster();

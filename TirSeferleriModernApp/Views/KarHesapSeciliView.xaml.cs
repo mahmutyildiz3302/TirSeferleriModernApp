@@ -25,10 +25,14 @@ namespace TirSeferleriModernApp.Views
         private void HesaplaVeGoster()
         {
             var ozet = KarHesapShared.Hesapla(_plaka, dpBas.SelectedDate, dpBit.SelectedDate);
-            txtGelir.Text = ozet.Gelir.ToString("N2", CultureInfo.CurrentCulture);
-            txtGider.Text = ozet.ToplamGider.ToString("N2", CultureInfo.CurrentCulture);
-            txtKar.Text   = ozet.Kar.ToString("N2", CultureInfo.CurrentCulture);
+            txtGelir.Text = ozet.Gelir.ToString("N2", System.Globalization.CultureInfo.CurrentCulture);
+            txtGider.Text = ozet.ToplamGider.ToString("N2", System.Globalization.CultureInfo.CurrentCulture);
+            txtKar.Text   = ozet.Kar.ToString("N2", System.Globalization.CultureInfo.CurrentCulture);
             dgKalemler.ItemsSource = ozet.Kalemler;
+
+            // Gelir grid'ini doldur
+            var gelirler = KarHesapShared.GetGelirler(_plaka, dpBas.SelectedDate, dpBit.SelectedDate);
+            dgGelirler.ItemsSource = gelirler;
         }
 
         private void dpBas_SelectedDateChanged(object sender, SelectionChangedEventArgs e) => HesaplaVeGoster();
