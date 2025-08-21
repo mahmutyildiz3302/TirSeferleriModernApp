@@ -14,18 +14,11 @@
         <Border Grid.Row="0" Background="#E8F0FE" BorderBrush="Gray" BorderThickness="1" Padding="10">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <!-- DataGrid left -->
-                <DataGrid Grid.Column="0" x:Name="dgDepolar" AutoGenerateColumns="False" IsReadOnly="True" Background="White" MinHeight="220" HorizontalAlignment="Stretch" Margin="0,0,10,0" MouseDoubleClick="dgDepolar_MouseDoubleClick">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Depo Adi" Binding="{Binding DepoAdi}" Width="200"/>
-                        <DataGridTextColumn Header="Aciklama" Binding="{Binding Aciklama}" Width="*"/>
-                    </DataGrid.Columns>
-                </DataGrid>
-                <!-- Form right -->
-                <Border Grid.Column="1" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="10">
+                <!-- Form left (Auto) -->
+                <Border Grid.Column="0" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,10,0">
                     <StackPanel>
                         <TextBlock Text="Depo Tanimi" FontSize="18" FontWeight="Bold" Margin="0,0,0,5"/>
                         <TextBox x:Name="txtDepoAdi" materialDesignControls:HintAssist.Hint="Depo Adi" Width="300" Margin="0,0,0,5"/>
@@ -37,6 +30,13 @@
                         </StackPanel>
                     </StackPanel>
                 </Border>
+                <!-- DataGrid right (*) -->
+                <DataGrid Grid.Column="1" x:Name="dgDepolar" AutoGenerateColumns="False" IsReadOnly="True" Background="White" MinHeight="220" HorizontalAlignment="Stretch" MouseDoubleClick="dgDepolar_MouseDoubleClick">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Depo Adi" Binding="{Binding DepoAdi}" Width="200"/>
+                        <DataGridTextColumn Header="Aciklama" Binding="{Binding Aciklama}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
             </Grid>
         </Border>
 
@@ -47,22 +47,11 @@
         <Border Grid.Row="2" Background="#E8F0FE" BorderBrush="Gray" BorderThickness="1" Padding="10">
             <Grid>
                 <Grid.ColumnDefinitions>
-                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <!-- DataGrid left -->
-                <DataGrid Grid.Column="0" x:Name="dgGuzergah" AutoGenerateColumns="False" IsReadOnly="True" Background="White" MinHeight="220" HorizontalAlignment="Stretch" Margin="0,0,10,0" MouseDoubleClick="dgGuzergah_MouseDoubleClick">
-                    <DataGrid.Columns>
-                        <DataGridTextColumn Header="Cikis Noktasi" Binding="{Binding CikisDepoAdi}" Width="150"/>
-                        <DataGridTextColumn Header="Varis Noktasi" Binding="{Binding VarisDepoAdi}" Width="150"/>
-                        <DataGridTextColumn Header="Bos/Dolu" Binding="{Binding BosDolu}" Width="90"/>
-                        <DataGridTextColumn Header="Ekstra" Binding="{Binding Ekstra}" Width="100"/>
-                        <DataGridTextColumn Header="Ucret" Binding="{Binding Ucret}" Width="90"/>
-                        <DataGridTextColumn Header="Aciklama" Binding="{Binding Aciklama}" Width="*"/>
-                    </DataGrid.Columns>
-                </DataGrid>
-                <!-- Form right -->
-                <Border Grid.Column="1" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="10">
+                <!-- Form left (Auto) -->
+                <Border Grid.Column="0" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,10,0">
                     <StackPanel>
                         <TextBlock Text="Guzergah Tanimi" FontSize="18" FontWeight="Bold" Margin="0,0,0,5"/>
                         <ComboBox x:Name="cmbCikisDepo" materialDesignControls:HintAssist.Hint="Cikis Noktasi" Width="300" Margin="0,0,0,5" DisplayMemberPath="Value" SelectedValuePath="Key"/>
@@ -84,6 +73,17 @@
                         </StackPanel>
                     </StackPanel>
                 </Border>
+                <!-- DataGrid right (*) -->
+                <DataGrid Grid.Column="1" x:Name="dgGuzergah" AutoGenerateColumns="False" IsReadOnly="True" Background="White" MinHeight="220" HorizontalAlignment="Stretch" MouseDoubleClick="dgGuzergah_MouseDoubleClick">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Cikis Noktasi" Binding="{Binding CikisDepoAdi}" Width="150"/>
+                        <DataGridTextColumn Header="Varis Noktasi" Binding="{Binding VarisDepoAdi}" Width="150"/>
+                        <DataGridTextColumn Header="Bos/Dolu" Binding="{Binding BosDolu}" Width="90"/>
+                        <DataGridTextColumn Header="Ekstra" Binding="{Binding Ekstra}" Width="100"/>
+                        <DataGridTextColumn Header="Ucret" Binding="{Binding Ucret}" Width="90"/>
+                        <DataGridTextColumn Header="Aciklama" Binding="{Binding Aciklama}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
             </Grid>
         </Border>
     </Grid>
