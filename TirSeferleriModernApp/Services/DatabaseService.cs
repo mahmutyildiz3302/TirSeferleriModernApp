@@ -1606,6 +1606,7 @@ WHERE f.SoforId IS NULL;";
                     CikisDepoId INTEGER NOT NULL,
                     VarisDepoId INTEGER NOT NULL,
                     BosDolu TEXT,
+                    Ekstra TEXT,
                     Ucret REAL,
                     Aciklama TEXT
                 );";
@@ -1613,6 +1614,7 @@ WHERE f.SoforId IS NULL;";
                     "CikisDepoId INTEGER",
                     "VarisDepoId INTEGER",
                     "BosDolu TEXT",
+                    "Ekstra TEXT",
                     "Ucret REAL",
                     "Aciklama TEXT"
                 ];

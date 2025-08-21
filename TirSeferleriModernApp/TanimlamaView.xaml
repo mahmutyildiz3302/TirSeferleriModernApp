@@ -204,10 +204,11 @@
                         <!-- DataGrid solda -->
                         <DataGrid Grid.Column="0" x:Name="dgGuzergah" AutoGenerateColumns="False" IsReadOnly="True" Background="White" MinHeight="220" HorizontalAlignment="Stretch" Margin="0,0,10,0" MouseDoubleClick="dgGuzergah_MouseDoubleClick">
                             <DataGrid.Columns>
-                                <DataGridTextColumn Header="Çıkış Noktası" Binding="{Binding CikisDepoAdi}" Width="160"/>
-                                <DataGridTextColumn Header="Varış Noktası" Binding="{Binding VarisDepoAdi}" Width="160"/>
-                                <DataGridTextColumn Header="Boş/Dolu" Binding="{Binding BosDolu}" Width="100"/>
-                                <DataGridTextColumn Header="Ücret" Binding="{Binding Ucret}" Width="100"/>
+                                <DataGridTextColumn Header="Çıkış Noktası" Binding="{Binding CikisDepoAdi}" Width="150"/>
+                                <DataGridTextColumn Header="Varış Noktası" Binding="{Binding VarisDepoAdi}" Width="150"/>
+                                <DataGridTextColumn Header="Boş/Dolu" Binding="{Binding BosDolu}" Width="90"/>
+                                <DataGridTextColumn Header="Ekstra" Binding="{Binding Ekstra}" Width="100"/>
+                                <DataGridTextColumn Header="Ücret" Binding="{Binding Ucret}" Width="90"/>
                                 <DataGridTextColumn Header="Açıklama" Binding="{Binding Aciklama}" Width="*"/>
                             </DataGrid.Columns>
                         </DataGrid>
@@ -220,6 +221,10 @@
                                 <ComboBox x:Name="cmbBosDolu" materialDesignControls:HintAssist.Hint="Boş/Dolu" Width="300" Margin="0,0,0,5">
                                     <ComboBoxItem Content="Boş"/>
                                     <ComboBoxItem Content="Dolu"/>
+                                </ComboBox>
+                                <ComboBox x:Name="cmbEkstra" materialDesignControls:HintAssist.Hint="Ekstra (Soda / Emanet)" Width="300" Margin="0,0,0,5">
+                                    <ComboBoxItem Content="Soda"/>
+                                    <ComboBoxItem Content="Emanet"/>
                                 </ComboBox>
                                 <TextBox x:Name="txtUcret" materialDesignControls:HintAssist.Hint="Ücret" Width="300" Margin="0,0,0,5"/>
                                 <TextBox x:Name="txtGuzergahAciklama" materialDesignControls:HintAssist.Hint="Açıklama (opsiyonel)" Width="300" Margin="0,0,0,5"/>
