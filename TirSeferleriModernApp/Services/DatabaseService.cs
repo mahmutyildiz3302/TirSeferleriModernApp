@@ -84,6 +84,7 @@ namespace TirSeferleriModernApp.Services
             CheckAndCreateOrUpdatePersonelGiderTablosu();
             CheckAndCreateOrUpdateVergiAracTablosu();
             CheckAndCreateOrUpdateDepoTablosu();
+            CheckAndCreateOrUpdateGuzergahTablosu(); // Güzergahlar tablosunu kontrol et
         }
 
         private void EnsureDatabaseFile()
@@ -1592,6 +1593,32 @@ WHERE f.SoforId IS NULL;";
             catch (Exception ex)
             {
                 Debug.WriteLine($"[DatabaseService] CheckAndCreateOrUpdateDepoTablosu hata: {ex.Message}");
+            }
+        }
+
+        public static void CheckAndCreateOrUpdateGuzergahTablosu()
+        {
+            try
+            {
+                EnsureDatabaseFileStatic();
+                string createScript = @"CREATE TABLE IF NOT EXISTS Guzergahlar (
+                    GuzergahId INTEGER PRIMARY KEY AUTOINCREMENT,
+                    CikisDepoId INTEGER NOT NULL,
+                    VarisDepoId INTEGER NOT NULL,
+                    Ucret REAL,
+                    Aciklama TEXT
+                );";
+                string[] requiredColumns = [
+                    "CikisDepoId INTEGER",
+                    "VarisDepoId INTEGER",
+                    "Ucret REAL",
+                    "Aciklama TEXT"
+                ];
+                EnsureTable("Guzergahlar", createScript, requiredColumns);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] CheckAndCreateOrUpdateGuzergahTablosu hata: {ex.Message}");
             }
         }
     }

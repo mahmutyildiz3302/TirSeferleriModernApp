@@ -21,8 +21,10 @@ namespace TirSeferleriModernApp.Views
         // Basit taşıyıcı tipler (ComboBox kaynakları)
         private class DorseItem { public int DorseId { get; set; } public string Plaka { get; set; } = string.Empty; }
         private class SoforItem { public int SoforId { get; set; } public string SoforAdi { get; set; } = string.Empty; }
+        private class DepoItem { public int DepoId { get; set; } public string DepoAdi { get; set; } = string.Empty; }
 
         private DataRowView? _seciliDepo;
+        private DataRowView? _seciliGuzergah;
 
         public TanimlamaView()
         {
@@ -31,12 +33,15 @@ namespace TirSeferleriModernApp.Views
             DatabaseService.EnsureCekicilerArsivliColumn();
             DatabaseService.EnsureDorselerArsivliColumn();
             DatabaseService.CheckAndCreateOrUpdateDepoTablosu();
+            DatabaseService.CheckAndCreateOrUpdateGuzergahTablosu();
             LoadData();
             LoadDorseler();
             LoadSoforler();
             LoadDorseTipleri();
             UpdateUnarchiveColumnsVisibility();
             LoadDepolar();
+            LoadDepoCombos();
+            LoadGuzergahlar();
         }
 
         private void LoadDorseTipleri()
@@ -64,6 +69,7 @@ namespace TirSeferleriModernApp.Views
             dgDorseler.ItemsSource = LoadTable("Dorseler").DefaultView;
             dgSoforler.ItemsSource = LoadTable("Soforler").DefaultView;
             LoadDepolar();
+            LoadGuzergahlar();
             UpdateUnarchiveColumnsVisibility();
         }
 
@@ -74,6 +80,40 @@ namespace TirSeferleriModernApp.Views
             using var rdr = cmd.ExecuteReader();
             var dt = new DataTable(); dt.Load(rdr);
             dgDepolar.ItemsSource = dt.DefaultView;
+        }
+
+        private void LoadDepoCombos()
+        {
+            try
+            {
+                using var conn = new SqliteConnection(ConnectionString); conn.Open();
+                using var cmd = new SqliteCommand("SELECT DepoId, DepoAdi FROM Depolar ORDER BY DepoAdi", conn);
+                using var rdr = cmd.ExecuteReader();
+                var list = new List<DepoItem>();
+                while (rdr.Read()) list.Add(new DepoItem { DepoId = rdr.GetInt32(0), DepoAdi = rdr.GetString(1) });
+                cmbCikisDepo.ItemsSource = list; cmbCikisDepo.DisplayMemberPath = nameof(DepoItem.DepoAdi); cmbCikisDepo.SelectedValuePath = nameof(DepoItem.DepoId);
+                cmbVarisDepo.ItemsSource = list.ToList(); cmbVarisDepo.DisplayMemberPath = nameof(DepoItem.DepoAdi); cmbVarisDepo.SelectedValuePath = nameof(DepoItem.DepoId);
+            }
+            catch { }
+        }
+
+        private void LoadGuzergahlar()
+        {
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            using var cmd = new SqliteCommand(@"SELECT g.GuzergahId,
+                                                       g.CikisDepoId,
+                                                       cd.DepoAdi AS CikisDepoAdi,
+                                                       g.VarisDepoId,
+                                                       vd.DepoAdi AS VarisDepoAdi,
+                                                       g.Ucret,
+                                                       g.Aciklama
+                                                FROM Guzergahlar g
+                                                LEFT JOIN Depolar cd ON cd.DepoId = g.CikisDepoId
+                                                LEFT JOIN Depolar vd ON vd.DepoId = g.VarisDepoId
+                                                ORDER BY cd.DepoAdi, vd.DepoAdi", conn);
+            using var rdr = cmd.ExecuteReader();
+            var dt = new DataTable(); dt.Load(rdr);
+            dgGuzergah.ItemsSource = dt.DefaultView;
         }
 
         private void UpdateUnarchiveColumnsVisibility()
@@ -425,7 +465,7 @@ namespace TirSeferleriModernApp.Views
             cmd.Parameters.AddWithValue("@a", ad);
             cmd.Parameters.AddWithValue("@c", (object?)ack ?? System.DBNull.Value);
             cmd.ExecuteNonQuery();
-            txtDepoAdi.Text = string.Empty; txtDepoAciklama.Text = string.Empty; _seciliDepo = null; LoadDepolar();
+            txtDepoAdi.Text = string.Empty; txtDepoAciklama.Text = string.Empty; _seciliDepo = null; LoadDepolar(); LoadDepoCombos();
         }
 
         private void BtnDepoGuncelle_Click(object sender, RoutedEventArgs e)
@@ -440,7 +480,7 @@ namespace TirSeferleriModernApp.Views
             cmd.Parameters.AddWithValue("@c", (object?)ack ?? System.DBNull.Value);
             cmd.Parameters.AddWithValue("@id", _seciliDepo.Row["DepoId"]);
             cmd.ExecuteNonQuery();
-            txtDepoAdi.Text = string.Empty; txtDepoAciklama.Text = string.Empty; _seciliDepo = null; LoadDepolar();
+            txtDepoAdi.Text = string.Empty; txtDepoAciklama.Text = string.Empty; _seciliDepo = null; LoadDepolar(); LoadDepoCombos(); LoadGuzergahlar();
         }
 
         private void BtnDepoSil_Click(object sender, RoutedEventArgs e)
@@ -452,7 +492,7 @@ namespace TirSeferleriModernApp.Views
             cmd.Parameters.AddWithValue("@id", row["DepoId"]);
             cmd.ExecuteNonQuery();
             if (_seciliDepo != null && Equals(_seciliDepo.Row["DepoId"], row["DepoId"])) _seciliDepo = null;
-            LoadDepolar();
+            LoadDepolar(); LoadDepoCombos(); LoadGuzergahlar();
         }
 
         private void dgDepolar_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -463,6 +503,75 @@ namespace TirSeferleriModernApp.Views
                 txtDepoAdi.Text = row["DepoAdi"]?.ToString() ?? string.Empty;
                 txtDepoAciklama.Text = row["Aciklama"]?.ToString() ?? string.Empty;
             }
+        }
+
+        private void BtnGuzergahKaydet_Click(object sender, RoutedEventArgs e)
+        {
+            var cikisId = cmbCikisDepo.SelectedValue as int?;
+            var varisId = cmbVarisDepo.SelectedValue as int?;
+            if (!cikisId.HasValue || !varisId.HasValue) { MessageBox.Show("Çıkış ve varış deposunu seçin"); return; }
+            decimal ucret = 0; if (!decimal.TryParse(txtUcret.Text, out ucret)) ucret = 0;
+            var ack = txtGuzergahAciklama.Text?.Trim();
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            using var cmd = new SqliteCommand("INSERT INTO Guzergahlar (CikisDepoId, VarisDepoId, Ucret, Aciklama) VALUES (@c, @v, @u, @a)", conn);
+            cmd.Parameters.AddWithValue("@c", cikisId.Value);
+            cmd.Parameters.AddWithValue("@v", varisId.Value);
+            cmd.Parameters.AddWithValue("@u", (double)ucret);
+            cmd.Parameters.AddWithValue("@a", (object?)ack ?? System.DBNull.Value);
+            cmd.ExecuteNonQuery();
+            ClearGuzergahForm(); LoadGuzergahlar();
+        }
+
+        private void BtnGuzergahGuncelle_Click(object sender, RoutedEventArgs e)
+        {
+            if (_seciliGuzergah == null) { MessageBox.Show("Güncellenecek güzergahı seçin"); return; }
+            var cikisId = cmbCikisDepo.SelectedValue as int?;
+            var varisId = cmbVarisDepo.SelectedValue as int?;
+            if (!cikisId.HasValue || !varisId.HasValue) { MessageBox.Show("Çıkış ve varış deposunu seçin"); return; }
+            decimal ucret = 0; if (!decimal.TryParse(txtUcret.Text, out ucret)) ucret = 0;
+            var ack = txtGuzergahAciklama.Text?.Trim();
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            using var cmd = new SqliteCommand("UPDATE Guzergahlar SET CikisDepoId=@c, VarisDepoId=@v, Ucret=@u, Aciklama=@a WHERE GuzergahId=@id", conn);
+            cmd.Parameters.AddWithValue("@c", cikisId.Value);
+            cmd.Parameters.AddWithValue("@v", varisId.Value);
+            cmd.Parameters.AddWithValue("@u", (double)ucret);
+            cmd.Parameters.AddWithValue("@a", (object?)ack ?? System.DBNull.Value);
+            cmd.Parameters.AddWithValue("@id", _seciliGuzergah.Row["GuzergahId"]);
+            cmd.ExecuteNonQuery();
+            ClearGuzergahForm(); LoadGuzergahlar();
+        }
+
+        private void BtnGuzergahSil_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgGuzergah.SelectedItem is not DataRowView row) { MessageBox.Show("Silinecek güzergahı seçin"); return; }
+            if (MessageBox.Show("Silinsin mi?", "Onay", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            using var cmd = new SqliteCommand("DELETE FROM Guzergahlar WHERE GuzergahId=@id", conn);
+            cmd.Parameters.AddWithValue("@id", row["GuzergahId"]);
+            cmd.ExecuteNonQuery();
+            if (_seciliGuzergah != null && Equals(_seciliGuzergah.Row["GuzergahId"], row["GuzergahId"])) _seciliGuzergah = null;
+            LoadGuzergahlar(); ClearGuzergahForm();
+        }
+
+        private void dgGuzergah_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if ((sender as DataGrid)?.SelectedItem is DataRowView row)
+            {
+                _seciliGuzergah = row;
+                cmbCikisDepo.SelectedValue = row["CikisDepoId"];
+                cmbVarisDepo.SelectedValue = row["VarisDepoId"];
+                txtUcret.Text = row["Ucret"]?.ToString() ?? string.Empty;
+                txtGuzergahAciklama.Text = row["Aciklama"]?.ToString() ?? string.Empty;
+            }
+        }
+
+        private void ClearGuzergahForm()
+        {
+            _seciliGuzergah = null;
+            cmbCikisDepo.SelectedIndex = -1;
+            cmbVarisDepo.SelectedIndex = -1;
+            txtUcret.Text = string.Empty;
+            txtGuzergahAciklama.Text = string.Empty;
         }
     }
 }
