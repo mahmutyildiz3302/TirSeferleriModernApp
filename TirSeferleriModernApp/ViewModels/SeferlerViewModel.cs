@@ -8,6 +8,7 @@ using TirSeferleriModernApp.Services;
 using TirSeferleriModernApp.Extensions;
 using MaterialDesignThemes.Wpf;
 using Microsoft.Data.Sqlite;
+using System.ComponentModel;
 
 namespace TirSeferleriModernApp.ViewModels
 {
@@ -21,7 +22,14 @@ namespace TirSeferleriModernApp.ViewModels
             {
                 if (_seciliSefer != value)
                 {
+                    if (_seciliSefer != null)
+                        _seciliSefer.PropertyChanged -= SeciliSefer_PropertyChanged;
+
                     _seciliSefer = value;
+
+                    if (_seciliSefer != null)
+                        _seciliSefer.PropertyChanged += SeciliSefer_PropertyChanged;
+
                     OnPropertyChanged(nameof(SeciliSefer));
                     OnPropertyChanged(nameof(KaydetButonMetni));
                     OnPropertyChanged(nameof(TemizleButonMetni));
@@ -193,9 +201,39 @@ namespace TirSeferleriModernApp.ViewModels
         private void RecalcFiyat()
         {
             if (SeciliSefer == null) return;
-            var ekstraParam = string.Equals(SeciliSefer.Ekstra, "EKSTRA YOK", StringComparison.OrdinalIgnoreCase) ? null : SeciliSefer.Ekstra;
-            var u = DatabaseService.GetUcretForRoute(SeciliSefer.YuklemeYeri, SeciliSefer.BosaltmaYeri, ekstraParam, SeciliSefer.BosDolu);
+            var ekstraParam = NormalizeEkstraForDb(SeciliSefer.Ekstra);
+            var bosDoluParam = NormalizeBosDoluForDb(SeciliSefer.BosDolu);
+            var u = DatabaseService.GetUcretForRoute(SeciliSefer.YuklemeYeri, SeciliSefer.BosaltmaYeri, ekstraParam, bosDoluParam);
             if (u.HasValue) SeciliSefer.Fiyat = u.Value;
+        }
+
+        private void SeciliSefer_PropertyChanged(object? sender, PropertyChangedEventArgs e)
+        {
+            if (e.PropertyName == nameof(Sefer.YuklemeYeri) ||
+                e.PropertyName == nameof(Sefer.BosaltmaYeri) ||
+                e.PropertyName == nameof(Sefer.Ekstra) ||
+                e.PropertyName == nameof(Sefer.BosDolu) ||
+                e.PropertyName == nameof(Sefer.KonteynerBoyutu))
+            {
+                RecalcFiyat();
+            }
+        }
+
+        private static string? NormalizeEkstraForDb(string? ekstra)
+        {
+            if (string.IsNullOrWhiteSpace(ekstra)) return null;
+            if (string.Equals(ekstra, "EKSTRA YOK", StringComparison.OrdinalIgnoreCase)) return null;
+            if (string.Equals(ekstra, "SODA", StringComparison.OrdinalIgnoreCase)) return "Soda";
+            if (string.Equals(ekstra, "EMANET", StringComparison.OrdinalIgnoreCase)) return "Emanet";
+            return ekstra;
+        }
+
+        private static string? NormalizeBosDoluForDb(string? bd)
+        {
+            if (string.IsNullOrWhiteSpace(bd)) return null;
+            if (string.Equals(bd, "Boş", StringComparison.OrdinalIgnoreCase) || string.Equals(bd, "BOS", StringComparison.OrdinalIgnoreCase) || string.Equals(bd, "Bos", StringComparison.OrdinalIgnoreCase)) return "Bos";
+            if (string.Equals(bd, "Dolu", StringComparison.OrdinalIgnoreCase)) return "Dolu";
+            return bd;
         }
     }
 }
