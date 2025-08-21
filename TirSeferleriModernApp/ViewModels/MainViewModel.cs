@@ -110,6 +110,7 @@ namespace TirSeferleriModernApp.ViewModels
         public ICommand SelectAracCommand  { get; }
         public ICommand ToggleTanimlarMenuCommand { get; }
         public ICommand AcTanimlarCommand { get; }
+        public ICommand AcDepoGuzergahTanimCommand { get; }
 
         // Giderler alt buton komutları
         public ICommand BtnYakitCommand   { get; }
@@ -142,6 +143,7 @@ namespace TirSeferleriModernApp.ViewModels
             SelectAracCommand  = new RelayCommand<string>(ExecuteSelectArac);
             ToggleTanimlarMenuCommand = new RelayCommand(ExecuteToggleTanimlar);
             AcTanimlarCommand = new RelayCommand(ExecuteTanimlar);
+            AcDepoGuzergahTanimCommand = new RelayCommand(ExecuteDepoGuzergahTanim);
 
             // Alt gider komutları: seçili plaka zorunlu
             BtnYakitCommand        = new RelayCommand(() => OpenGiderWithPlaka(plaka => CurrentContent = new YakitGiderView(plaka)));
@@ -329,6 +331,13 @@ namespace TirSeferleriModernApp.ViewModels
                 return;
             }
             opener(SelectedPlaka!);
+        }
+
+        private void ExecuteDepoGuzergahTanim()
+        {
+            CurrentContent = new DepoGuzergahTanimView();
+            StatusText = "Depo ve Güzergah Tanımı açıldı.";
+            AktifAltMenu = "📋 Depo ve Güzergah Tanımı";
         }
     }
 }

@@ -152,5 +152,15 @@ namespace TirSeferleriModernApp
             if (DataContext is MainViewModel vm)
                 vm.StatusText = mesaj;
         }
+
+        private void BtnDepoGuzergahTanim_Click(object sender, RoutedEventArgs e)
+        {
+            if (DataContext is MainViewModel vm)
+            {
+                vm.CurrentContent = new DepoGuzergahTanimView();
+                vm.StatusText = "Depo ve Güzergah Tanımı açıldı.";
+                vm.AktifAltMenu = "📋 Depo ve Güzergah Tanımı";
+            }
+        }
     }
 }

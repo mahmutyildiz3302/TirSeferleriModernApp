@@ -245,6 +245,12 @@
                             Margin="10,5,10,6"
                             Style="{StaticResource SubMenuButtonStyle}"
                             Command="{Binding AcTanimlarCommand}"/>
+
+                    <!-- Yeni alt menü: Depo ve Güzergah Tanımı -->
+                    <Button Content="Depo ve Güzergah Tanımı"
+                            Margin="10,0,10,10"
+                            Style="{StaticResource SubMenuButtonStyle}"
+                            Command="{Binding AcDepoGuzergahTanimCommand}"/>
                 </StackPanel>
             </StackPanel>
 

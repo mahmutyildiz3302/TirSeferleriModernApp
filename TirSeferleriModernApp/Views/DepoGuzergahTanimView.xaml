@@ -1,0 +1,90 @@
+<UserControl x:Class="TirSeferleriModernApp.Views.DepoGuzergahTanimView"
+             xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:materialDesignControls="clr-namespace:MaterialDesignThemes.Wpf;assembly=MaterialDesignThemes.Wpf"
+             Background="#F0F0F0">
+    <Grid Background="#F0F0F0" Margin="10">
+        <Grid.RowDefinitions>
+            <RowDefinition Height="Auto"/>
+            <RowDefinition Height="10"/>
+            <RowDefinition Height="*"/>
+        </Grid.RowDefinitions>
+
+        <!-- Ust: Depo Tanimi -->
+        <Border Grid.Row="0" Background="#E8F0FE" BorderBrush="Gray" BorderThickness="1" Padding="10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <!-- DataGrid left -->
+                <DataGrid Grid.Column="0" x:Name="dgDepolar" AutoGenerateColumns="False" IsReadOnly="True" Background="White" MinHeight="220" HorizontalAlignment="Stretch" Margin="0,0,10,0" MouseDoubleClick="dgDepolar_MouseDoubleClick">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Depo Adi" Binding="{Binding DepoAdi}" Width="200"/>
+                        <DataGridTextColumn Header="Aciklama" Binding="{Binding Aciklama}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+                <!-- Form right -->
+                <Border Grid.Column="1" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="10">
+                    <StackPanel>
+                        <TextBlock Text="Depo Tanimi" FontSize="18" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <TextBox x:Name="txtDepoAdi" materialDesignControls:HintAssist.Hint="Depo Adi" Width="300" Margin="0,0,0,5"/>
+                        <TextBox x:Name="txtDepoAciklama" materialDesignControls:HintAssist.Hint="Aciklama (opsiyonel)" Width="300" Margin="0,0,0,5"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                            <Button Content="Kaydet" Width="120" Margin="0,0,10,0" Click="BtnDepoKaydet_Click"/>
+                            <Button Content="Guncelle" Width="120" Margin="0,0,10,0" Click="BtnDepoGuncelle_Click"/>
+                            <Button Content="Sil" Width="120" Click="BtnDepoSil_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+
+        <!-- Spacer -->
+        <Border Grid.Row="1" Background="Transparent"/>
+
+        <!-- Alt: Guzergah Tanimi -->
+        <Border Grid.Row="2" Background="#E8F0FE" BorderBrush="Gray" BorderThickness="1" Padding="10">
+            <Grid>
+                <Grid.ColumnDefinitions>
+                    <ColumnDefinition Width="*"/>
+                    <ColumnDefinition Width="*"/>
+                </Grid.ColumnDefinitions>
+                <!-- DataGrid left -->
+                <DataGrid Grid.Column="0" x:Name="dgGuzergah" AutoGenerateColumns="False" IsReadOnly="True" Background="White" MinHeight="220" HorizontalAlignment="Stretch" Margin="0,0,10,0" MouseDoubleClick="dgGuzergah_MouseDoubleClick">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Cikis Noktasi" Binding="{Binding CikisDepoAdi}" Width="150"/>
+                        <DataGridTextColumn Header="Varis Noktasi" Binding="{Binding VarisDepoAdi}" Width="150"/>
+                        <DataGridTextColumn Header="Bos/Dolu" Binding="{Binding BosDolu}" Width="90"/>
+                        <DataGridTextColumn Header="Ekstra" Binding="{Binding Ekstra}" Width="100"/>
+                        <DataGridTextColumn Header="Ucret" Binding="{Binding Ucret}" Width="90"/>
+                        <DataGridTextColumn Header="Aciklama" Binding="{Binding Aciklama}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
+                <!-- Form right -->
+                <Border Grid.Column="1" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="10">
+                    <StackPanel>
+                        <TextBlock Text="Guzergah Tanimi" FontSize="18" FontWeight="Bold" Margin="0,0,0,5"/>
+                        <ComboBox x:Name="cmbCikisDepo" materialDesignControls:HintAssist.Hint="Cikis Noktasi" Width="300" Margin="0,0,0,5" DisplayMemberPath="Value" SelectedValuePath="Key"/>
+                        <ComboBox x:Name="cmbVarisDepo" materialDesignControls:HintAssist.Hint="Varis Noktasi" Width="300" Margin="0,0,0,5" DisplayMemberPath="Value" SelectedValuePath="Key"/>
+                        <ComboBox x:Name="cmbBosDolu" materialDesignControls:HintAssist.Hint="Bos/Dolu" Width="300" Margin="0,0,0,5">
+                            <ComboBoxItem Content="Bos"/>
+                            <ComboBoxItem Content="Dolu"/>
+                        </ComboBox>
+                        <ComboBox x:Name="cmbEkstra" materialDesignControls:HintAssist.Hint="Ekstra (Soda / Emanet)" Width="300" Margin="0,0,0,5">
+                            <ComboBoxItem Content="Soda"/>
+                            <ComboBoxItem Content="Emanet"/>
+                        </ComboBox>
+                        <TextBox x:Name="txtUcret" materialDesignControls:HintAssist.Hint="Ucret" Width="300" Margin="0,0,0,5"/>
+                        <TextBox x:Name="txtGuzergahAciklama" materialDesignControls:HintAssist.Hint="Aciklama (opsiyonel)" Width="300" Margin="0,0,0,5"/>
+                        <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
+                            <Button Content="Kaydet" Width="120" Margin="0,0,10,0" Click="BtnGuzergahKaydet_Click"/>
+                            <Button Content="Guncelle" Width="120" Margin="0,0,10,0" Click="BtnGuzergahGuncelle_Click"/>
+                            <Button Content="Sil" Width="120" Click="BtnGuzergahSil_Click"/>
+                        </StackPanel>
+                    </StackPanel>
+                </Border>
+            </Grid>
+        </Border>
+    </Grid>
+</UserControl>
