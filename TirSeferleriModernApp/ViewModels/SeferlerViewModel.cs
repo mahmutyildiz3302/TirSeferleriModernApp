@@ -32,7 +32,7 @@ namespace TirSeferleriModernApp.ViewModels
 
         // Depo/ekstra/bos-dolu seçim listeleri
         public ObservableCollection<string> DepoAdlari { get; } = new();
-        public ObservableCollection<string> EkstraAdlari { get; } = new();
+        public ObservableCollection<string> EkstraAdlari { get; } = new() { "EKSTRA YOK", "SODA", "EMANET" };
         public ObservableCollection<string> BosDoluSecenekleri { get; } = new() { "Boş", "Dolu" };
 
         // Soldaki menüden gelen bilgiler (bildirimli özellikler)
@@ -180,20 +180,21 @@ namespace TirSeferleriModernApp.ViewModels
         {
             SeferListesi.ReplaceAll(DatabaseService.GetSeferler());
             DepoAdlari.ReplaceAll(DatabaseService.GetDepoAdlari());
-            EkstraAdlari.ReplaceAll(DatabaseService.GetEkstraAdlari());
+            // EkstraAdlari sabit; DB'den doldurulmayacak
         }
 
         public void LoadSeferler(string cekiciPlaka)
         {
             SeferListesi.ReplaceAll(DatabaseService.GetSeferlerByCekiciPlaka(cekiciPlaka));
             DepoAdlari.ReplaceAll(DatabaseService.GetDepoAdlari());
-            EkstraAdlari.ReplaceAll(DatabaseService.GetEkstraAdlari());
+            // EkstraAdlari sabit; DB'den doldurulmayacak
         }
 
         private void RecalcFiyat()
         {
             if (SeciliSefer == null) return;
-            var u = DatabaseService.GetUcretForRoute(SeciliSefer.YuklemeYeri, SeciliSefer.BosaltmaYeri, SeciliSefer.Ekstra, SeciliSefer.BosDolu);
+            var ekstraParam = string.Equals(SeciliSefer.Ekstra, "EKSTRA YOK", StringComparison.OrdinalIgnoreCase) ? null : SeciliSefer.Ekstra;
+            var u = DatabaseService.GetUcretForRoute(SeciliSefer.YuklemeYeri, SeciliSefer.BosaltmaYeri, ekstraParam, SeciliSefer.BosDolu);
             if (u.HasValue) SeciliSefer.Fiyat = u.Value;
         }
     }

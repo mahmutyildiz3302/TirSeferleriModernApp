@@ -87,7 +87,8 @@ namespace TirSeferleriModernApp.Views
             // Yükleme/Boşaltma/Ekstra/BoşDolu alanı değiştiyse fiyatı yeniden hesapla
             if (e.Row?.Item is Sefer s && (e.Column.Header?.ToString() == "Yükleme" || e.Column.Header?.ToString() == "Boşaltma" || e.Column.Header?.ToString() == "Ekstra" || e.Column.Header?.ToString() == "Boş/Dolu"))
             {
-                var u = DatabaseService.GetUcretForRoute(s.YuklemeYeri, s.BosaltmaYeri, s.Ekstra, s.BosDolu);
+                var ekstraParam = string.Equals(s.Ekstra, "EKSTRA YOK", StringComparison.OrdinalIgnoreCase) ? null : s.Ekstra;
+                var u = DatabaseService.GetUcretForRoute(s.YuklemeYeri, s.BosaltmaYeri, ekstraParam, s.BosDolu);
                 if (u.HasValue)
                 {
                     s.Fiyat = u.Value;
