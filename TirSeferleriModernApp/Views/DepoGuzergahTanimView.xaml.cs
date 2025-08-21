@@ -2,6 +2,7 @@ using Microsoft.Data.Sqlite;
 using System.Data;
 using System.Windows;
 using System.Windows.Controls;
+using System.Collections.Generic;
 
 namespace TirSeferleriModernApp.Views
 {
@@ -33,10 +34,10 @@ namespace TirSeferleriModernApp.Views
             using var conn = new SqliteConnection(ConnectionString); conn.Open();
             using var cmd = new SqliteCommand("SELECT DepoId, DepoAdi FROM Depolar ORDER BY DepoAdi", conn);
             using var rdr = cmd.ExecuteReader();
-            var list = new System.Collections.Generic.List<(int id, string ad)>();
-            while (rdr.Read()) list.Add((rdr.GetInt32(0), rdr.GetString(1)));
-            cmbCikisDepo.ItemsSource = list; cmbCikisDepo.DisplayMemberPath = "ad"; cmbCikisDepo.SelectedValuePath = "id";
-            cmbVarisDepo.ItemsSource = list; cmbVarisDepo.DisplayMemberPath = "ad"; cmbVarisDepo.SelectedValuePath = "id";
+            var list = new List<KeyValuePair<int, string>>();
+            while (rdr.Read()) list.Add(new KeyValuePair<int, string>(rdr.GetInt32(0), rdr.GetString(1)));
+            cmbCikisDepo.ItemsSource = list; cmbCikisDepo.DisplayMemberPath = "Value"; cmbCikisDepo.SelectedValuePath = "Key";
+            cmbVarisDepo.ItemsSource = new List<KeyValuePair<int, string>>(list); cmbVarisDepo.DisplayMemberPath = "Value"; cmbVarisDepo.SelectedValuePath = "Key";
         }
 
         private void LoadGuzergahlar()
@@ -128,8 +129,8 @@ namespace TirSeferleriModernApp.Views
 
         private void BtnGuzergahKaydet_Click(object sender, RoutedEventArgs e)
         {
-            var cikisId = cmbCikisDepo.SelectedValue as int?;
-            var varisId = cmbVarisDepo.SelectedValue as int?;
+            int? cikisId = cmbCikisDepo.SelectedValue is int c ? c : null;
+            int? varisId = cmbVarisDepo.SelectedValue is int v ? v : null;
             if (!cikisId.HasValue || !varisId.HasValue) { MessageBox.Show("Çýkýþ ve varýþ deposunu seçin"); return; }
             var bosDolu = (cmbBosDolu.SelectedItem as ComboBoxItem)?.Content?.ToString();
             var ekstra = (cmbEkstra.SelectedItem as ComboBoxItem)?.Content?.ToString();
@@ -150,8 +151,8 @@ namespace TirSeferleriModernApp.Views
         private void BtnGuzergahGuncelle_Click(object sender, RoutedEventArgs e)
         {
             if (_seciliGuzergah == null) { MessageBox.Show("Güncellenecek güzergahý seçin"); return; }
-            var cikisId = cmbCikisDepo.SelectedValue as int?;
-            var varisId = cmbVarisDepo.SelectedValue as int?;
+            int? cikisId = cmbCikisDepo.SelectedValue is int c ? c : null;
+            int? varisId = cmbVarisDepo.SelectedValue is int v ? v : null;
             if (!cikisId.HasValue || !varisId.HasValue) { MessageBox.Show("Çýkýþ ve varýþ deposunu seçin"); return; }
             var bosDolu = (cmbBosDolu.SelectedItem as ComboBoxItem)?.Content?.ToString();
             var ekstra = (cmbEkstra.SelectedItem as ComboBoxItem)?.Content?.ToString();
