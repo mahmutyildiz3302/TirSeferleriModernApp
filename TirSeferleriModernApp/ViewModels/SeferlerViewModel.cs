@@ -30,9 +30,10 @@ namespace TirSeferleriModernApp.ViewModels
             }
         }
 
-        // Depo/ekstra seçim listeleri
+        // Depo/ekstra/bos-dolu seçim listeleri
         public ObservableCollection<string> DepoAdlari { get; } = new();
         public ObservableCollection<string> EkstraAdlari { get; } = new();
+        public ObservableCollection<string> BosDoluSecenekleri { get; } = new() { "Boş", "Dolu" };
 
         // Soldaki menüden gelen bilgiler (bildirimli özellikler)
         private string? _seciliCekiciPlaka;
@@ -192,7 +193,7 @@ namespace TirSeferleriModernApp.ViewModels
         private void RecalcFiyat()
         {
             if (SeciliSefer == null) return;
-            var u = DatabaseService.GetUcretForRoute(SeciliSefer.YuklemeYeri, SeciliSefer.BosaltmaYeri, SeciliSefer.Ekstra);
+            var u = DatabaseService.GetUcretForRoute(SeciliSefer.YuklemeYeri, SeciliSefer.BosaltmaYeri, SeciliSefer.Ekstra, SeciliSefer.BosDolu);
             if (u.HasValue) SeciliSefer.Fiyat = u.Value;
         }
     }

@@ -54,6 +54,13 @@
                           IsEditable="False"
                           MinWidth="200" Margin="0,5,0,10"/>
 
+                <TextBlock Text="Boş/Dolu:" Foreground="#F5F9FF"/>
+                <ComboBox Background="White"
+                          ItemsSource="{Binding BosDoluSecenekleri}"
+                          SelectedItem="{Binding SeciliSefer.BosDolu, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                          IsEditable="False"
+                          MinWidth="200" Margin="0,5,0,10"/>
+
                 <TextBlock Text="Fiyat (otomatik):" Foreground="#F5F9FF"/>
                 <TextBlock Background="#F5F9FF" Foreground="#22335A" Padding="8,4" Margin="0,5,0,10"
                            Text="{Binding SeciliSefer.Fiyat, StringFormat={}{0:N2}}"/>
@@ -168,6 +175,7 @@
                         <DataGridComboBoxColumn Header="Yükleme" SelectedItemBinding="{Binding YuklemeYeri, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ItemsSource="{Binding DataContext.DepoAdlari, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
                         <DataGridComboBoxColumn Header="Boşaltma" SelectedItemBinding="{Binding BosaltmaYeri, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ItemsSource="{Binding DataContext.DepoAdlari, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
                         <DataGridComboBoxColumn Header="Ekstra" SelectedItemBinding="{Binding Ekstra, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ItemsSource="{Binding DataContext.EkstraAdlari, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                        <DataGridComboBoxColumn Header="Boş/Dolu" SelectedItemBinding="{Binding BosDolu, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ItemsSource="{Binding DataContext.BosDoluSecenekleri, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
                         <DataGridTextColumn Header="Tarih" Binding="{Binding Tarih, Mode=TwoWay, StringFormat=dd.MM.yyyy}"/>
                         <DataGridTextColumn Header="Saat" Binding="{Binding Saat, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                         <DataGridTextColumn Header="Fiyat" Binding="{Binding Fiyat}" IsReadOnly="True"/>
