@@ -15,6 +15,7 @@ using System.Windows.Shapes;
 using System.Windows.Controls.Primitives;
 using TirSeferleriModernApp.Models;
 using TirSeferleriModernApp.Services;
+using TirSeferleriModernApp.ViewModels;
 
 // bu dosya XAML'in arkasındaki code-behind dosyasıdır. 
 // DataGrid'e sağ tıklanınca açılan sütun görünürlüğü menüsünü (ContextMenu) burada tanımlanır.
@@ -80,6 +81,17 @@ namespace TirSeferleriModernApp.Views
                 catch (Exception ex)
                 {
                     MessageBox.Show($"Güncelleme hatası: {ex.Message}");
+                }
+            }
+
+            // Yükleme/Boşaltma/Ekstra alanı değiştiyse fiyatı yeniden hesapla
+            if (e.Row?.Item is Sefer s && (e.Column.Header?.ToString() == "Yükleme" || e.Column.Header?.ToString() == "Boşaltma" || e.Column.Header?.ToString() == "Ekstra"))
+            {
+                var u = DatabaseService.GetUcretForRoute(s.YuklemeYeri, s.BosaltmaYeri, s.Ekstra);
+                if (u.HasValue)
+                {
+                    s.Fiyat = u.Value;
+                    try { DatabaseService.SeferGuncelle(s); } catch { }
                 }
             }
         }

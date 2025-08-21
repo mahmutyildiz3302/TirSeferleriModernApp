@@ -22,5 +22,6 @@ namespace TirSeferleriModernApp.Models
         public int? DorseId { get; set; }
         public int? SoforId { get; set; }
         public string? SoforAdi { get; set; }
+        public string? Ekstra { get; set; }
     }
 }

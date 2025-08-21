@@ -25,12 +25,14 @@ namespace TirSeferleriModernApp.ViewModels
                     OnPropertyChanged(nameof(SeciliSefer));
                     OnPropertyChanged(nameof(KaydetButonMetni));
                     OnPropertyChanged(nameof(TemizleButonMetni));
+                    RecalcFiyat();
                 }
             }
         }
 
-        // Depo isimleri (Yükleme/Boşaltma comboları için)
+        // Depo/ekstra seçim listeleri
         public ObservableCollection<string> DepoAdlari { get; } = new();
+        public ObservableCollection<string> EkstraAdlari { get; } = new();
 
         // Soldaki menüden gelen bilgiler (bildirimli özellikler)
         private string? _seciliCekiciPlaka;
@@ -93,6 +95,9 @@ namespace TirSeferleriModernApp.ViewModels
                 SeciliDorsePlaka = info.dorsePlaka; // üst şerit güncellensin
                 SeciliSoforAdi = info.soforAdi;      // üst şerit güncellensin
             }
+
+            // Her kaydet/güncelle öncesi fiyatı güzergah tablosuna göre güncelle
+            RecalcFiyat();
 
             if (SeciliSefer.SeferId <= 0)
             {
@@ -174,12 +179,21 @@ namespace TirSeferleriModernApp.ViewModels
         {
             SeferListesi.ReplaceAll(DatabaseService.GetSeferler());
             DepoAdlari.ReplaceAll(DatabaseService.GetDepoAdlari());
+            EkstraAdlari.ReplaceAll(DatabaseService.GetEkstraAdlari());
         }
 
         public void LoadSeferler(string cekiciPlaka)
         {
             SeferListesi.ReplaceAll(DatabaseService.GetSeferlerByCekiciPlaka(cekiciPlaka));
             DepoAdlari.ReplaceAll(DatabaseService.GetDepoAdlari());
+            EkstraAdlari.ReplaceAll(DatabaseService.GetEkstraAdlari());
+        }
+
+        private void RecalcFiyat()
+        {
+            if (SeciliSefer == null) return;
+            var u = DatabaseService.GetUcretForRoute(SeciliSefer.YuklemeYeri, SeciliSefer.BosaltmaYeri, SeciliSefer.Ekstra);
+            if (u.HasValue) SeciliSefer.Fiyat = u.Value;
         }
     }
 }
