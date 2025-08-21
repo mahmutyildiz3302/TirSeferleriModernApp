@@ -1605,12 +1605,14 @@ WHERE f.SoforId IS NULL;";
                     GuzergahId INTEGER PRIMARY KEY AUTOINCREMENT,
                     CikisDepoId INTEGER NOT NULL,
                     VarisDepoId INTEGER NOT NULL,
+                    BosDolu TEXT,
                     Ucret REAL,
                     Aciklama TEXT
                 );";
                 string[] requiredColumns = [
                     "CikisDepoId INTEGER",
                     "VarisDepoId INTEGER",
+                    "BosDolu TEXT",
                     "Ucret REAL",
                     "Aciklama TEXT"
                 ];

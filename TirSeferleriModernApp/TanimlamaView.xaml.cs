@@ -105,6 +105,7 @@ namespace TirSeferleriModernApp.Views
                                                        cd.DepoAdi AS CikisDepoAdi,
                                                        g.VarisDepoId,
                                                        vd.DepoAdi AS VarisDepoAdi,
+                                                       g.BosDolu,
                                                        g.Ucret,
                                                        g.Aciklama
                                                 FROM Guzergahlar g
@@ -510,12 +511,14 @@ namespace TirSeferleriModernApp.Views
             var cikisId = cmbCikisDepo.SelectedValue as int?;
             var varisId = cmbVarisDepo.SelectedValue as int?;
             if (!cikisId.HasValue || !varisId.HasValue) { MessageBox.Show("Çıkış ve varış deposunu seçin"); return; }
+            var bosDolu = (cmbBosDolu.SelectedItem as ComboBoxItem)?.Content?.ToString();
             decimal ucret = 0; if (!decimal.TryParse(txtUcret.Text, out ucret)) ucret = 0;
             var ack = txtGuzergahAciklama.Text?.Trim();
-            using var conn = new SqliteConnection(ConnectionString); conn.Open();
-            using var cmd = new SqliteCommand("INSERT INTO Guzergahlar (CikisDepoId, VarisDepoId, Ucret, Aciklama) VALUES (@c, @v, @u, @a)", conn);
+            using var conn = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=TirSeferleri.db"); conn.Open();
+            using var cmd = new Microsoft.Data.Sqlite.SqliteCommand("INSERT INTO Guzergahlar (CikisDepoId, VarisDepoId, BosDolu, Ucret, Aciklama) VALUES (@c, @v, @b, @u, @a)", conn);
             cmd.Parameters.AddWithValue("@c", cikisId.Value);
             cmd.Parameters.AddWithValue("@v", varisId.Value);
+            cmd.Parameters.AddWithValue("@b", (object?)bosDolu ?? System.DBNull.Value);
             cmd.Parameters.AddWithValue("@u", (double)ucret);
             cmd.Parameters.AddWithValue("@a", (object?)ack ?? System.DBNull.Value);
             cmd.ExecuteNonQuery();
@@ -528,12 +531,14 @@ namespace TirSeferleriModernApp.Views
             var cikisId = cmbCikisDepo.SelectedValue as int?;
             var varisId = cmbVarisDepo.SelectedValue as int?;
             if (!cikisId.HasValue || !varisId.HasValue) { MessageBox.Show("Çıkış ve varış deposunu seçin"); return; }
+            var bosDolu = (cmbBosDolu.SelectedItem as ComboBoxItem)?.Content?.ToString();
             decimal ucret = 0; if (!decimal.TryParse(txtUcret.Text, out ucret)) ucret = 0;
             var ack = txtGuzergahAciklama.Text?.Trim();
-            using var conn = new SqliteConnection(ConnectionString); conn.Open();
-            using var cmd = new SqliteCommand("UPDATE Guzergahlar SET CikisDepoId=@c, VarisDepoId=@v, Ucret=@u, Aciklama=@a WHERE GuzergahId=@id", conn);
+            using var conn = new Microsoft.Data.Sqlite.SqliteConnection("Data Source=TirSeferleri.db"); conn.Open();
+            using var cmd = new Microsoft.Data.Sqlite.SqliteCommand("UPDATE Guzergahlar SET CikisDepoId=@c, VarisDepoId=@v, BosDolu=@b, Ucret=@u, Aciklama=@a WHERE GuzergahId=@id", conn);
             cmd.Parameters.AddWithValue("@c", cikisId.Value);
             cmd.Parameters.AddWithValue("@v", varisId.Value);
+            cmd.Parameters.AddWithValue("@b", (object?)bosDolu ?? System.DBNull.Value);
             cmd.Parameters.AddWithValue("@u", (double)ucret);
             cmd.Parameters.AddWithValue("@a", (object?)ack ?? System.DBNull.Value);
             cmd.Parameters.AddWithValue("@id", _seciliGuzergah.Row["GuzergahId"]);
@@ -543,14 +548,18 @@ namespace TirSeferleriModernApp.Views
 
         private void BtnGuzergahSil_Click(object sender, RoutedEventArgs e)
         {
-            if (dgGuzergah.SelectedItem is not DataRowView row) { MessageBox.Show("Silinecek güzergahı seçin"); return; }
-            if (MessageBox.Show("Silinsin mi?", "Onay", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            if (dgGuzergah.SelectedItem is not DataRowView row)
+            { MessageBox.Show("Silinecek güzergahı seçin"); return; }
+            if (MessageBox.Show("Silinsin mi?", "Onay", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes)
+                return;
             using var conn = new SqliteConnection(ConnectionString); conn.Open();
             using var cmd = new SqliteCommand("DELETE FROM Guzergahlar WHERE GuzergahId=@id", conn);
             cmd.Parameters.AddWithValue("@id", row["GuzergahId"]);
             cmd.ExecuteNonQuery();
-            if (_seciliGuzergah != null && Equals(_seciliGuzergah.Row["GuzergahId"], row["GuzergahId"])) _seciliGuzergah = null;
-            LoadGuzergahlar(); ClearGuzergahForm();
+            if (_seciliGuzergah != null && Equals(_seciliGuzergah.Row["GuzergahId"], row["GuzergahId"]))
+                _seciliGuzergah = null;
+            LoadGuzergahlar();
+            ClearGuzergahForm();
         }
 
         private void dgGuzergah_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -560,6 +569,9 @@ namespace TirSeferleriModernApp.Views
                 _seciliGuzergah = row;
                 cmbCikisDepo.SelectedValue = row["CikisDepoId"];
                 cmbVarisDepo.SelectedValue = row["VarisDepoId"];
+                // Boş/Dolu seçimi
+                var val = row["BosDolu"]?.ToString();
+                if (val == "Boş" || val == "BOS" || val == "Bos") cmbBosDolu.SelectedIndex = 0; else if (!string.IsNullOrWhiteSpace(val)) cmbBosDolu.SelectedIndex = 1; else cmbBosDolu.SelectedIndex = -1;
                 txtUcret.Text = row["Ucret"]?.ToString() ?? string.Empty;
                 txtGuzergahAciklama.Text = row["Aciklama"]?.ToString() ?? string.Empty;
             }
@@ -570,6 +582,7 @@ namespace TirSeferleriModernApp.Views
             _seciliGuzergah = null;
             cmbCikisDepo.SelectedIndex = -1;
             cmbVarisDepo.SelectedIndex = -1;
+            cmbBosDolu.SelectedIndex = -1;
             txtUcret.Text = string.Empty;
             txtGuzergahAciklama.Text = string.Empty;
         }
