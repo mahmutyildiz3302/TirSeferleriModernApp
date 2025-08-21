@@ -29,6 +29,9 @@ namespace TirSeferleriModernApp.ViewModels
             }
         }
 
+        // Depo isimleri (Yükleme/Boşaltma comboları için)
+        public ObservableCollection<string> DepoAdlari { get; } = new();
+
         // Soldaki menüden gelen bilgiler (bildirimli özellikler)
         private string? _seciliCekiciPlaka;
         public string? SeciliCekiciPlaka
@@ -170,11 +173,13 @@ namespace TirSeferleriModernApp.ViewModels
         public void LoadSeferler()
         {
             SeferListesi.ReplaceAll(DatabaseService.GetSeferler());
+            DepoAdlari.ReplaceAll(DatabaseService.GetDepoAdlari());
         }
 
         public void LoadSeferler(string cekiciPlaka)
         {
             SeferListesi.ReplaceAll(DatabaseService.GetSeferlerByCekiciPlaka(cekiciPlaka));
+            DepoAdlari.ReplaceAll(DatabaseService.GetDepoAdlari());
         }
     }
 }

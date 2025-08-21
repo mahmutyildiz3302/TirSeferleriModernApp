@@ -34,10 +34,18 @@
                 </ComboBox>
 
                 <TextBlock Text="Yükleme Yeri:" Foreground="#F5F9FF"/>
-                <TextBox Background="White" Text="{Binding SeciliSefer.YuklemeYeri, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MinWidth="200" Margin="0,5,0,10"/>
+                <ComboBox Background="White"
+                          ItemsSource="{Binding DepoAdlari}"
+                          SelectedItem="{Binding SeciliSefer.YuklemeYeri, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                          IsEditable="False"
+                          MinWidth="200" Margin="0,5,0,10"/>
 
                 <TextBlock Text="Boşaltma Yeri:" Foreground="#F5F9FF"/>
-                <TextBox Background="White" Text="{Binding SeciliSefer.BosaltmaYeri, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MinWidth="200" Margin="0,5,0,10"/>
+                <ComboBox Background="White"
+                          ItemsSource="{Binding DepoAdlari}"
+                          SelectedItem="{Binding SeciliSefer.BosaltmaYeri, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
+                          IsEditable="False"
+                          MinWidth="200" Margin="0,5,0,10"/>
 
                 <TextBlock Text="Tarih:" Foreground="#F5F9FF"/>
                 <DatePicker SelectedDate="{Binding SeciliSefer.Tarih, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MinWidth="200" Margin="0,5,0,10"/>
@@ -155,8 +163,8 @@
                         <DataGridTextColumn Header="Sefer ID" Binding="{Binding SeferId}" Visibility="Collapsed" IsReadOnly="True"/>
                         <DataGridTextColumn Header="Konteyner No" Binding="{Binding KonteynerNo, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                         <DataGridTextColumn Header="Boyut" Binding="{Binding KonteynerBoyutu, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                        <DataGridTextColumn Header="Yükleme" Binding="{Binding YuklemeYeri, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                        <DataGridTextColumn Header="Boşaltma" Binding="{Binding BosaltmaYeri, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        <DataGridComboBoxColumn Header="Yükleme" SelectedItemBinding="{Binding YuklemeYeri, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ItemsSource="{Binding DataContext.DepoAdlari, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                        <DataGridComboBoxColumn Header="Boşaltma" SelectedItemBinding="{Binding BosaltmaYeri, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ItemsSource="{Binding DataContext.DepoAdlari, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
                         <DataGridTextColumn Header="Tarih" Binding="{Binding Tarih, Mode=TwoWay, StringFormat=dd.MM.yyyy}"/>
                         <DataGridTextColumn Header="Saat" Binding="{Binding Saat, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                         <DataGridTextColumn Header="Fiyat" Binding="{Binding Fiyat, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
