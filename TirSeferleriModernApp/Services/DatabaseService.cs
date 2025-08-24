@@ -759,12 +759,12 @@ WHERE c.CekiciId IS NULL;";
                 }
                 reader.Close();
 
-                foreach (var it in items)
+                foreach (var (plaka, soforId, dorseId) in items)
                 {
                     using var ins = new SqliteCommand("INSERT INTO Cekiciler (Plaka, SoforId, DorseId, Aktif) VALUES (@p, @s, @d, 1)", connection);
-                    ins.Parameters.AddWithValue("@p", it.plaka);
-                    ins.Parameters.AddWithValue("@s", (object?)it.soforId ?? DBNull.Value);
-                    ins.Parameters.AddWithValue("@d", (object?)it.dorseId ?? DBNull.Value);
+                    ins.Parameters.AddWithValue("@p", plaka);
+                    ins.Parameters.AddWithValue("@s", (object?)soforId ?? DBNull.Value);
+                    ins.Parameters.AddWithValue("@d", (object?)dorseId ?? DBNull.Value);
                     inserted += ins.ExecuteNonQuery();
                 }
             }
@@ -854,11 +854,11 @@ WHERE f.SoforId IS NULL;";
                 }
                 reader.Close();
 
-                foreach (var it in items)
+                foreach (var (soforId, soforAdi) in items)
                 {
                     using var ins = new SqliteCommand("INSERT INTO Soforler (SoforId, SoforAdi, Telefon, Arsivli) VALUES (@id, @ad, '', 0)", connection);
-                    ins.Parameters.AddWithValue("@id", it.soforId);
-                    ins.Parameters.AddWithValue("@ad", it.soforAdi);
+                    ins.Parameters.AddWithValue("@id", soforId);
+                    ins.Parameters.AddWithValue("@ad", soforAdi);
                     inserted += ins.ExecuteNonQuery();
                 }
             }
@@ -1707,7 +1707,7 @@ WHERE f.SoforId IS NULL;";
                 }
             }
             catch (Exception ex)
-            {
+ {
                 Debug.WriteLine($"[DatabaseService] GetEkstraAdlari hata: {ex.Message}");
             }
             return list;

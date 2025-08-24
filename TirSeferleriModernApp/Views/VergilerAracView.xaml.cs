@@ -104,9 +104,7 @@ namespace TirSeferleriModernApp.Views
 
             var headerToplam = BuildToplamSatir(_sonListe);
             var footerToplam = BuildToplamSatir(_sonListe);
-            var list = new List<VergiArac> { headerToplam };
-            list.AddRange(_sonListe);
-            list.Add(footerToplam);
+            List<VergiArac> list = [headerToplam, .._sonListe, footerToplam];
             dgVergiler.ItemsSource = list;
         }
 
@@ -256,8 +254,7 @@ namespace TirSeferleriModernApp.Views
                     sb.AppendLine("Id,Plaka,Tarih,VergiTuru,Donem,VarlikTipi,DorseId,DorsePlaka,Tutar,Aciklama");
                     foreach (var r in _sonListe)
                     {
-                        string line = string.Join(",", new[]
-                        {
+                        string line = string.Join(",", [
                             r.VergiId.ToString(),
                             Quote(r.Plaka),
                             r.Tarih.ToString("yyyy-MM-dd"),
@@ -268,7 +265,7 @@ namespace TirSeferleriModernApp.Views
                             Quote(r.DorsePlaka),
                             r.Tutar.ToString(nfi),
                             Quote(r.Aciklama)
-                        });
+                        ]);
                         sb.AppendLine(line);
                     }
                     File.WriteAllText(sfd.FileName, sb.ToString(), Encoding.UTF8);

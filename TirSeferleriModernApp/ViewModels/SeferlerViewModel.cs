@@ -2,22 +2,28 @@
 using CommunityToolkit.Mvvm.Input;
 using System;
 using System.Collections.ObjectModel;
-using System.Linq;
 using TirSeferleriModernApp.Models;
 using TirSeferleriModernApp.Services;
 using TirSeferleriModernApp.Extensions;
 using MaterialDesignThemes.Wpf;
-using Microsoft.Data.Sqlite;
 using System.ComponentModel;
 
 namespace TirSeferleriModernApp.ViewModels
 {
     public partial class SeferlerViewModel(SnackbarMessageQueue messageQueue, DatabaseService databaseService) : ObservableObject
     {
-        private Sefer? _seciliSefer = new Sefer { Tarih = DateTime.Today }; // İlk açılışta null olmasın
+        private Sefer? _seciliSefer; // lazy init
         public Sefer? SeciliSefer
         {
-            get => _seciliSefer;
+            get
+            {
+                if (_seciliSefer == null)
+                {
+                    _seciliSefer = new Sefer { Tarih = DateTime.Today };
+                    _seciliSefer.PropertyChanged += SeciliSefer_PropertyChanged;
+                }
+                return _seciliSefer;
+            }
             set
             {
                 if (_seciliSefer != value)
@@ -39,9 +45,9 @@ namespace TirSeferleriModernApp.ViewModels
         }
 
         // Depo/ekstra/bos-dolu seçim listeleri
-        public ObservableCollection<string> DepoAdlari { get; } = new();
-        public ObservableCollection<string> EkstraAdlari { get; } = new() { "EKSTRA YOK", "SODA", "EMANET" };
-        public ObservableCollection<string> BosDoluSecenekleri { get; } = new() { "Boş", "Dolu" };
+        public ObservableCollection<string> DepoAdlari { get; } = [];
+        public ObservableCollection<string> EkstraAdlari { get; } = ["EKSTRA YOK", "SODA", "EMANET"];
+        public ObservableCollection<string> BosDoluSecenekleri { get; } = ["Boş", "Dolu"];
 
         // Soldaki menüden gelen bilgiler (bildirimli özellikler)
         private string? _seciliCekiciPlaka;

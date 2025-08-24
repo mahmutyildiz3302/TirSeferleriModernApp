@@ -33,8 +33,10 @@ namespace TirSeferleriModernApp.Views
         private void LoadPlakalar()
         {
             var plakalar = KarHesapShared.GetActivePlakalar();
-            var items = new List<PlakaItem>();
-            items.Add(new PlakaItem { Plaka = "Tümü", IsAll = true });
+            var items = new List<PlakaItem>
+            {
+                new PlakaItem { Plaka = "Tümü", IsAll = true }
+            };
             items.AddRange(plakalar.Select(p => new PlakaItem { Plaka = p }));
             cmbPlaka.ItemsSource = items;
             cmbPlaka.SelectedIndex = 0;
