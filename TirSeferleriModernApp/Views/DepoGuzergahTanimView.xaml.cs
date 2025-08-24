@@ -49,7 +49,6 @@ namespace TirSeferleriModernApp.Views
                                                        g.VarisDepoId,
                                                        vd.DepoAdi AS VarisDepoAdi,
                                                        g.BosDolu,
-                                                       g.Ekstra,
                                                        g.Ucret,
                                                        g.Aciklama
                                                 FROM Guzergahlar g
@@ -120,8 +119,6 @@ namespace TirSeferleriModernApp.Views
                 cmbVarisDepo.SelectedValue = row["VarisDepoId"];
                 var val = row["BosDolu"]?.ToString();
                 if (val == "Boþ" || val == "BOS" || val == "Bos") cmbBosDolu.SelectedIndex = 0; else if (!string.IsNullOrWhiteSpace(val)) cmbBosDolu.SelectedIndex = 1; else cmbBosDolu.SelectedIndex = -1;
-                var ext = row["Ekstra"]?.ToString();
-                if (ext == "Soda") cmbEkstra.SelectedIndex = 0; else if (ext == "Emanet") cmbEkstra.SelectedIndex = 1; else cmbEkstra.SelectedIndex = -1;
                 txtUcret.Text = row["Ucret"]?.ToString() ?? string.Empty;
                 txtGuzergahAciklama.Text = row["Aciklama"]?.ToString() ?? string.Empty;
             }
@@ -133,15 +130,13 @@ namespace TirSeferleriModernApp.Views
             int? varisId = cmbVarisDepo.SelectedValue is int v ? v : null;
             if (!cikisId.HasValue || !varisId.HasValue) { MessageBox.Show("Çýkýþ ve varýþ deposunu seçin"); return; }
             var bosDolu = (cmbBosDolu.SelectedItem as ComboBoxItem)?.Content?.ToString();
-            var ekstra = (cmbEkstra.SelectedItem as ComboBoxItem)?.Content?.ToString();
             decimal ucret = 0; if (!decimal.TryParse(txtUcret.Text, out ucret)) ucret = 0;
             var ack = txtGuzergahAciklama.Text?.Trim();
             using var conn = new SqliteConnection(ConnectionString); conn.Open();
-            using var cmd = new SqliteCommand("INSERT INTO Guzergahlar (CikisDepoId, VarisDepoId, BosDolu, Ekstra, Ucret, Aciklama) VALUES (@c, @v, @b, @e, @u, @a)", conn);
+            using var cmd = new SqliteCommand("INSERT INTO Guzergahlar (CikisDepoId, VarisDepoId, BosDolu, Ucret, Aciklama) VALUES (@c, @v, @b, @u, @a)", conn);
             cmd.Parameters.AddWithValue("@c", cikisId.Value);
             cmd.Parameters.AddWithValue("@v", varisId.Value);
             cmd.Parameters.AddWithValue("@b", (object?)bosDolu ?? System.DBNull.Value);
-            cmd.Parameters.AddWithValue("@e", (object?)ekstra ?? System.DBNull.Value);
             cmd.Parameters.AddWithValue("@u", (double)ucret);
             cmd.Parameters.AddWithValue("@a", (object?)ack ?? System.DBNull.Value);
             cmd.ExecuteNonQuery();
@@ -155,15 +150,13 @@ namespace TirSeferleriModernApp.Views
             int? varisId = cmbVarisDepo.SelectedValue is int v ? v : null;
             if (!cikisId.HasValue || !varisId.HasValue) { MessageBox.Show("Çýkýþ ve varýþ deposunu seçin"); return; }
             var bosDolu = (cmbBosDolu.SelectedItem as ComboBoxItem)?.Content?.ToString();
-            var ekstra = (cmbEkstra.SelectedItem as ComboBoxItem)?.Content?.ToString();
             decimal ucret = 0; if (!decimal.TryParse(txtUcret.Text, out ucret)) ucret = 0;
             var ack = txtGuzergahAciklama.Text?.Trim();
             using var conn = new SqliteConnection(ConnectionString); conn.Open();
-            using var cmd = new SqliteCommand("UPDATE Guzergahlar SET CikisDepoId=@c, VarisDepoId=@v, BosDolu=@b, Ekstra=@e, Ucret=@u, Aciklama=@a WHERE GuzergahId=@id", conn);
+            using var cmd = new SqliteCommand("UPDATE Guzergahlar SET CikisDepoId=@c, VarisDepoId=@v, BosDolu=@b, Ucret=@u, Aciklama=@a WHERE GuzergahId=@id", conn);
             cmd.Parameters.AddWithValue("@c", cikisId.Value);
             cmd.Parameters.AddWithValue("@v", varisId.Value);
             cmd.Parameters.AddWithValue("@b", (object?)bosDolu ?? System.DBNull.Value);
-            cmd.Parameters.AddWithValue("@e", (object?)ekstra ?? System.DBNull.Value);
             cmd.Parameters.AddWithValue("@u", (double)ucret);
             cmd.Parameters.AddWithValue("@a", (object?)ack ?? System.DBNull.Value);
             cmd.Parameters.AddWithValue("@id", _seciliGuzergah.Row["GuzergahId"]);
@@ -189,7 +182,6 @@ namespace TirSeferleriModernApp.Views
             cmbCikisDepo.SelectedIndex = -1;
             cmbVarisDepo.SelectedIndex = -1;
             cmbBosDolu.SelectedIndex = -1;
-            cmbEkstra.SelectedIndex = -1;
             txtUcret.Text = string.Empty;
             txtGuzergahAciklama.Text = string.Empty;
         }

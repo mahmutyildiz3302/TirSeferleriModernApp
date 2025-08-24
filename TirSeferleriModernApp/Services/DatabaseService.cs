@@ -631,12 +631,10 @@ namespace TirSeferleriModernApp.Services
                                      INNER JOIN Depolar cd ON cd.DepoId = g.CikisDepoId
                                      INNER JOIN Depolar vd ON vd.DepoId = g.VarisDepoId
                                      WHERE cd.DepoAdi = @c AND vd.DepoAdi = @v
-                                       AND ( ( (@e IS NULL OR TRIM(@e)='') AND (g.Ekstra IS NULL OR TRIM(g.Ekstra)='') ) OR g.Ekstra = @e )
                                        AND ( ( (@bd IS NULL OR TRIM(@bd)='') AND (g.BosDolu IS NULL OR TRIM(g.BosDolu)='') ) OR g.BosDolu = @bd )
                                      LIMIT 1";
                 cmd.Parameters.AddWithValue("@c", cikisDepoAdi);
                 cmd.Parameters.AddWithValue("@v", varisDepoAdi);
-                cmd.Parameters.AddWithValue("@e", (object?)(string.IsNullOrWhiteSpace(ekstra) ? null : ekstra) ?? DBNull.Value);
                 cmd.Parameters.AddWithValue("@bd", (object?)(string.IsNullOrWhiteSpace(bosDolu) ? null : bosDolu) ?? DBNull.Value);
                 var val = cmd.ExecuteScalar();
                 if (val == null || val is DBNull) return null;
@@ -1707,7 +1705,7 @@ WHERE f.SoforId IS NULL;";
                 }
             }
             catch (Exception ex)
- {
+            {
                 Debug.WriteLine($"[DatabaseService] GetEkstraAdlari hata: {ex.Message}");
             }
             return list;

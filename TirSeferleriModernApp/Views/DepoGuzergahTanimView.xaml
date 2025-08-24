@@ -65,10 +65,6 @@
                             <ComboBoxItem Content="Bos"/>
                             <ComboBoxItem Content="Dolu"/>
                         </ComboBox>
-                        <ComboBox x:Name="cmbEkstra" materialDesignControls:HintAssist.Hint="Ekstra (Soda / Emanet)" Width="300" Margin="0,0,0,5">
-                            <ComboBoxItem Content="Soda"/>
-                            <ComboBoxItem Content="Emanet"/>
-                        </ComboBox>
                         <TextBox x:Name="txtUcret" materialDesignControls:HintAssist.Hint="Ucret" Width="300" Margin="0,0,0,5"/>
                         <TextBox x:Name="txtGuzergahAciklama" materialDesignControls:HintAssist.Hint="Aciklama (opsiyonel)" Width="300" Margin="0,0,0,5"/>
                         <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
@@ -93,7 +89,6 @@
                         <DataGridTextColumn Header="Cikis Noktasi" Binding="{Binding CikisDepoAdi}" Width="150"/>
                         <DataGridTextColumn Header="Varis Noktasi" Binding="{Binding VarisDepoAdi}" Width="150"/>
                         <DataGridTextColumn Header="Bos/Dolu" Binding="{Binding BosDolu}" Width="90"/>
-                        <DataGridTextColumn Header="Ekstra" Binding="{Binding Ekstra}" Width="100"/>
                         <DataGridTextColumn Header="Ucret" Binding="{Binding Ucret}" Width="90"/>
                         <DataGridTextColumn Header="Aciklama" Binding="{Binding Aciklama}" Width="*"/>
                     </DataGrid.Columns>

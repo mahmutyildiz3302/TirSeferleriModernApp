@@ -207,9 +207,8 @@ namespace TirSeferleriModernApp.ViewModels
         private void RecalcFiyat()
         {
             if (SeciliSefer == null) return;
-            var ekstraParam = NormalizeEkstraForDb(SeciliSefer.Ekstra);
             var bosDoluParam = NormalizeBosDoluForDb(SeciliSefer.BosDolu);
-            var u = DatabaseService.GetUcretForRoute(SeciliSefer.YuklemeYeri, SeciliSefer.BosaltmaYeri, ekstraParam, bosDoluParam);
+            var u = DatabaseService.GetUcretForRoute(SeciliSefer.YuklemeYeri, SeciliSefer.BosaltmaYeri, null, bosDoluParam);
             if (u.HasValue) SeciliSefer.Fiyat = u.Value;
         }
 
@@ -223,15 +222,6 @@ namespace TirSeferleriModernApp.ViewModels
             {
                 RecalcFiyat();
             }
-        }
-
-        private static string? NormalizeEkstraForDb(string? ekstra)
-        {
-            if (string.IsNullOrWhiteSpace(ekstra)) return null;
-            if (string.Equals(ekstra, "EKSTRA YOK", StringComparison.OrdinalIgnoreCase)) return null;
-            if (string.Equals(ekstra, "SODA", StringComparison.OrdinalIgnoreCase)) return "Soda";
-            if (string.Equals(ekstra, "EMANET", StringComparison.OrdinalIgnoreCase)) return "Emanet";
-            return ekstra;
         }
 
         private static string? NormalizeBosDoluForDb(string? bd)
