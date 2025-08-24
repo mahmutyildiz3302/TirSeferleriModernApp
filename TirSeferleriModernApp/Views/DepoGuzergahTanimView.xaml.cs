@@ -11,13 +11,28 @@ namespace TirSeferleriModernApp.Views
         private const string ConnectionString = "Data Source=TirSeferleri.db";
         private DataRowView? _seciliDepo;
         private DataRowView? _seciliGuzergah;
+        private DataRowView? _seciliEkstra;
 
         public DepoGuzergahTanimView()
         {
             InitializeComponent();
+            EnsureEkstraUcretTable();
             LoadDepolar();
             LoadDepoCombos();
             LoadGuzergahlar();
+            LoadEkstraUcretler();
+        }
+
+        private static void EnsureEkstraUcretTable()
+        {
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            using var cmd = new SqliteCommand(@"CREATE TABLE IF NOT EXISTS EkstraUcretler (
+                                                    EkstraId INTEGER PRIMARY KEY AUTOINCREMENT,
+                                                    Ad TEXT NOT NULL,
+                                                    Ucret REAL,
+                                                    Aciklama TEXT
+                                                );", conn);
+            cmd.ExecuteNonQuery();
         }
 
         private void LoadDepolar()
@@ -48,8 +63,12 @@ namespace TirSeferleriModernApp.Views
                                                        cd.DepoAdi AS CikisDepoAdi,
                                                        g.VarisDepoId,
                                                        vd.DepoAdi AS VarisDepoAdi,
-                                                       g.BosDolu,
-                                                       g.Ucret,
+                                                       g.BosFiyat,
+                                                       g.DoluFiyat,
+                                                       g.EmanetBosFiyat,
+                                                       g.EmanetDoluFiyat,
+                                                       g.SodaBosFiyat,
+                                                       g.SodaDoluFiyat,
                                                        g.Aciklama
                                                 FROM Guzergahlar g
                                                 LEFT JOIN Depolar cd ON cd.DepoId = g.CikisDepoId
@@ -58,6 +77,15 @@ namespace TirSeferleriModernApp.Views
             using var rdr = cmd.ExecuteReader();
             var dt = new DataTable(); dt.Load(rdr);
             dgGuzergah.ItemsSource = dt.DefaultView;
+        }
+
+        private void LoadEkstraUcretler()
+        {
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            using var cmd = new SqliteCommand("SELECT EkstraId, Ad, Ucret, Aciklama FROM EkstraUcretler ORDER BY Ad", conn);
+            using var rdr = cmd.ExecuteReader();
+            var dt = new DataTable(); dt.Load(rdr);
+            dgEkstraUcretler.ItemsSource = dt.DefaultView;
         }
 
         private void dgDepolar_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -74,7 +102,7 @@ namespace TirSeferleriModernApp.Views
         {
             var ad = txtDepoAdi.Text?.Trim();
             var ack = txtDepoAciklama.Text?.Trim();
-            if (string.IsNullOrWhiteSpace(ad)) { MessageBox.Show("Depo adý girin"); return; }
+            if (string.IsNullOrWhiteSpace(ad)) { MessageBox.Show("Depo adi girin"); return; }
             using var conn = new SqliteConnection(ConnectionString); conn.Open();
             using var cmd = new SqliteCommand("INSERT INTO Depolar (DepoAdi, Aciklama) VALUES (@a, @c)", conn);
             cmd.Parameters.AddWithValue("@a", ad);
@@ -85,10 +113,10 @@ namespace TirSeferleriModernApp.Views
 
         private void BtnDepoGuncelle_Click(object sender, RoutedEventArgs e)
         {
-            if (_seciliDepo == null) { MessageBox.Show("Güncellenecek depo seçin"); return; }
+            if (_seciliDepo == null) { MessageBox.Show("Guncellenecek depo secin"); return; }
             var ad = txtDepoAdi.Text?.Trim();
             var ack = txtDepoAciklama.Text?.Trim();
-            if (string.IsNullOrWhiteSpace(ad)) { MessageBox.Show("Depo adý girin"); return; }
+            if (string.IsNullOrWhiteSpace(ad)) { MessageBox.Show("Depo adi girin"); return; }
             using var conn = new SqliteConnection(ConnectionString); conn.Open();
             using var cmd = new SqliteCommand("UPDATE Depolar SET DepoAdi=@a, Aciklama=@c WHERE DepoId=@id", conn);
             cmd.Parameters.AddWithValue("@a", ad);
@@ -100,7 +128,7 @@ namespace TirSeferleriModernApp.Views
 
         private void BtnDepoSil_Click(object sender, RoutedEventArgs e)
         {
-            if (dgDepolar.SelectedItem is not DataRowView row) { MessageBox.Show("Silinecek depoyu seçin"); return; }
+            if (dgDepolar.SelectedItem is not DataRowView row) { MessageBox.Show("Silinecek depoyu secin"); return; }
             if (MessageBox.Show("Silinsin mi?", "Onay", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
             using var conn = new SqliteConnection(ConnectionString); conn.Open();
             using var cmd = new SqliteCommand("DELETE FROM Depolar WHERE DepoId=@id", conn);
@@ -117,9 +145,12 @@ namespace TirSeferleriModernApp.Views
                 _seciliGuzergah = row;
                 cmbCikisDepo.SelectedValue = row["CikisDepoId"];
                 cmbVarisDepo.SelectedValue = row["VarisDepoId"];
-                var val = row["BosDolu"]?.ToString();
-                if (val == "Boþ" || val == "BOS" || val == "Bos") cmbBosDolu.SelectedIndex = 0; else if (!string.IsNullOrWhiteSpace(val)) cmbBosDolu.SelectedIndex = 1; else cmbBosDolu.SelectedIndex = -1;
-                txtUcret.Text = row["Ucret"]?.ToString() ?? string.Empty;
+                txtBosFiyat.Text = row["BosFiyat"]?.ToString() ?? string.Empty;
+                txtDoluFiyat.Text = row["DoluFiyat"]?.ToString() ?? string.Empty;
+                txtEmanetBosFiyat.Text = row["EmanetBosFiyat"]?.ToString() ?? string.Empty;
+                txtEmanetDoluFiyat.Text = row["EmanetDoluFiyat"]?.ToString() ?? string.Empty;
+                txtSodaBosFiyat.Text = row["SodaBosFiyat"]?.ToString() ?? string.Empty;
+                txtSodaDoluFiyat.Text = row["SodaDoluFiyat"]?.ToString() ?? string.Empty;
                 txtGuzergahAciklama.Text = row["Aciklama"]?.ToString() ?? string.Empty;
             }
         }
@@ -128,16 +159,25 @@ namespace TirSeferleriModernApp.Views
         {
             int? cikisId = cmbCikisDepo.SelectedValue is int c ? c : null;
             int? varisId = cmbVarisDepo.SelectedValue is int v ? v : null;
-            if (!cikisId.HasValue || !varisId.HasValue) { MessageBox.Show("Çýkýþ ve varýþ deposunu seçin"); return; }
-            var bosDolu = (cmbBosDolu.SelectedItem as ComboBoxItem)?.Content?.ToString();
-            decimal ucret = 0; if (!decimal.TryParse(txtUcret.Text, out ucret)) ucret = 0;
+            if (!cikisId.HasValue || !varisId.HasValue) { MessageBox.Show("Cikis ve Varis deposunu secin"); return; }
+            decimal.TryParse(txtBosFiyat.Text, out var bos);
+            decimal.TryParse(txtDoluFiyat.Text, out var dolu);
+            decimal.TryParse(txtEmanetBosFiyat.Text, out var eBos);
+            decimal.TryParse(txtEmanetDoluFiyat.Text, out var eDolu);
+            decimal.TryParse(txtSodaBosFiyat.Text, out var sBos);
+            decimal.TryParse(txtSodaDoluFiyat.Text, out var sDolu);
             var ack = txtGuzergahAciklama.Text?.Trim();
             using var conn = new SqliteConnection(ConnectionString); conn.Open();
-            using var cmd = new SqliteCommand("INSERT INTO Guzergahlar (CikisDepoId, VarisDepoId, BosDolu, Ucret, Aciklama) VALUES (@c, @v, @b, @u, @a)", conn);
+            using var cmd = new SqliteCommand(@"INSERT INTO Guzergahlar (CikisDepoId, VarisDepoId, BosFiyat, DoluFiyat, EmanetBosFiyat, EmanetDoluFiyat, SodaBosFiyat, SodaDoluFiyat, Aciklama)
+                                               VALUES (@c, @v, @bf, @df, @ebf, @edf, @sbf, @sdf, @a)", conn);
             cmd.Parameters.AddWithValue("@c", cikisId.Value);
             cmd.Parameters.AddWithValue("@v", varisId.Value);
-            cmd.Parameters.AddWithValue("@b", (object?)bosDolu ?? System.DBNull.Value);
-            cmd.Parameters.AddWithValue("@u", (double)ucret);
+            cmd.Parameters.AddWithValue("@bf", (double)bos);
+            cmd.Parameters.AddWithValue("@df", (double)dolu);
+            cmd.Parameters.AddWithValue("@ebf", (double)eBos);
+            cmd.Parameters.AddWithValue("@edf", (double)eDolu);
+            cmd.Parameters.AddWithValue("@sbf", (double)sBos);
+            cmd.Parameters.AddWithValue("@sdf", (double)sDolu);
             cmd.Parameters.AddWithValue("@a", (object?)ack ?? System.DBNull.Value);
             cmd.ExecuteNonQuery();
             ClearGuzergahForm(); LoadGuzergahlar();
@@ -145,19 +185,27 @@ namespace TirSeferleriModernApp.Views
 
         private void BtnGuzergahGuncelle_Click(object sender, RoutedEventArgs e)
         {
-            if (_seciliGuzergah == null) { MessageBox.Show("Güncellenecek güzergahý seçin"); return; }
+            if (_seciliGuzergah == null) { MessageBox.Show("Guncellenecek guzergahi secin"); return; }
             int? cikisId = cmbCikisDepo.SelectedValue is int c ? c : null;
             int? varisId = cmbVarisDepo.SelectedValue is int v ? v : null;
-            if (!cikisId.HasValue || !varisId.HasValue) { MessageBox.Show("Çýkýþ ve varýþ deposunu seçin"); return; }
-            var bosDolu = (cmbBosDolu.SelectedItem as ComboBoxItem)?.Content?.ToString();
-            decimal ucret = 0; if (!decimal.TryParse(txtUcret.Text, out ucret)) ucret = 0;
+            if (!cikisId.HasValue || !varisId.HasValue) { MessageBox.Show("Cikis ve Varis deposunu secin"); return; }
+            decimal.TryParse(txtBosFiyat.Text, out var bos);
+            decimal.TryParse(txtDoluFiyat.Text, out var dolu);
+            decimal.TryParse(txtEmanetBosFiyat.Text, out var eBos);
+            decimal.TryParse(txtEmanetDoluFiyat.Text, out var eDolu);
+            decimal.TryParse(txtSodaBosFiyat.Text, out var sBos);
+            decimal.TryParse(txtSodaDoluFiyat.Text, out var sDolu);
             var ack = txtGuzergahAciklama.Text?.Trim();
             using var conn = new SqliteConnection(ConnectionString); conn.Open();
-            using var cmd = new SqliteCommand("UPDATE Guzergahlar SET CikisDepoId=@c, VarisDepoId=@v, BosDolu=@b, Ucret=@u, Aciklama=@a WHERE GuzergahId=@id", conn);
+            using var cmd = new SqliteCommand(@"UPDATE Guzergahlar SET CikisDepoId=@c, VarisDepoId=@v, BosFiyat=@bf, DoluFiyat=@df, EmanetBosFiyat=@ebf, EmanetDoluFiyat=@edf, SodaBosFiyat=@sbf, SodaDoluFiyat=@sdf, Aciklama=@a WHERE GuzergahId=@id", conn);
             cmd.Parameters.AddWithValue("@c", cikisId.Value);
             cmd.Parameters.AddWithValue("@v", varisId.Value);
-            cmd.Parameters.AddWithValue("@b", (object?)bosDolu ?? System.DBNull.Value);
-            cmd.Parameters.AddWithValue("@u", (double)ucret);
+            cmd.Parameters.AddWithValue("@bf", (double)bos);
+            cmd.Parameters.AddWithValue("@df", (double)dolu);
+            cmd.Parameters.AddWithValue("@ebf", (double)eBos);
+            cmd.Parameters.AddWithValue("@edf", (double)eDolu);
+            cmd.Parameters.AddWithValue("@sbf", (double)sBos);
+            cmd.Parameters.AddWithValue("@sdf", (double)sDolu);
             cmd.Parameters.AddWithValue("@a", (object?)ack ?? System.DBNull.Value);
             cmd.Parameters.AddWithValue("@id", _seciliGuzergah.Row["GuzergahId"]);
             cmd.ExecuteNonQuery();
@@ -166,7 +214,7 @@ namespace TirSeferleriModernApp.Views
 
         private void BtnGuzergahSil_Click(object sender, RoutedEventArgs e)
         {
-            if (dgGuzergah.SelectedItem is not DataRowView row) { MessageBox.Show("Silinecek güzergahý seçin"); return; }
+            if (dgGuzergah.SelectedItem is not DataRowView row) { MessageBox.Show("Silinecek guzergahi secin"); return; }
             if (MessageBox.Show("Silinsin mi?", "Onay", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
             using var conn = new SqliteConnection(ConnectionString); conn.Open();
             using var cmd = new SqliteCommand("DELETE FROM Guzergahlar WHERE GuzergahId=@id", conn);
@@ -181,9 +229,76 @@ namespace TirSeferleriModernApp.Views
             _seciliGuzergah = null;
             cmbCikisDepo.SelectedIndex = -1;
             cmbVarisDepo.SelectedIndex = -1;
-            cmbBosDolu.SelectedIndex = -1;
-            txtUcret.Text = string.Empty;
+            txtBosFiyat.Text = string.Empty;
+            txtDoluFiyat.Text = string.Empty;
+            txtEmanetBosFiyat.Text = string.Empty;
+            txtEmanetDoluFiyat.Text = string.Empty;
+            txtSodaBosFiyat.Text = string.Empty;
+            txtSodaDoluFiyat.Text = string.Empty;
             txtGuzergahAciklama.Text = string.Empty;
+        }
+
+        private void dgEkstraUcretler_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
+        {
+            if ((sender as DataGrid)?.SelectedItem is DataRowView row)
+            {
+                _seciliEkstra = row;
+                txtEkstraAd.Text = row["Ad"]?.ToString() ?? string.Empty;
+                txtEkstraUcret.Text = row["Ucret"]?.ToString() ?? string.Empty;
+                txtEkstraAciklama.Text = row["Aciklama"]?.ToString() ?? string.Empty;
+            }
+        }
+
+        private void BtnEkstraKaydet_Click(object sender, RoutedEventArgs e)
+        {
+            var ad = txtEkstraAd.Text?.Trim();
+            if (string.IsNullOrWhiteSpace(ad)) { MessageBox.Show("Ad girin"); return; }
+            decimal ucret = 0; if (!decimal.TryParse(txtEkstraUcret.Text, out ucret)) ucret = 0;
+            var ack = txtEkstraAciklama.Text?.Trim();
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            using var cmd = new SqliteCommand("INSERT INTO EkstraUcretler (Ad, Ucret, Aciklama) VALUES (@a, @u, @c)", conn);
+            cmd.Parameters.AddWithValue("@a", ad);
+            cmd.Parameters.AddWithValue("@u", (double)ucret);
+            cmd.Parameters.AddWithValue("@c", (object?)ack ?? System.DBNull.Value);
+            cmd.ExecuteNonQuery();
+            ClearEkstraForm(); LoadEkstraUcretler();
+        }
+
+        private void BtnEkstraGuncelle_Click(object sender, RoutedEventArgs e)
+        {
+            if (_seciliEkstra == null) { MessageBox.Show("Guncellenecek kaydi secin"); return; }
+            var ad = txtEkstraAd.Text?.Trim();
+            if (string.IsNullOrWhiteSpace(ad)) { MessageBox.Show("Ad girin"); return; }
+            decimal ucret = 0; if (!decimal.TryParse(txtEkstraUcret.Text, out ucret)) ucret = 0;
+            var ack = txtEkstraAciklama.Text?.Trim();
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            using var cmd = new SqliteCommand("UPDATE EkstraUcretler SET Ad=@a, Ucret=@u, Aciklama=@c WHERE EkstraId=@id", conn);
+            cmd.Parameters.AddWithValue("@a", ad);
+            cmd.Parameters.AddWithValue("@u", (double)ucret);
+            cmd.Parameters.AddWithValue("@c", (object?)ack ?? System.DBNull.Value);
+            cmd.Parameters.AddWithValue("@id", _seciliEkstra.Row["EkstraId"]);
+            cmd.ExecuteNonQuery();
+            ClearEkstraForm(); LoadEkstraUcretler();
+        }
+
+        private void BtnEkstraSil_Click(object sender, RoutedEventArgs e)
+        {
+            if (dgEkstraUcretler.SelectedItem is not DataRowView row) { MessageBox.Show("Silinecek kaydi secin"); return; }
+            if (MessageBox.Show("Silinsin mi?", "Onay", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            using var cmd = new SqliteCommand("DELETE FROM EkstraUcretler WHERE EkstraId=@id", conn);
+            cmd.Parameters.AddWithValue("@id", row["EkstraId"]);
+            cmd.ExecuteNonQuery();
+            if (_seciliEkstra != null && Equals(_seciliEkstra.Row["EkstraId"], row["EkstraId"])) _seciliEkstra = null;
+            LoadEkstraUcretler(); ClearEkstraForm();
+        }
+
+        private void ClearEkstraForm()
+        {
+            _seciliEkstra = null;
+            txtEkstraAd.Text = string.Empty;
+            txtEkstraUcret.Text = string.Empty;
+            txtEkstraAciklama.Text = string.Empty;
         }
     }
 }

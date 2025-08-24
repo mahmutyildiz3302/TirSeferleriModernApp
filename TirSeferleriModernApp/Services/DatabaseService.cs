@@ -4,8 +4,8 @@ using System.Collections.Generic;
 using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
-using TirSeferleriModernApp.Models; // Sefer sınıfının bulunduğu namespace'i ekleyin
-using static TirSeferleriModernApp.Views.VergilerAracView; // VergiArac modelini kullanmak için
+using TirSeferleriModernApp.Models;
+using static TirSeferleriModernApp.Views.VergilerAracView;
 
 namespace TirSeferleriModernApp.Services
 {
@@ -25,70 +25,37 @@ namespace TirSeferleriModernApp.Services
             _instanceConnectionString = $"Data Source={_dbFile}";
         }
 
+        // Helper: basic sefer validation (server-side)
+        private static bool ValidateSeferInternal(Sefer s)
+        {
+            if (s == null) return false;
+            if (string.IsNullOrWhiteSpace(s.KonteynerBoyutu)) return false;
+            if (string.IsNullOrWhiteSpace(s.YuklemeYeri)) return false;
+            if (string.IsNullOrWhiteSpace(s.BosaltmaYeri)) return false;
+            return true;
+        }
+
+        private static DateTime ParseDate(string? s)
+        {
+            if (DateTime.TryParse(s, out var dt)) return dt;
+            return DateTime.Today;
+        }
+
         public void Initialize()
         {
             EnsureDatabaseFile();
-
-            // Tabloları oluştur ve eksik kolonları kontrol et
-            CreateOrUpdateTable("Seferler", @"
-                CREATE TABLE IF NOT EXISTS Seferler (
-                    SeferId INTEGER PRIMARY KEY AUTOINCREMENT,
-                    KonteynerNo TEXT,
-                    KonteynerBoyutu TEXT CHECK(KonteynerBoyutu IN ('20', '40')),
-                    YuklemeYeri TEXT,
-                    BosaltmaYeri TEXT,
-                    Ekstra TEXT,
-                    BosDolu TEXT,
-                    Tarih TEXT,
-                    Saat TEXT,
-                    Fiyat REAL,
-                    Aciklama TEXT,
-                    CekiciId INTEGER,
-                    CekiciPlaka TEXT,
-                    DorseId INTEGER,
-                    SoforId INTEGER,
-                    SoforAdi TEXT
-                );", [
-                    "Ekstra TEXT",
-                    "BosDolu TEXT",
-                    "CekiciId INTEGER",
-                    "CekiciPlaka TEXT",
-                    "DorseId INTEGER",
-                    "SoforId INTEGER",
-                    "SoforAdi TEXT"
-                ]);
-
-            Debug.WriteLine("[DatabaseService.xaml.cs] Giderler tablosu kontrol ediliyor...");
-            CreateOrUpdateTable("Giderler", @"
-                CREATE TABLE IF NOT EXISTS Giderler (
-                    GiderId INTEGER PRIMARY KEY AUTOINCREMENT,
-                    CekiciId INTEGER NOT NULL,
-                    Aciklama TEXT,
-                    Tutar REAL NOT NULL,
-                    Tarih TEXT NOT NULL
-                );", [
-                    "CekiciId INTEGER",
-                    "Aciklama TEXT",
-                    "Tutar REAL",
-                    "Tarih TEXT"
-                ]);
-
-            CreateOrUpdateTable("KarHesap", @"
-                CREATE TABLE IF NOT EXISTS KarHesap (
-                    KarHesapId INTEGER PRIMARY KEY AUTOINCREMENT,
-                    CekiciId INTEGER NOT NULL
-                );", []);
-
-            // Soforler tablosunda Arsivli kolonu olduğundan emin ol
+            CheckAndCreateOrUpdateSeferlerTablosu();
+            CheckAndCreateOrUpdateGiderlerTablosu();
+            CheckAndCreateOrUpdateKarHesapTablosu();
             EnsureSoforlerArsivliColumn();
             EnsureCekicilerArsivliColumn();
             EnsureDorselerArsivliColumn();
-
             CheckAndCreateOrUpdateGenelGiderTablosu();
             CheckAndCreateOrUpdatePersonelGiderTablosu();
             CheckAndCreateOrUpdateVergiAracTablosu();
             CheckAndCreateOrUpdateDepoTablosu();
-            CheckAndCreateOrUpdateGuzergahTablosu(); // Güzergahlar tablosunu kontrol et
+            CheckAndCreateOrUpdateGuzergahTablosu();
+            CheckAndCreateOrUpdateYakitGiderTablosu();
         }
 
         private void EnsureDatabaseFile()
@@ -97,11 +64,15 @@ namespace TirSeferleriModernApp.Services
             {
                 using var initialConnection = new SqliteConnection(_instanceConnectionString);
                 initialConnection.Open();
-                Debug.WriteLine("[DatabaseService.xaml.cs] Veritabanı dosyası oluşturuldu.");
             }
-            else
+        }
+
+        public static void EnsureDatabaseFileStatic()
+        {
+            if (!File.Exists(DbFile))
             {
-                Debug.WriteLine($"[DatabaseService.xaml.cs] Veritabanı dosyası zaten mevcut: {_dbFile}");
+                using var initialConnection = new SqliteConnection(ConnectionString);
+                initialConnection.Open();
             }
         }
 
@@ -109,12 +80,7 @@ namespace TirSeferleriModernApp.Services
         {
             using var connection = new SqliteConnection(ConnectionString);
             connection.Open();
-
-            // Tabloyu oluştur
             ExecuteScript(connection, createScript);
-            Debug.WriteLine($"[DatabaseService.xaml.cs] {tableName} tablosu kontrol edildi veya oluşturuldu.");
-
-            // Eksik kolonları kontrol et ve ekle
             EnsureColumns(connection, tableName, columns);
         }
 
@@ -135,14 +101,10 @@ namespace TirSeferleriModernApp.Services
 
                 using var reader = checkColumnCommand.ExecuteReader();
                 bool columnExists = false;
-
                 while (reader.Read())
                 {
                     if (reader.GetString(1).Equals(columnName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        columnExists = true;
-                        break;
-                    }
+                    { columnExists = true; break; }
                 }
 
                 if (!columnExists)
@@ -150,179 +112,88 @@ namespace TirSeferleriModernApp.Services
                     var addColumnCommand = connection.CreateCommand();
                     addColumnCommand.CommandText = $"ALTER TABLE {tableName} ADD COLUMN {column};";
                     addColumnCommand.ExecuteNonQuery();
-                    Debug.WriteLine($"[DatabaseService.xaml.cs] Kolon eklendi: {column}");
                 }
             }
         }
 
-        public static void EnsureSoforlerArsivliColumn()
+        // Schema checks (stubs where unknown)
+        public static void CheckAndCreateOrUpdateGenelGiderTablosu()
         {
             try
             {
                 EnsureDatabaseFileStatic();
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-
-                // Kolon var mı kontrol et
-                bool exists = false;
-                using (var cmd = connection.CreateCommand())
-                {
-                    cmd.CommandText = "PRAGMA table_info(Soforler);";
-                    using var reader = cmd.ExecuteReader();
-                    while (reader.Read())
-                    {
-                        var colName = reader.GetString(1);
-                        if (string.Equals(colName, "Arsivli", StringComparison.OrdinalIgnoreCase))
-                        {
-                            exists = true;
-                            break;
-                        }
-                    }
-                }
-
-                if (!exists)
-                {
-                    using var alter = connection.CreateCommand();
-                    alter.CommandText = "ALTER TABLE Soforler ADD COLUMN Arsivli INTEGER DEFAULT 0;";
-                    alter.ExecuteNonQuery();
-                    Debug.WriteLine("[DatabaseService] Soforler.Arsivli kolonu eklendi.");
-                }
+                using var conn = new SqliteConnection(ConnectionString); conn.Open();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = @"CREATE TABLE IF NOT EXISTS GenelGiderler (
+                                        GiderId INTEGER PRIMARY KEY AUTOINCREMENT,
+                                        Aciklama TEXT,
+                                        Tutar REAL,
+                                        Tarih TEXT
+                                    );";
+                cmd.ExecuteNonQuery();
             }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] EnsureSoforlerArsivliColumn hata: {ex.Message}");
-            }
+            catch { }
         }
 
-        public static void EnsureCekicilerArsivliColumn()
+        public static void CheckAndCreateOrUpdatePersonelGiderTablosu()
         {
             try
             {
                 EnsureDatabaseFileStatic();
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                bool exists = false;
-                using (var cmd = connection.CreateCommand())
-                {
-                    cmd.CommandText = "PRAGMA table_info(Cekiciler);";
-                    using var reader = cmd.ExecuteReader();
-                    while (reader.Read())
-                    {
-                        if (string.Equals(reader.GetString(1), "Arsivli", StringComparison.OrdinalIgnoreCase))
-                        { exists = true; break; }
-                    }
-                }
-                if (!exists)
-                {
-                    using var alter = connection.CreateCommand();
-                    alter.CommandText = "ALTER TABLE Cekiciler ADD COLUMN Arsivli INTEGER DEFAULT 0;";
-                    alter.ExecuteNonQuery();
-                }
+                using var conn = new SqliteConnection(ConnectionString); conn.Open();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = @"CREATE TABLE IF NOT EXISTS PersonelGiderler (
+                                        Id INTEGER PRIMARY KEY AUTOINCREMENT,
+                                        PersonelId INTEGER,
+                                        Aciklama TEXT,
+                                        Tutar REAL,
+                                        Tarih TEXT
+                                    );";
+                cmd.ExecuteNonQuery();
             }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] EnsureCekicilerArsivliColumn hata: {ex.Message}");
-            }
+            catch { }
         }
 
-        public static void EnsureDorselerArsivliColumn()
+        public static void CheckAndCreateOrUpdateVergiAracTablosu()
         {
             try
             {
                 EnsureDatabaseFileStatic();
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                bool exists = false;
-                using (var cmd = connection.CreateCommand())
-                {
-                    cmd.CommandText = "PRAGMA table_info(Dorseler);";
-                    using var reader = cmd.ExecuteReader();
-                    while (reader.Read())
-                    {
-                        if (string.Equals(reader.GetString(1), "Arsivli", StringComparison.OrdinalIgnoreCase))
-                        { exists = true; break; }
-                    }
-                }
-                if (!exists)
-                {
-                    using var alter = connection.CreateCommand();
-                    alter.CommandText = "ALTER TABLE Dorseler ADD COLUMN Arsivli INTEGER DEFAULT 0;";
-                    alter.ExecuteNonQuery();
-                }
+                using var conn = new SqliteConnection(ConnectionString); conn.Open();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = @"CREATE TABLE IF NOT EXISTS VergilerArac (
+                                        VergiId INTEGER PRIMARY KEY AUTOINCREMENT,
+                                        CekiciId INTEGER,
+                                        Plaka TEXT,
+                                        Tarih TEXT,
+                                        VergiTuru TEXT,
+                                        Donem TEXT,
+                                        VarlikTipi TEXT,
+                                        DorseId INTEGER,
+                                        DorsePlaka TEXT,
+                                        Tutar REAL,
+                                        Aciklama TEXT
+                                    );";
+                cmd.ExecuteNonQuery();
             }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] EnsureDorselerArsivliColumn hata: {ex.Message}");
-            }
+            catch { }
         }
 
-        public static int GetSeferCountBySoforId(int soforId)
+        public static void CheckAndCreateOrUpdateDepoTablosu()
         {
             try
             {
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                using var cmd = connection.CreateCommand();
-                cmd.CommandText = "SELECT COUNT(1) FROM Seferler WHERE SoforId = @sid";
-                cmd.Parameters.AddWithValue("@sid", soforId);
-                var count = Convert.ToInt32(cmd.ExecuteScalar());
-                return count;
+                EnsureDatabaseFileStatic();
+                using var conn = new SqliteConnection(ConnectionString); conn.Open();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = @"CREATE TABLE IF NOT EXISTS Depolar (
+                                        DepoId INTEGER PRIMARY KEY AUTOINCREMENT,
+                                        DepoAdi TEXT,
+                                        Aciklama TEXT
+                                    );";
+                cmd.ExecuteNonQuery();
             }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] GetSeferCountBySoforId hata: {ex.Message}");
-                return 0;
-            }
-        }
-
-        public static int GetSeferCountByCekiciId(int cekiciId)
-        {
-            try
-            {
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                using var cmd = connection.CreateCommand();
-                cmd.CommandText = "SELECT COUNT(1) FROM Seferler WHERE CekiciId = @id";
-                cmd.Parameters.AddWithValue("@id", cekiciId);
-                return Convert.ToInt32(cmd.ExecuteScalar());
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] GetSeferCountByCekiciId hata: {ex.Message}");
-                return 0;
-            }
-        }
-
-        public static int GetSeferCountByDorseId(int dorseId)
-        {
-            try
-            {
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                using var cmd = connection.CreateCommand();
-                cmd.CommandText = "SELECT COUNT(1) FROM Seferler WHERE DorseId = @id";
-                cmd.Parameters.AddWithValue("@id", dorseId);
-                return Convert.ToInt32(cmd.ExecuteScalar());
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] GetSeferCountByDorseId hata: {ex.Message}");
-                return 0;
-            }
-        }
-
-        public static void EnsureDatabaseFileStatic()
-        {
-            if (!File.Exists(DbFile))
-            {
-                using var initialConnection = new SqliteConnection(ConnectionString);
-                initialConnection.Open();
-                Debug.WriteLine("[DatabaseService.xaml.cs] Veritabanı dosyası oluşturuldu.");
-            }
-            else
-            {
-                Debug.WriteLine($"[DatabaseService.xaml.cs] Veritabanı dosyası zaten mevcut: {DbFile}");
-            }
+            catch { }
         }
 
         public static void CheckAndCreateOrUpdateSeferlerTablosu()
@@ -330,9 +201,7 @@ namespace TirSeferleriModernApp.Services
             try
             {
                 EnsureDatabaseFileStatic();
-
-                string createScript = @"
-                    CREATE TABLE IF NOT EXISTS Seferler (
+                string createScript = @"CREATE TABLE IF NOT EXISTS Seferler (
                         SeferId INTEGER PRIMARY KEY AUTOINCREMENT,
                         KonteynerNo TEXT,
                         KonteynerBoyutu TEXT CHECK(KonteynerBoyutu IN ('20', '40')),
@@ -349,9 +218,7 @@ namespace TirSeferleriModernApp.Services
                         DorseId INTEGER,
                         SoforId INTEGER,
                         SoforAdi TEXT
-                    );
-                ";
-
+                    );";
                 string[] requiredColumns = [
                     "Ekstra TEXT",
                     "BosDolu TEXT",
@@ -361,13 +228,9 @@ namespace TirSeferleriModernApp.Services
                     "SoforId INTEGER",
                     "SoforAdi TEXT"
                 ];
-
                 EnsureTable("Seferler", createScript, requiredColumns);
             }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService.xaml.cs] Hata: {ex.Message}");
-            }
+            catch { }
         }
 
         public static void CheckAndCreateOrUpdateGiderlerTablosu()
@@ -375,122 +238,112 @@ namespace TirSeferleriModernApp.Services
             try
             {
                 EnsureDatabaseFileStatic();
-
-                string createScript = @"
-            CREATE TABLE IF NOT EXISTS Giderler (
+                string createScript = @"CREATE TABLE IF NOT EXISTS Giderler (
                 GiderId INTEGER PRIMARY KEY AUTOINCREMENT,
                 CekiciId INTEGER NOT NULL,
                 Aciklama TEXT,
                 Tutar REAL NOT NULL,
                 Tarih TEXT NOT NULL
-            );
-            ";
-
+            );";
                 string[] requiredColumns = [
                 "CekiciId INTEGER",
                 "Aciklama TEXT",
                 "Tutar REAL",
                 "Tarih TEXT"
             ];
-
-                Debug.WriteLine("[DatabaseService.xaml.cs] Giderler tablosu kontrol ediliyor...");
                 EnsureTable("Giderler", createScript, requiredColumns);
-                Debug.WriteLine("[DatabaseService.xaml.cs] Giderler tablosu kontrol edildi veya oluşturuldu.");
             }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService.xaml.cs] Hata: {ex.Message}");
-            }
+            catch { }
         }
 
         public static void CheckAndCreateOrUpdateKarHesapTablosu()
         {
-            string createScript = @"
-           CREATE TABLE IF NOT EXISTS KarHesap (
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var command = new SqliteCommand(@"CREATE TABLE IF NOT EXISTS KarHesap (
                KarHesapId INTEGER PRIMARY KEY AUTOINCREMENT,
-               CekiciId INTEGER NOT NULL
-           );
-       ";
-
-            using var connection = new SqliteConnection(ConnectionString);
-            connection.Open();
-            using var command = new SqliteCommand(createScript, connection);
-            command.ExecuteNonQuery();
+               CekiciId INTEGER NOT NULL );", connection);
+                command.ExecuteNonQuery();
+            }
+            catch { }
         }
 
         private static void EnsureTable(string tableName, string createScript, string[] columns)
         {
-            using var connection = new SqliteConnection($"Data Source={DbFile}");
+            using var connection = new SqliteConnection(ConnectionString);
             connection.Open();
-
-            // Tabloyu oluştur
             var createTableCommand = connection.CreateCommand();
             createTableCommand.CommandText = createScript;
             createTableCommand.ExecuteNonQuery();
-            Debug.WriteLine($"[DatabaseService.xaml.cs] {tableName} tablosu kontrol edildi veya oluşturuldu.");
-
-            // Eksik kolonları kontrol et ve ekle
             foreach (var column in columns)
             {
                 string columnName = column.Split(' ')[0];
                 var checkColumnCommand = connection.CreateCommand();
                 checkColumnCommand.CommandText = $"PRAGMA table_info({tableName});";
-
                 using var reader = checkColumnCommand.ExecuteReader();
                 bool columnExists = false;
-
                 while (reader.Read())
                 {
                     if (reader.GetString(1).Equals(columnName, StringComparison.OrdinalIgnoreCase))
-                    {
-                        columnExists = true;
-                        break;
-                    }
+                    { columnExists = true; break; }
                 }
-
                 if (!columnExists)
                 {
                     var addColumnCommand = connection.CreateCommand();
                     addColumnCommand.CommandText = $"ALTER TABLE {tableName} ADD COLUMN {column};";
                     addColumnCommand.ExecuteNonQuery();
-                    Debug.WriteLine($"[DatabaseService.xaml.cs] Kolon eklendi: {column}");
                 }
             }
         }
 
-        // >>>>>>>>>>>> BURASI STATIK <<<<<<<<<<<<<<
-        public static List<Arac> GetAraclar()
+        // Vehicle helpers used by UI
+        public static (int? cekiciId, int? dorseId, int? soforId, string? soforAdi, string? dorsePlaka) GetVehicleInfoByCekiciPlaka(string cekiciPlaka)
         {
-            using var connection = new SqliteConnection(ConnectionString);
-            connection.Open();
-
-            using var command = connection.CreateCommand();
-            command.CommandText = @"
-        SELECT  C.Plaka, S.SoforAdi FROM Cekiciler as C
-        INNER JOIN Soforler S ON S.SoforId = C.SoforId
-        WHERE   C.Aktif = 1 AND IFNULL(C.Arsivli,0)=0
-        ORDER BY C.Plaka;";
-
-            using var reader = command.ExecuteReader();
-            var araclar = new List<Arac>();
-
-            while (reader.Read())
+            try
             {
-                var plaka = reader.IsDBNull(0) ? "" : reader.GetString(0);
-                var soforAdi = reader.IsDBNull(1) ? "" : reader.GetString(1);
-
-                Debug.WriteLine($"[DatabaseServices.cs:305 - DB SQLite] Plaka: {plaka}, Şoför: {soforAdi}");
-
-                araclar.Add(new Arac { Plaka = plaka, SoforAdi = soforAdi });
+                using var conn = new SqliteConnection(ConnectionString); conn.Open();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = @"SELECT C.CekiciId, C.DorseId, C.SoforId, S.SoforAdi, D.Plaka
+                                     FROM Cekiciler C
+                                     LEFT JOIN Soforler S ON S.SoforId = C.SoforId
+                                     LEFT JOIN Dorseler D ON D.DorseId = C.DorseId
+                                     WHERE C.Plaka=@p LIMIT 1";
+                cmd.Parameters.AddWithValue("@p", cekiciPlaka);
+                using var r = cmd.ExecuteReader();
+                if (r.Read())
+                {
+                    int? cekiciId = r.IsDBNull(0) ? null : r.GetInt32(0);
+                    int? dorseId = r.IsDBNull(1) ? null : r.GetInt32(1);
+                    int? soforId = r.IsDBNull(2) ? null : r.GetInt32(2);
+                    string? soforAdi = r.IsDBNull(3) ? null : r.GetString(3);
+                    string? dorsePlaka = r.IsDBNull(4) ? null : r.GetString(4);
+                    return (cekiciId, dorseId, soforId, soforAdi, dorsePlaka);
+                }
             }
-
-            return araclar;
+            catch { }
+            return (null, null, null, null, null);
         }
 
-        // Yeni: Sefer CRUD
+        public static string? GetDorsePlakaByCekiciPlaka(string cekiciPlaka)
+        {
+            try
+            {
+                using var conn = new SqliteConnection(ConnectionString); conn.Open();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = @"SELECT D.Plaka FROM Cekiciler C LEFT JOIN Dorseler D ON D.DorseId=C.DorseId WHERE C.Plaka=@p LIMIT 1";
+                cmd.Parameters.AddWithValue("@p", cekiciPlaka);
+                var val = cmd.ExecuteScalar();
+                return val == null || val is DBNull ? null : (string)val;
+            }
+            catch { return null; }
+        }
+
+        // Sefer CRUD (uses ValidateSeferInternal)
         public static int SeferEkle(Sefer s)
         {
-            if (!ValidateSefer(s)) return 0;
+            if (!ValidateSeferInternal(s)) return 0;
             using var connection = new SqliteConnection(ConnectionString);
             connection.Open();
             using var cmd = connection.CreateCommand();
@@ -504,7 +357,7 @@ namespace TirSeferleriModernApp.Services
 
         public static void SeferGuncelle(Sefer s)
         {
-            if (!ValidateSefer(s) || s.SeferId <= 0) return;
+            if (!ValidateSeferInternal(s) || s.SeferId <= 0) return;
             using var connection = new SqliteConnection(ConnectionString);
             connection.Open();
             using var cmd = connection.CreateCommand();
@@ -623,19 +476,18 @@ namespace TirSeferleriModernApp.Services
             if (string.IsNullOrWhiteSpace(cikisDepoAdi) || string.IsNullOrWhiteSpace(varisDepoAdi)) return null;
             try
             {
+                string col = GetPriceColumnName(ekstra, bosDolu);
                 using var connection = new SqliteConnection(ConnectionString);
                 connection.Open();
                 using var cmd = connection.CreateCommand();
-                cmd.CommandText = @"SELECT g.Ucret
+                cmd.CommandText = $@"SELECT g.{col}
                                      FROM Guzergahlar g
                                      INNER JOIN Depolar cd ON cd.DepoId = g.CikisDepoId
                                      INNER JOIN Depolar vd ON vd.DepoId = g.VarisDepoId
                                      WHERE cd.DepoAdi = @c AND vd.DepoAdi = @v
-                                       AND ( ( (@bd IS NULL OR TRIM(@bd)='') AND (g.BosDolu IS NULL OR TRIM(g.BosDolu)='') ) OR g.BosDolu = @bd )
                                      LIMIT 1";
                 cmd.Parameters.AddWithValue("@c", cikisDepoAdi);
                 cmd.Parameters.AddWithValue("@v", varisDepoAdi);
-                cmd.Parameters.AddWithValue("@bd", (object?)(string.IsNullOrWhiteSpace(bosDolu) ? null : bosDolu) ?? DBNull.Value);
                 var val = cmd.ExecuteScalar();
                 if (val == null || val is DBNull) return null;
                 return Convert.ToDecimal((double)val);
@@ -647,992 +499,22 @@ namespace TirSeferleriModernApp.Services
             }
         }
 
-        // Arac POCO
-        public class Arac
+        private static string GetPriceColumnName(string? ekstra, string? bosDolu)
         {
-            public string? Plaka { get; set; }
-            public string? SoforAdi { get; set; }
-        }
-
-        // Sefer doğrulama ve tarih parse yardımcıları
-        private static bool ValidateSefer(Sefer sefer) => !string.IsNullOrWhiteSpace(sefer.KonteynerNo);
-        private static DateTime ParseDate(string? text)
-        {
-            if (string.IsNullOrWhiteSpace(text)) return DateTime.Today;
-            if (DateTime.TryParse(text, out var d)) return d;
-            if (DateTime.TryParseExact(text, "yyyy-MM-dd", System.Globalization.CultureInfo.InvariantCulture, System.Globalization.DateTimeStyles.None, out d)) return d;
-            return DateTime.Today;
-        }
-
-        public static string? GetDorsePlakaByCekiciPlaka(string plaka)
-        {
-            try
+            var isBos = string.Equals(bosDolu, "Bos", StringComparison.OrdinalIgnoreCase);
+            if (string.IsNullOrWhiteSpace(ekstra) || string.Equals(ekstra, "EKSTRA YOK", StringComparison.OrdinalIgnoreCase))
             {
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                using var cmd = connection.CreateCommand();
-                cmd.CommandText = @"SELECT D.Plaka
-                                    FROM Cekiciler C
-                                    LEFT JOIN Dorseler D ON C.DorseId = D.DorseId
-                                    WHERE C.Plaka = @Plaka
-                                    LIMIT 1";
-                cmd.Parameters.AddWithValue("@Plaka", plaka);
-                var result = cmd.ExecuteScalar();
-                return result == null || result is DBNull ? null : Convert.ToString(result);
+                return isBos ? "BosFiyat" : "DoluFiyat";
             }
-            catch (Exception ex)
+            if (string.Equals(ekstra, "Emanet", StringComparison.OrdinalIgnoreCase))
             {
-                Debug.WriteLine($"[DatabaseService] GetDorsePlakaByCekiciPlaka hata: {ex.Message}");
-                return null;
+                return isBos ? "EmanetBosFiyat" : "EmanetDoluFiyat";
             }
-        }
-
-        public static (int? cekiciId, int? soforId, int? dorseId, string? soforAdi, string? dorsePlaka) GetVehicleInfoByCekiciPlaka(string plaka)
-        {
-            try
+            if (string.Equals(ekstra, "Soda", StringComparison.OrdinalIgnoreCase))
             {
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                using var cmd = connection.CreateCommand();
-                cmd.CommandText = @"SELECT C.CekiciId, C.SoforId, C.DorseId, S.SoforAdi, D.Plaka
-                                    FROM Cekiciler C
-                                    LEFT JOIN Soforler S ON C.SoforId = S.SoforId
-                                    LEFT JOIN Dorseler D ON C.DorseId = D.DorseId
-                                    WHERE C.Plaka = @Plaka
-                                    LIMIT 1";
-                cmd.Parameters.AddWithValue("@Plaka", plaka);
-                using var reader = cmd.ExecuteReader();
-                if (reader.Read())
-                {
-                    int? cekiciId = reader.IsDBNull(0) ? null : reader.GetInt32(0);
-                    int? soforId = reader.IsDBNull(1) ? null : reader.GetInt32(1);
-                    int? dorseId = reader.IsDBNull(2) ? null : reader.GetInt32(2);
-                    string? soforAdi = reader.IsDBNull(3) ? null : reader.GetString(3);
-                    string? dorsePlaka = reader.IsDBNull(4) ? null : reader.GetString(4);
-                    return (cekiciId, soforId, dorseId, soforAdi, dorsePlaka);
-                }
+                return isBos ? "SodaBosFiyat" : "SodaDoluFiyat";
             }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] GetVehicleInfoByCekiciPlaka hata: {ex.Message}");
-            }
-            return (null, null, null, null, null);
-        }
-
-        public static int RestoreMissingCekicilerFromSeferler()
-        {
-            int inserted = 0;
-            try
-            {
-                EnsureDatabaseFileStatic();
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-
-                string query = @"
-WITH latest AS (
-    SELECT CekiciPlaka, MAX(SeferId) AS MaxSeferId
-    FROM Seferler
-    WHERE CekiciPlaka IS NOT NULL AND TRIM(CekiciPlaka) <> ''
-    GROUP BY CekiciPlaka
-), src AS (
-    SELECT s.CekiciPlaka, s.SoforId, s.DorseId
-    FROM Seferler s
-    INNER JOIN latest l ON l.CekiciPlaka = s.CekiciPlaka AND l.MaxSeferId = s.SeferId
-)
-SELECT src.CekiciPlaka, src.SoforId, src.DorseId
-FROM src
-LEFT JOIN Cekiciler c ON c.Plaka = src.CekiciPlaka
-WHERE c.CekiciId IS NULL;";
-
-                using var selectCmd = new SqliteCommand(query, connection);
-                using var reader = selectCmd.ExecuteReader();
-                var items = new List<(string plaka, int? soforId, int? dorseId)>();
-                while (reader.Read())
-                {
-                    var plaka = reader.IsDBNull(0) ? string.Empty : reader.GetString(0);
-                    int? soforId = reader.IsDBNull(1) ? null : reader.GetInt32(1);
-                    int? dorseId = reader.IsDBNull(2) ? null : reader.GetInt32(2);
-                    if (!string.IsNullOrWhiteSpace(plaka))
-                        items.Add((plaka, soforId, dorseId));
-                }
-                reader.Close();
-
-                foreach (var (plaka, soforId, dorseId) in items)
-                {
-                    using var ins = new SqliteCommand("INSERT INTO Cekiciler (Plaka, SoforId, DorseId, Aktif) VALUES (@p, @s, @d, 1)", connection);
-                    ins.Parameters.AddWithValue("@p", plaka);
-                    ins.Parameters.AddWithValue("@s", (object?)soforId ?? DBNull.Value);
-                    ins.Parameters.AddWithValue("@d", (object?)dorseId ?? DBNull.Value);
-                    inserted += ins.ExecuteNonQuery();
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] RestoreMissingCekicilerFromSeferler hata: {ex.Message}");
-            }
-            return inserted;
-        }
-
-        public static int RestoreMissingDorselerFromSeferler()
-        {
-            int inserted = 0;
-            try
-            {
-                EnsureDatabaseFileStatic();
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-
-                string query = @"
-SELECT DISTINCT s.DorseId
-FROM Seferler s
-LEFT JOIN Dorseler d ON d.DorseId = s.DorseId
-WHERE s.DorseId IS NOT NULL AND d.DorseId IS NULL;";
-
-                using var selectCmd = new SqliteCommand(query, connection);
-                using var reader = selectCmd.ExecuteReader();
-                var ids = new List<int>();
-                while (reader.Read())
-                {
-                    if (!reader.IsDBNull(0)) ids.Add(reader.GetInt32(0));
-                }
-                reader.Close();
-
-                foreach (var id in ids)
-                {
-                    using var ins = new SqliteCommand("INSERT INTO Dorseler (DorseId, Plaka, Tip, Arsivli) VALUES (@id, @plaka, @tip, 0)", connection);
-                    ins.Parameters.AddWithValue("@id", id);
-                    ins.Parameters.AddWithValue("@plaka", $"RESTORE-{id}");
-                    ins.Parameters.AddWithValue("@tip", "Unknown");
-                    inserted += ins.ExecuteNonQuery();
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] RestoreMissingDorselerFromSeferler hata: {ex.Message}");
-            }
-            return inserted;
-        }
-
-        public static int RestoreMissingSoforlerFromSeferler()
-        {
-            int inserted = 0;
-            try
-            {
-                EnsureDatabaseFileStatic();
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-
-                string query = @"
-WITH latest AS (
-    SELECT SoforId, MAX(SeferId) AS MaxSeferId
-    FROM Seferler
-    WHERE SoforId IS NOT NULL
-    GROUP BY SoforId
-), src AS (
-    SELECT s.SoforId, COALESCE(s.SoforAdi, 'Bilinmeyen') AS SoforAdi
-    FROM Seferler s
-    INNER JOIN latest l ON l.SoforId = s.SoforId AND l.MaxSeferId = s.SeferId
-)
-SELECT src.SoforId, src.SoforAdi
-FROM src
-LEFT JOIN Soforler f ON f.SoforId = src.SoforId
-WHERE f.SoforId IS NULL;";
-
-                using var selectCmd = new SqliteCommand(query, connection);
-                using var reader = selectCmd.ExecuteReader();
-                var items = new List<(int soforId, string soforAdi)>();
-                while (reader.Read())
-                {
-                    if (!reader.IsDBNull(0))
-                    {
-                        var id = reader.GetInt32(0);
-                        var adi = reader.IsDBNull(1) ? "Bilinmeyen" : reader.GetString(1);
-                        items.Add((id, adi));
-                    }
-                }
-                reader.Close();
-
-                foreach (var (soforId, soforAdi) in items)
-                {
-                    using var ins = new SqliteCommand("INSERT INTO Soforler (SoforId, SoforAdi, Telefon, Arsivli) VALUES (@id, @ad, '', 0)", connection);
-                    ins.Parameters.AddWithValue("@id", soforId);
-                    ins.Parameters.AddWithValue("@ad", soforAdi);
-                    inserted += ins.ExecuteNonQuery();
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] RestoreMissingSoforlerFromSeferler hata: {ex.Message}");
-            }
-            return inserted;
-        }
-
-        public static void CheckAndCreateOrUpdateYakitGiderTablosu()
-        {
-            try
-            {
-                EnsureDatabaseFileStatic();
-                string createScript = @"CREATE TABLE IF NOT EXISTS YakitGider (
-                    YakitId INTEGER PRIMARY KEY AUTOINCREMENT,
-                    CekiciId INTEGER,
-                    Plaka TEXT,
-                    Tarih TEXT NOT NULL,
-                    Istasyon TEXT,
-                    Litre REAL,
-                    BirimFiyat REAL,
-                    Tutar REAL,
-                    Km INTEGER,
-                    Aciklama TEXT
-                );";
-                string[] requiredColumns = [
-                    "CekiciId INTEGER",
-                    "Plaka TEXT",
-                    "Tarih TEXT",
-                    "Istasyon TEXT",
-                    "Litre REAL",
-                    "BirimFiyat REAL",
-                    "Tutar REAL",
-                    "Km INTEGER",
-                    "Aciklama TEXT"
-                ];
-                EnsureTable("YakitGider", createScript, requiredColumns);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] CheckAndCreateOrUpdateYakitGiderTablosu hata: {ex.Message}");
-            }
-        }
-
-        public static int YakitEkle(YakitGider y)
-        {
-            try
-            {
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                using var cmd = connection.CreateCommand();
-                cmd.CommandText = @"INSERT INTO YakitGider (CekiciId, Plaka, Tarih, Istasyon, Litre, BirimFiyat, Tutar, Km, Aciklama)
-                                    VALUES (@CekiciId, @Plaka, @Tarih, @Istasyon, @Litre, @BirimFiyat, @Tutar, @Km, @Aciklama);
-                                    SELECT last_insert_rowid();";
-                BindYakitParams(cmd, y);
-                var id = (long)cmd.ExecuteScalar()!;
-                return (int)id;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] YakitEkle hata: {ex.Message}");
-                return 0;
-            }
-        }
-
-        public static void YakitGuncelle(YakitGider y)
-        {
-            if (y.YakitId <= 0) return;
-            try
-            {
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                using var cmd = connection.CreateCommand();
-                cmd.CommandText = @"UPDATE YakitGider SET
-                                    CekiciId=@CekiciId, Plaka=@Plaka, Tarih=@Tarih, Istasyon=@Istasyon,
-                                    Litre=@Litre, BirimFiyat=@BirimFiyat, Tutar=@Tutar, Km=@Km, Aciklama=@Aciklama
-                                   WHERE YakitId=@Id";
-                BindYakitParams(cmd, y);
-                cmd.Parameters.AddWithValue("@Id", y.YakitId);
-                cmd.ExecuteNonQuery();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] YakitGuncelle hata: {ex.Message}");
-            }
-        }
-
-        public static void YakitSil(int id)
-        {
-            try
-            {
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                using var cmd = connection.CreateCommand();
-                cmd.CommandText = "DELETE FROM YakitGider WHERE YakitId=@Id";
-                cmd.Parameters.AddWithValue("@Id", id);
-                cmd.ExecuteNonQuery();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] YakitSil hata: {ex.Message}");
-            }
-        }
-
-        public static List<YakitGider> GetYakitGiderleri(int? cekiciId)
-            => GetYakitGiderleri(cekiciId, null, null);
-
-        public static List<YakitGider> GetYakitGiderleri(int? cekiciId, DateTime? baslangic, DateTime? bitis)
-        {
-            var list = new List<YakitGider>();
-            try
-            {
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                using var cmd = connection.CreateCommand();
-
-                var sql = "SELECT YakitId, CekiciId, Plaka, Tarih, Istasyon, Litre, BirimFiyat, Tutar, Km, Aciklama FROM YakitGider WHERE 1=1";
-                if (cekiciId.HasValue) sql += " AND CekiciId=@Id";
-                if (baslangic.HasValue) sql += " AND Tarih >= @Bas";
-                if (bitis.HasValue) sql += " AND Tarih <= @Bit";
-                sql += " ORDER BY Tarih DESC, YakitId DESC";
-                cmd.CommandText = sql;
-                if (cekiciId.HasValue) cmd.Parameters.AddWithValue("@Id", cekiciId.Value);
-                if (baslangic.HasValue) cmd.Parameters.AddWithValue("@Bas", baslangic.Value.ToString("yyyy-MM-dd"));
-                if (bitis.HasValue) cmd.Parameters.AddWithValue("@Bit", bitis.Value.ToString("yyyy-MM-dd"));
-
-                using var reader = cmd.ExecuteReader();
-                while (reader.Read())
-                {
-                    list.Add(new YakitGider
-                    {
-                        YakitId = reader.IsDBNull(0) ? 0 : reader.GetInt32(0),
-                        CekiciId = reader.IsDBNull(1) ? null : reader.GetInt32(1),
-                        Plaka = reader.IsDBNull(2) ? null : reader.GetString(2),
-                        Tarih = DateTime.TryParse(reader.IsDBNull(3) ? null : reader.GetString(3), out var d) ? d : DateTime.Today,
-                        Istasyon = reader.IsDBNull(4) ? null : reader.GetString(4),
-                        Litre = reader.IsDBNull(5) ? 0 : Convert.ToDecimal(reader.GetDouble(5)),
-                        BirimFiyat = reader.IsDBNull(6) ? 0 : Convert.ToDecimal(reader.GetDouble(6)),
-                        Tutar = reader.IsDBNull(7) ? 0 : Convert.ToDecimal(reader.GetDouble(7)),
-                        Km = reader.IsDBNull(8) ? null : reader.GetInt32(8),
-                        Aciklama = reader.IsDBNull(9) ? null : reader.GetString(9)
-                    });
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] GetYakitGiderleri hata: {ex.Message}");
-            }
-            return list;
-        }
-
-        private static void BindYakitParams(SqliteCommand cmd, YakitGider y)
-        {
-            cmd.Parameters.AddWithValue("@CekiciId", (object?)y.CekiciId ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@Plaka", (object?)y.Plaka ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@Tarih", y.Tarih.ToString("yyyy-MM-dd"));
-            cmd.Parameters.AddWithValue("@Istasyon", (object?)y.Istasyon ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@Litre", Convert.ToDouble(y.Litre));
-            cmd.Parameters.AddWithValue("@BirimFiyat", Convert.ToDouble(y.BirimFiyat));
-            cmd.Parameters.AddWithValue("@Tutar", Convert.ToDouble(y.Tutar));
-            cmd.Parameters.AddWithValue("@Km", (object?)y.Km ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@Aciklama", (object?)y.Aciklama ?? DBNull.Value);
-        }
-
-        public static void CheckAndCreateOrUpdateSanaiGiderTablosu()
-        {
-            try
-            {
-                EnsureDatabaseFileStatic();
-                string createScript = @"CREATE TABLE IF NOT EXISTS SanaiGider (
-                    SanaiId INTEGER PRIMARY KEY AUTOINCREMENT,
-                    CekiciId INTEGER,
-                    Plaka TEXT,
-                    Tarih TEXT NOT NULL,
-                    Kalem TEXT,
-                    Tutar REAL,
-                    Km INTEGER,
-                    Aciklama TEXT
-                );";
-                string[] requiredColumns = [
-                    "CekiciId INTEGER",
-                    "Plaka TEXT",
-                    "Tarih TEXT",
-                    "Kalem TEXT",
-                    "Tutar REAL",
-                    "Km INTEGER",
-                    "Aciklama TEXT"
-                ];
-                EnsureTable("SanaiGider", createScript, requiredColumns);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] CheckAndCreateOrUpdateSanaiGiderTablosu hata: {ex.Message}");
-            }
-        }
-
-        public static int SanaiGiderEkle(SanaiGider s)
-        {
-            try
-            {
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                using var cmd = connection.CreateCommand();
-                cmd.CommandText = @"INSERT INTO SanaiGider (CekiciId, Plaka, Tarih, Kalem, Tutar, Km, Aciklama)
-                                    VALUES (@CekiciId, @Plaka, @Tarih, @Kalem, @Tutar, @Km, @Aciklama);
-                                    SELECT last_insert_rowid();";
-                BindSanaiParams(cmd, s);
-                var id = (long)cmd.ExecuteScalar()!;
-                return (int)id;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] SanaiGiderEkle hata: {ex.Message}");
-                return 0;
-            }
-        }
-
-        public static void SanaiGiderGuncelle(SanaiGider s)
-        {
-            if (s.SanaiId <= 0) return;
-            try
-            {
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                using var cmd = connection.CreateCommand();
-                cmd.CommandText = @"UPDATE SanaiGider SET
-                                    CekiciId=@CekiciId, Plaka=@Plaka, Tarih=@Tarih, Kalem=@Kalem,
-                                    Tutar=@Tutar, Km=@Km, Aciklama=@Aciklama
-                                   WHERE SanaiId=@Id";
-                BindSanaiParams(cmd, s);
-                cmd.Parameters.AddWithValue("@Id", s.SanaiId);
-                cmd.ExecuteNonQuery();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] SanaiGiderGuncelle hata: {ex.Message}");
-            }
-        }
-
-        public static void SanaiGiderSil(int id)
-        {
-            try
-            {
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                using var cmd = connection.CreateCommand();
-                cmd.CommandText = "DELETE FROM SanaiGider WHERE SanaiId=@Id";
-                cmd.Parameters.AddWithValue("@Id", id);
-                cmd.ExecuteNonQuery();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] SanaiGiderSil hata: {ex.Message}");
-            }
-        }
-
-        public static List<SanaiGider> GetSanaiGiderleri(int? cekiciId, DateTime? baslangic, DateTime? bitis)
-        {
-            var list = new List<SanaiGider>();
-            try
-            {
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                using var cmd = connection.CreateCommand();
-                var sql = "SELECT SanaiId, CekiciId, Plaka, Tarih, Kalem, Tutar, Km, Aciklama FROM SanaiGider WHERE 1=1";
-                if (cekiciId.HasValue) sql += " AND CekiciId=@Id";
-                if (baslangic.HasValue) sql += " AND Tarih >= @Bas";
-                if (bitis.HasValue) sql += " AND Tarih <= @Bit";
-                sql += " ORDER BY Tarih DESC, SanaiId DESC";
-                cmd.CommandText = sql;
-                if (cekiciId.HasValue) cmd.Parameters.AddWithValue("@Id", cekiciId.Value);
-                if (baslangic.HasValue) cmd.Parameters.AddWithValue("@Bas", baslangic.Value.ToString("yyyy-MM-dd"));
-                if (bitis.HasValue) cmd.Parameters.AddWithValue("@Bit", bitis.Value.ToString("yyyy-MM-dd"));
-
-                using var reader = cmd.ExecuteReader();
-                while (reader.Read())
-                {
-                    list.Add(new SanaiGider
-                    {
-                        SanaiId = reader.IsDBNull(0) ? 0 : reader.GetInt32(0),
-                        CekiciId = reader.IsDBNull(1) ? null : reader.GetInt32(1),
-                        Plaka = reader.IsDBNull(2) ? null : reader.GetString(2),
-                        Tarih = DateTime.TryParse(reader.IsDBNull(3) ? null : reader.GetString(3), out var d) ? d : DateTime.Today,
-                        Kalem = reader.IsDBNull(4) ? null : reader.GetString(4),
-                        Tutar = reader.IsDBNull(5) ? 0 : Convert.ToDecimal(reader.GetDouble(5)),
-                        Km = reader.IsDBNull(6) ? null : reader.GetInt32(6),
-                        Aciklama = reader.IsDBNull(7) ? null : reader.GetString(7)
-                    });
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] GetSanaiGiderleri hata: {ex.Message}");
-            }
-            return list;
-        }
-
-        private static void BindSanaiParams(SqliteCommand cmd, SanaiGider s)
-        {
-            cmd.Parameters.AddWithValue("@CekiciId", (object?)s.CekiciId ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@Plaka", (object?)s.Plaka ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@Tarih", s.Tarih.ToString("yyyy-MM-dd"));
-            cmd.Parameters.AddWithValue("@Kalem", (object?)s.Kalem ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@Tutar", Convert.ToDouble(s.Tutar));
-            cmd.Parameters.AddWithValue("@Km", (object?)s.Km ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@Aciklama", (object?)s.Aciklama ?? DBNull.Value);
-        }
-
-        public static void CheckAndCreateOrUpdateGenelGiderTablosu()
-        {
-            try
-            {
-                EnsureDatabaseFileStatic();
-                string createScript = @"CREATE TABLE IF NOT EXISTS GenelGider (
-                    GiderId INTEGER PRIMARY KEY AUTOINCREMENT,
-                    CekiciId INTEGER,
-                    Plaka TEXT,
-                    Tarih TEXT NOT NULL,
-                    Tutar REAL,
-                    Aciklama TEXT
-                );";
-                string[] requiredColumns = [
-                    "CekiciId INTEGER",
-                    "Plaka TEXT",
-                    "Tarih TEXT",
-                    "Tutar REAL",
-                    "Aciklama TEXT"
-                ];
-                EnsureTable("GenelGider", createScript, requiredColumns);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] CheckAndCreateOrUpdateGenelGiderTablosu hata: {ex.Message}");
-            }
-        }
-
-        public static int GenelGiderEkle(GenelGider g)
-        {
-            try
-            {
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                using var cmd = connection.CreateCommand();
-                cmd.CommandText = @"INSERT INTO GenelGider (CekiciId, Plaka, Tarih, Tutar, Aciklama)
-                                    VALUES (@CekiciId, @Plaka, @Tarih, @Tutar, @Aciklama);
-                                    SELECT last_insert_rowid();";
-                BindGenelParams(cmd, g);
-                var id = (long)cmd.ExecuteScalar()!;
-                return (int)id;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] GenelGiderEkle hata: {ex.Message}");
-                return 0;
-            }
-        }
-
-        public static void GenelGiderGuncelle(GenelGider g)
-        {
-            if (g.GiderId <= 0) return;
-            try
-            {
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                using var cmd = connection.CreateCommand();
-                cmd.CommandText = @"UPDATE GenelGider SET
-                                    CekiciId=@CekiciId, Plaka=@Plaka, Tarih=@Tarih,
-                                    Tutar=@Tutar, Aciklama=@Aciklama
-                                   WHERE GiderId=@Id";
-                BindGenelParams(cmd, g);
-                cmd.Parameters.AddWithValue("@Id", g.GiderId);
-                cmd.ExecuteNonQuery();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] GenelGiderGuncelle hata: {ex.Message}");
-            }
-        }
-
-        public static void GenelGiderSil(int id)
-        {
-            try
-            {
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                using var cmd = connection.CreateCommand();
-                cmd.CommandText = "DELETE FROM GenelGider WHERE GiderId=@Id";
-                cmd.Parameters.AddWithValue("@Id", id);
-                cmd.ExecuteNonQuery();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] GenelGiderSil hata: {ex.Message}");
-            }
-        }
-
-        public static List<GenelGider> GetGenelGiderleri(int? cekiciId, DateTime? baslangic, DateTime? bitis)
-        {
-            var list = new List<GenelGider>();
-            try
-            {
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                using var cmd = connection.CreateCommand();
-                var sql = "SELECT GiderId, CekiciId, Plaka, Tarih, Tutar, Aciklama FROM GenelGider WHERE 1=1";
-                if (cekiciId.HasValue) sql += " AND CekiciId=@Id";
-                if (baslangic.HasValue) sql += " AND Tarih >= @Bas";
-                if (bitis.HasValue) sql += " AND Tarih <= @Bit";
-                sql += " ORDER BY Tarih DESC, GiderId DESC";
-                cmd.CommandText = sql;
-                if (cekiciId.HasValue) cmd.Parameters.AddWithValue("@Id", cekiciId.Value);
-                if (baslangic.HasValue) cmd.Parameters.AddWithValue("@Bas", baslangic.Value.ToString("yyyy-MM-dd"));
-                if (bitis.HasValue) cmd.Parameters.AddWithValue("@Bit", bitis.Value.ToString("yyyy-MM-dd"));
-
-                using var reader = cmd.ExecuteReader();
-                while (reader.Read())
-                {
-                    list.Add(new GenelGider
-                    {
-                        GiderId = reader.IsDBNull(0) ? 0 : reader.GetInt32(0),
-                        CekiciId = reader.IsDBNull(1) ? null : reader.GetInt32(1),
-                        Plaka = reader.IsDBNull(2) ? null : reader.GetString(2),
-                        Tarih = DateTime.TryParse(reader.IsDBNull(3) ? null : reader.GetString(3), out var d) ? d : DateTime.Today,
-                        Tutar = reader.IsDBNull(4) ? 0 : Convert.ToDecimal(reader.GetDouble(4)),
-                        Aciklama = reader.IsDBNull(5) ? null : reader.GetString(5)
-                    });
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] GetGenelGiderleri hata: {ex.Message}");
-            }
-            return list;
-        }
-
-        private static void BindGenelParams(SqliteCommand cmd, GenelGider g)
-        {
-            cmd.Parameters.AddWithValue("@CekiciId", (object?)g.CekiciId ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@Plaka", (object?)g.Plaka ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@Tarih", g.Tarih.ToString("yyyy-MM-dd"));
-            cmd.Parameters.AddWithValue("@Tutar", Convert.ToDouble(g.Tutar));
-            cmd.Parameters.AddWithValue("@Aciklama", (object?)g.Aciklama ?? DBNull.Value);
-        }
-
-        public static void CheckAndCreateOrUpdatePersonelGiderTablosu()
-        {
-            try
-            {
-                EnsureDatabaseFileStatic();
-                string createScript = @"CREATE TABLE IF NOT EXISTS PersonelGider (
-                    PersonelGiderId INTEGER PRIMARY KEY AUTOINCREMENT,
-                    CekiciId INTEGER,
-                    Plaka TEXT,
-                    Tarih TEXT NOT NULL,
-                    PersonelAdi TEXT,
-                    OdemeTuru TEXT,
-                    SgkDonem TEXT,
-                    VergiTuru TEXT,
-                    Tutar REAL,
-                    Aciklama TEXT
-                );";
-                string[] requiredColumns = [
-                    "CekiciId INTEGER",
-                    "Plaka TEXT",
-                    "Tarih TEXT",
-                    "PersonelAdi TEXT",
-                    "OdemeTuru TEXT",
-                    "SgkDonem TEXT",
-                    "VergiTuru TEXT",
-                    "Tutar REAL",
-                    "Aciklama TEXT"
-                ];
-                EnsureTable("PersonelGider", createScript, requiredColumns);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] CheckAndCreateOrUpdatePersonelGiderTablosu hata: {ex.Message}");
-            }
-        }
-
-        public static int PersonelGiderEkle(PersonelGider g)
-        {
-            try
-            {
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                using var cmd = connection.CreateCommand();
-                cmd.CommandText = @"INSERT INTO PersonelGider (CekiciId, Plaka, Tarih, PersonelAdi, OdemeTuru, SgkDonem, VergiTuru, Tutar, Aciklama)
-                                    VALUES (@CekiciId, @Plaka, @Tarih, @PersonelAdi, @OdemeTuru, @SgkDonem, @VergiTuru, @Tutar, @Aciklama);
-                                    SELECT last_insert_rowid();";
-                BindPersonelParams(cmd, g);
-                var id = (long)cmd.ExecuteScalar()!;
-                return (int)id;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] PersonelGiderEkle hata: {ex.Message}");
-                return 0;
-            }
-        }
-
-        public static void PersonelGiderGuncelle(PersonelGider g)
-        {
-            if (g.PersonelGiderId <= 0) return;
-            try
-            {
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                using var cmd = connection.CreateCommand();
-                cmd.CommandText = @"UPDATE PersonelGider SET
-                                    CekiciId=@CekiciId, Plaka=@Plaka, Tarih=@Tarih,
-                                    PersonelAdi=@PersonelAdi, OdemeTuru=@OdemeTuru, SgkDonem=@SgkDonem, VergiTuru=@VergiTuru,
-                                    Tutar=@Tutar, Aciklama=@Aciklama
-                                   WHERE PersonelGiderId=@Id";
-                BindPersonelParams(cmd, g);
-                cmd.Parameters.AddWithValue("@Id", g.PersonelGiderId);
-                cmd.ExecuteNonQuery();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] PersonelGiderGuncelle hata: {ex.Message}");
-            }
-        }
-
-        public static void PersonelGiderSil(int id)
-        {
-            try
-            {
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                using var cmd = connection.CreateCommand();
-                cmd.CommandText = "DELETE FROM PersonelGider WHERE PersonelGiderId=@Id";
-                cmd.Parameters.AddWithValue("@Id", id);
-                cmd.ExecuteNonQuery();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] PersonelGiderSil hata: {ex.Message}");
-            }
-        }
-
-        public static List<PersonelGider> GetPersonelGiderleri(int? cekiciId, DateTime? baslangic, DateTime? bitis)
-        {
-            var list = new List<PersonelGider>();
-            try
-            {
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                using var cmd = connection.CreateCommand();
-                var sql = "SELECT PersonelGiderId, CekiciId, Plaka, Tarih, PersonelAdi, OdemeTuru, SgkDonem, VergiTuru, Tutar, Aciklama FROM PersonelGider WHERE 1=1";
-                if (cekiciId.HasValue) sql += " AND CekiciId=@Id";
-                if (baslangic.HasValue) sql += " AND Tarih >= @Bas";
-                if (bitis.HasValue) sql += " AND Tarih <= @Bit";
-                sql += " ORDER BY Tarih DESC, PersonelGiderId DESC";
-                cmd.CommandText = sql;
-                if (cekiciId.HasValue) cmd.Parameters.AddWithValue("@Id", cekiciId.Value);
-                if (baslangic.HasValue) cmd.Parameters.AddWithValue("@Bas", baslangic.Value.ToString("yyyy-MM-dd"));
-                if (bitis.HasValue) cmd.Parameters.AddWithValue("@Bit", bitis.Value.ToString("yyyy-MM-dd"));
-
-                using var reader = cmd.ExecuteReader();
-                while (reader.Read())
-                {
-                    list.Add(new PersonelGider
-                    {
-                        PersonelGiderId = reader.IsDBNull(0) ? 0 : reader.GetInt32(0),
-                        CekiciId = reader.IsDBNull(1) ? null : reader.GetInt32(1),
-                        Plaka = reader.IsDBNull(2) ? null : reader.GetString(2),
-                        Tarih = DateTime.TryParse(reader.IsDBNull(3) ? null : reader.GetString(3), out var d) ? d : DateTime.Today,
-                        PersonelAdi = reader.IsDBNull(4) ? null : reader.GetString(4),
-                        OdemeTuru = reader.IsDBNull(5) ? null : reader.GetString(5),
-                        SgkDonem = reader.IsDBNull(6) ? null : reader.GetString(6),
-                        VergiTuru = reader.IsDBNull(7) ? null : reader.GetString(7),
-                        Tutar = reader.IsDBNull(8) ? 0 : Convert.ToDecimal(reader.GetDouble(8)),
-                        Aciklama = reader.IsDBNull(9) ? null : reader.GetString(9)
-                    });
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] GetPersonelGiderleri hata: {ex.Message}");
-            }
-            return list;
-        }
-
-        private static void BindPersonelParams(SqliteCommand cmd, PersonelGider g)
-        {
-            cmd.Parameters.AddWithValue("@CekiciId", (object?)g.CekiciId ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@Plaka", (object?)g.Plaka ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@Tarih", g.Tarih.ToString("yyyy-MM-dd"));
-            cmd.Parameters.AddWithValue("@PersonelAdi", (object?)g.PersonelAdi ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@OdemeTuru", (object?)g.OdemeTuru ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@SgkDonem", (object?)g.SgkDonem ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@VergiTuru", (object?)g.VergiTuru ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@Tutar", Convert.ToDouble(g.Tutar));
-            cmd.Parameters.AddWithValue("@Aciklama", (object?)g.Aciklama ?? DBNull.Value);
-        }
-
-        public static void CheckAndCreateOrUpdateVergiAracTablosu()
-        {
-            try
-            {
-                EnsureDatabaseFileStatic();
-                string createScript = @"CREATE TABLE IF NOT EXISTS VergiArac (
-                    VergiId INTEGER PRIMARY KEY AUTOINCREMENT,
-                    CekiciId INTEGER,
-                    Plaka TEXT,
-                    Tarih TEXT NOT NULL,
-                    VergiTuru TEXT,
-                    Donem TEXT,
-                    VarlikTipi TEXT,
-                    DorseId INTEGER,
-                    DorsePlaka TEXT,
-                    Tutar REAL,
-                    Aciklama TEXT
-                );";
-                string[] requiredColumns = [
-                    "CekiciId INTEGER",
-                    "Plaka TEXT",
-                    "Tarih TEXT",
-                    "VergiTuru TEXT",
-                    "Donem TEXT",
-                    "VarlikTipi TEXT",
-                    "DorseId INTEGER",
-                    "DorsePlaka TEXT",
-                    "Tutar REAL",
-                    "Aciklama TEXT"
-                ];
-                EnsureTable("VergiArac", createScript, requiredColumns);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] CheckAndCreateOrUpdateVergiAracTablosu hata: {ex.Message}");
-            }
-        }
-
-        public static int VergiAracEkle(VergiArac v)
-        {
-            try
-            {
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                using var cmd = connection.CreateCommand();
-                cmd.CommandText = @"INSERT INTO VergiArac (CekiciId, Plaka, Tarih, VergiTuru, Donem, VarlikTipi, DorseId, DorsePlaka, Tutar, Aciklama)
-                                    VALUES (@CekiciId, @Plaka, @Tarih, @VergiTuru, @Donem, @VarlikTipi, @DorseId, @DorsePlaka, @Tutar, @Aciklama);
-                                    SELECT last_insert_rowid();";
-                BindVergiAracParams(cmd, v);
-                var id = (long)cmd.ExecuteScalar()!;
-                return (int)id;
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] VergiAracEkle hata: {ex.Message}");
-                return 0;
-            }
-        }
-
-        public static void VergiAracGuncelle(VergiArac v)
-        {
-            if (v.VergiId <= 0) return;
-            try
-            {
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                using var cmd = connection.CreateCommand();
-                cmd.CommandText = @"UPDATE VergiArac SET
-                                    CekiciId=@CekiciId, Plaka=@Plaka, Tarih=@Tarih, VergiTuru=@VergiTuru, Donem=@Donem,
-                                    VarlikTipi=@VarlikTipi, DorseId=@DorseId, DorsePlaka=@DorsePlaka,
-                                    Tutar=@Tutar, Aciklama=@Aciklama
-                                   WHERE VergiId=@Id";
-                BindVergiAracParams(cmd, v);
-                cmd.Parameters.AddWithValue("@Id", v.VergiId);
-                cmd.ExecuteNonQuery();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] VergiAracGuncelle hata: {ex.Message}");
-            }
-        }
-
-        public static void VergiAracSil(int id)
-        {
-            try
-            {
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                using var cmd = connection.CreateCommand();
-                cmd.CommandText = "DELETE FROM VergiArac WHERE VergiId=@Id";
-                cmd.Parameters.AddWithValue("@Id", id);
-                cmd.ExecuteNonQuery();
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] VergiAracSil hata: {ex.Message}");
-            }
-        }
-
-        public static List<VergiArac> GetVergiAraclari(int? cekiciId, DateTime? baslangic, DateTime? bitis)
-        {
-            var list = new List<VergiArac>();
-            try
-            {
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                using var cmd = connection.CreateCommand();
-                var sql = "SELECT VergiId, CekiciId, Plaka, Tarih, VergiTuru, Donem, VarlikTipi, DorseId, DorsePlaka, Tutar, Aciklama FROM VergiArac WHERE 1=1";
-                if (cekiciId.HasValue) sql += " AND CekiciId=@Id";
-                if (baslangic.HasValue) sql += " AND Tarih >= @Bas";
-                if (bitis.HasValue) sql += " AND Tarih <= @Bit";
-                sql += " ORDER BY Tarih DESC, VergiId DESC";
-                cmd.CommandText = sql;
-                if (cekiciId.HasValue) cmd.Parameters.AddWithValue("@Id", cekiciId.Value);
-                if (baslangic.HasValue) cmd.Parameters.AddWithValue("@Bas", baslangic.Value.ToString("yyyy-MM-dd"));
-                if (bitis.HasValue) cmd.Parameters.AddWithValue("@Bit", bitis.Value.ToString("yyyy-MM-dd"));
-
-                using var reader = cmd.ExecuteReader();
-                while (reader.Read())
-                {
-                    list.Add(new VergiArac
-                    {
-                        VergiId = reader.IsDBNull(0) ? 0 : reader.GetInt32(0),
-                        CekiciId = reader.IsDBNull(1) ? null : reader.GetInt32(1),
-                        Plaka = reader.IsDBNull(2) ? null : reader.GetString(2),
-                        Tarih = DateTime.TryParse(reader.IsDBNull(3) ? null : reader.GetString(3), out var d) ? d : DateTime.Today,
-                        VergiTuru = reader.IsDBNull(4) ? null : reader.GetString(4),
-                        Donem = reader.IsDBNull(5) ? null : reader.GetString(5),
-                        VarlikTipi = reader.IsDBNull(6) ? null : reader.GetString(6),
-                        DorseId = reader.IsDBNull(7) ? null : reader.GetInt32(7),
-                        DorsePlaka = reader.IsDBNull(8) ? null : reader.GetString(8),
-                        Tutar = reader.IsDBNull(9) ? 0 : Convert.ToDecimal(reader.GetDouble(9)),
-                        Aciklama = reader.IsDBNull(10) ? null : reader.GetString(10)
-                    });
-                }
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] GetVergiAraclari hata: {ex.Message}");
-            }
-            return list;
-        }
-
-        private static void BindVergiAracParams(SqliteCommand cmd, VergiArac v)
-        {
-            cmd.Parameters.AddWithValue("@CekiciId", (object?)v.CekiciId ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@Plaka", (object?)v.Plaka ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@Tarih", v.Tarih.ToString("yyyy-MM-dd"));
-            cmd.Parameters.AddWithValue("@VergiTuru", (object?)v.VergiTuru ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@Donem", (object?)v.Donem ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@VarlikTipi", (object?)v.VarlikTipi ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@DorseId", (object?)v.DorseId ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@DorsePlaka", (object?)v.DorsePlaka ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@Tutar", Convert.ToDouble(v.Tutar));
-            cmd.Parameters.AddWithValue("@Aciklama", (object?)v.Aciklama ?? DBNull.Value);
-        }
-
-        public static void CheckAndCreateOrUpdateDepoTablosu()
-        {
-            try
-            {
-                EnsureDatabaseFileStatic();
-                string createScript = @"CREATE TABLE IF NOT EXISTS Depolar (
-                    DepoId INTEGER PRIMARY KEY AUTOINCREMENT,
-                    DepoAdi TEXT NOT NULL,
-                    Aciklama TEXT
-                );";
-                string[] requiredColumns = [
-                    "DepoAdi TEXT",
-                    "Aciklama TEXT"
-                ];
-                EnsureTable("Depolar", createScript, requiredColumns);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] CheckAndCreateOrUpdateDepoTablosu hata: {ex.Message}");
-            }
+            return isBos ? "BosFiyat" : "DoluFiyat";
         }
 
         public static void CheckAndCreateOrUpdateGuzergahTablosu()
@@ -1644,25 +526,28 @@ WHERE f.SoforId IS NULL;";
                     GuzergahId INTEGER PRIMARY KEY AUTOINCREMENT,
                     CikisDepoId INTEGER NOT NULL,
                     VarisDepoId INTEGER NOT NULL,
-                    BosDolu TEXT,
-                    Ekstra TEXT,
-                    Ucret REAL,
+                    BosFiyat REAL,
+                    DoluFiyat REAL,
+                    EmanetBosFiyat REAL,
+                    EmanetDoluFiyat REAL,
+                    SodaBosFiyat REAL,
+                    SodaDoluFiyat REAL,
                     Aciklama TEXT
                 );";
                 string[] requiredColumns = [
                     "CikisDepoId INTEGER",
                     "VarisDepoId INTEGER",
-                    "BosDolu TEXT",
-                    "Ekstra TEXT",
-                    "Ucret REAL",
+                    "BosFiyat REAL",
+                    "DoluFiyat REAL",
+                    "EmanetBosFiyat REAL",
+                    "EmanetDoluFiyat REAL",
+                    "SodaBosFiyat REAL",
+                    "SodaDoluFiyat REAL",
                     "Aciklama TEXT"
                 ];
                 EnsureTable("Guzergahlar", createScript, requiredColumns);
             }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] CheckAndCreateOrUpdateGuzergahTablosu hata: {ex.Message}");
-            }
+            catch { }
         }
 
         public static List<string> GetDepoAdlari()
@@ -1681,10 +566,7 @@ WHERE f.SoforId IS NULL;";
                     if (!reader.IsDBNull(0)) list.Add(reader.GetString(0));
                 }
             }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] GetDepoAdlari hata: {ex.Message}");
-            }
+            catch { }
             return list;
         }
 
@@ -1697,17 +579,373 @@ WHERE f.SoforId IS NULL;";
                 using var connection = new SqliteConnection(ConnectionString);
                 connection.Open();
                 using var cmd = connection.CreateCommand();
-                cmd.CommandText = "SELECT DISTINCT IFNULL(TRIM(Ekstra),'') FROM Guzergahlar WHERE IFNULL(TRIM(Ekstra),'') <> '' ORDER BY 1";
+                cmd.CommandText = "SELECT Ad FROM EkstraUcretler WHERE IFNULL(TRIM(Ad),'')<>'' ORDER BY Ad";
                 using var reader = cmd.ExecuteReader();
                 while (reader.Read())
                 {
                     if (!reader.IsDBNull(0)) list.Add(reader.GetString(0));
                 }
             }
-            catch (Exception ex)
+            catch { }
+            return list;
+        }
+
+        public static void EnsureSoforlerArsivliColumn()
+        {
+            try
             {
-                Debug.WriteLine($"[DatabaseService] GetEkstraAdlari hata: {ex.Message}");
+                EnsureDatabaseFileStatic();
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "PRAGMA table_info(Soforler);";
+                using var rdr = cmd.ExecuteReader();
+                bool exists = false;
+                while (rdr.Read())
+                {
+                    if (string.Equals(rdr.GetString(1), "Arsivli", StringComparison.OrdinalIgnoreCase)) { exists = true; break; }
+                }
+                if (!exists)
+                {
+                    using var alter = connection.CreateCommand();
+                    alter.CommandText = "ALTER TABLE Soforler ADD COLUMN Arsivli INTEGER DEFAULT 0;";
+                    alter.ExecuteNonQuery();
+                }
             }
+            catch { }
+        }
+
+        public static void EnsureCekicilerArsivliColumn()
+        {
+            try
+            {
+                EnsureDatabaseFileStatic();
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "PRAGMA table_info(Cekiciler);";
+                using var rdr = cmd.ExecuteReader();
+                bool exists = false;
+                while (rdr.Read())
+                {
+                    if (string.Equals(rdr.GetString(1), "Arsivli", StringComparison.OrdinalIgnoreCase)) { exists = true; break; }
+                }
+                if (!exists)
+                {
+                    using var alter = connection.CreateCommand();
+                    alter.CommandText = "ALTER TABLE Cekiciler ADD COLUMN Arsivli INTEGER DEFAULT 0;";
+                    alter.ExecuteNonQuery();
+                }
+            }
+            catch { }
+        }
+
+        public static void EnsureDorselerArsivliColumn()
+        {
+            try
+            {
+                EnsureDatabaseFileStatic();
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "PRAGMA table_info(Dorseler);";
+                using var rdr = cmd.ExecuteReader();
+                bool exists = false;
+                while (rdr.Read())
+                {
+                    if (string.Equals(rdr.GetString(1), "Arsivli", StringComparison.OrdinalIgnoreCase)) { exists = true; break; }
+                }
+                if (!exists)
+                {
+                    using var alter = connection.CreateCommand();
+                    alter.CommandText = "ALTER TABLE Dorseler ADD COLUMN Arsivli INTEGER DEFAULT 0;";
+                    alter.ExecuteNonQuery();
+                }
+            }
+            catch { }
+        }
+
+        public static int GetSeferCountByCekiciId(int cekiciId)
+        {
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "SELECT COUNT(1) FROM Seferler WHERE CekiciId = @id";
+                cmd.Parameters.AddWithValue("@id", cekiciId);
+                return Convert.ToInt32(cmd.ExecuteScalar());
+            }
+            catch { return 0; }
+        }
+
+        public static int GetSeferCountByDorseId(int dorseId)
+        {
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+                cmd.CommandText = "SELECT COUNT(1) FROM Seferler WHERE DorseId = @id";
+                cmd.Parameters.AddWithValue("@id", dorseId);
+                return Convert.ToInt32(cmd.ExecuteScalar());
+            }
+            catch { return 0; }
+        }
+
+        public static int RestoreMissingCekicilerFromSeferler()
+        {
+            try
+            {
+                using var conn = new SqliteConnection(ConnectionString); conn.Open();
+                var count = 0;
+                using (var cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = @"INSERT INTO Cekiciler (Plaka, Aktif, Arsivli)
+                                        SELECT DISTINCT s.CekiciPlaka, 1, 0
+                                        FROM Seferler s
+                                        LEFT JOIN Cekiciler c ON c.Plaka = s.CekiciPlaka
+                                        WHERE IFNULL(TRIM(s.CekiciPlaka),'')<>'' AND c.Plaka IS NULL";
+                    count += cmd.ExecuteNonQuery();
+                }
+                return count;
+            }
+            catch { return 0; }
+        }
+
+        public static int RestoreMissingDorselerFromSeferler()
+        {
+            try
+            {
+                using var conn = new SqliteConnection(ConnectionString); conn.Open();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = @"INSERT INTO Dorseler (Plaka, Arsivli)
+                                    SELECT DISTINCT s.CekiciPlaka, 0 FROM Seferler s
+                                    LEFT JOIN Dorseler d ON d.Plaka = s.CekiciPlaka
+                                    WHERE 1=0"; // Seferler tablosunda dorse plaka tutulmuyorsa pasif; ileride güncelleyin
+                return cmd.ExecuteNonQuery();
+            }
+            catch { return 0; }
+        }
+
+        public static int RestoreMissingSoforlerFromSeferler()
+        {
+            try
+            {
+                using var conn = new SqliteConnection(ConnectionString); conn.Open();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = @"INSERT INTO Soforler (SoforAdi, Arsivli)
+                                    SELECT DISTINCT s.SoforAdi, 0 FROM Seferler s
+                                    LEFT JOIN Soforler d ON d.SoforAdi = s.SoforAdi
+                                    WHERE IFNULL(TRIM(s.SoforAdi),'')<>'' AND d.SoforAdi IS NULL";
+                return cmd.ExecuteNonQuery();
+            }
+            catch { return 0; }
+        }
+
+        public static void CheckAndCreateOrUpdateYakitGiderTablosu()
+        {
+            try
+            {
+                EnsureDatabaseFileStatic();
+                using var conn = new SqliteConnection(ConnectionString); conn.Open();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = @"CREATE TABLE IF NOT EXISTS YakitGiderleri (
+                                        YakitId INTEGER PRIMARY KEY AUTOINCREMENT,
+                                        CekiciId INTEGER,
+                                        Plaka TEXT,
+                                        Tarih TEXT,
+                                        Istasyon TEXT,
+                                        Litre REAL,
+                                        BirimFiyat REAL,
+                                        Tutar REAL,
+                                        Km INTEGER,
+                                        Aciklama TEXT);";
+                cmd.ExecuteNonQuery();
+            }
+            catch { }
+        }
+
+        public static List<YakitGider> GetYakitGiderleri(int? cekiciId, DateTime? bas, DateTime? bit)
+        {
+            var list = new List<YakitGider>();
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            var sql = "SELECT YakitId, CekiciId, Plaka, Tarih, Istasyon, Litre, BirimFiyat, Tutar, Km, Aciklama FROM YakitGiderleri WHERE 1=1";
+            using var cmd = conn.CreateCommand();
+            if (cekiciId.HasValue) { sql += " AND (CekiciId = @id OR CekiciId IS NULL)"; cmd.Parameters.AddWithValue("@id", cekiciId.Value); }
+            if (bas.HasValue) { sql += " AND Tarih >= @bas"; cmd.Parameters.AddWithValue("@bas", bas.Value.ToString("yyyy-MM-dd")); }
+            if (bit.HasValue) { sql += " AND Tarih <= @bit"; cmd.Parameters.AddWithValue("@bit", bit.Value.ToString("yyyy-MM-dd")); }
+            sql += " ORDER BY Tarih DESC, YakitId DESC";
+            cmd.CommandText = sql;
+            using var rdr = cmd.ExecuteReader();
+            while (rdr.Read())
+            {
+                list.Add(new YakitGider
+                {
+                    YakitId = rdr.IsDBNull(0) ? 0 : rdr.GetInt32(0),
+                    CekiciId = rdr.IsDBNull(1) ? null : rdr.GetInt32(1),
+                    Plaka = rdr.IsDBNull(2) ? null : rdr.GetString(2),
+                    Tarih = DateTime.TryParse(rdr.IsDBNull(3) ? null : rdr.GetString(3), out var dt) ? dt : DateTime.Today,
+                    Istasyon = rdr.IsDBNull(4) ? null : rdr.GetString(4),
+                    Litre = rdr.IsDBNull(5) ? 0 : Convert.ToDecimal(rdr.GetDouble(5)),
+                    BirimFiyat = rdr.IsDBNull(6) ? 0 : Convert.ToDecimal(rdr.GetDouble(6)),
+                    Tutar = rdr.IsDBNull(7) ? 0 : Convert.ToDecimal(rdr.GetDouble(7)),
+                    Km = rdr.IsDBNull(8) ? null : rdr.GetInt32(8),
+                    Aciklama = rdr.IsDBNull(9) ? null : rdr.GetString(9)
+                });
+            }
+            return list;
+        }
+
+        public static int YakitEkle(YakitGider y)
+        {
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"INSERT INTO YakitGiderleri (CekiciId, Plaka, Tarih, Istasyon, Litre, BirimFiyat, Tutar, Km, Aciklama)
+                                VALUES (@cid,@p,@t,@i,@l,@b,@u,@k,@a); SELECT last_insert_rowid();";
+            cmd.Parameters.AddWithValue("@cid", (object?)y.CekiciId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@p", (object?)y.Plaka ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@t", y.Tarih.ToString("yyyy-MM-dd"));
+            cmd.Parameters.AddWithValue("@i", (object?)y.Istasyon ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@l", Convert.ToDouble(y.Litre));
+            cmd.Parameters.AddWithValue("@b", Convert.ToDouble(y.BirimFiyat));
+            cmd.Parameters.AddWithValue("@u", Convert.ToDouble(y.Tutar));
+            cmd.Parameters.AddWithValue("@k", (object?)y.Km ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@a", (object?)y.Aciklama ?? DBNull.Value);
+            var id = (long)cmd.ExecuteScalar()!; return (int)id;
+        }
+
+        public static void YakitGuncelle(YakitGider y)
+        {
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"UPDATE YakitGiderleri SET CekiciId=@cid, Plaka=@p, Tarih=@t, Istasyon=@i, Litre=@l, BirimFiyat=@b, Tutar=@u, Km=@k, Aciklama=@a WHERE YakitId=@id";
+            cmd.Parameters.AddWithValue("@cid", (object?)y.CekiciId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@p", (object?)y.Plaka ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@t", y.Tarih.ToString("yyyy-MM-dd"));
+            cmd.Parameters.AddWithValue("@i", (object?)y.Istasyon ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@l", Convert.ToDouble(y.Litre));
+            cmd.Parameters.AddWithValue("@b", Convert.ToDouble(y.BirimFiyat));
+            cmd.Parameters.AddWithValue("@u", Convert.ToDouble(y.Tutar));
+            cmd.Parameters.AddWithValue("@k", (object?)y.Km ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@a", (object?)y.Aciklama ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@id", y.YakitId);
+            cmd.ExecuteNonQuery();
+        }
+
+        public static void YakitSil(int id)
+        {
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "DELETE FROM YakitGiderleri WHERE YakitId=@id";
+            cmd.Parameters.AddWithValue("@id", id);
+            cmd.ExecuteNonQuery();
+        }
+
+        public static List<GenelGider> GetGenelGiderleri(int? cekiciId, DateTime? bas, DateTime? bit)
+        {
+            var list = new List<GenelGider>();
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            var sql = "SELECT GiderId, CekiciId, Plaka, Tarih, Tutar, Aciklama FROM GenelGiderler WHERE 1=1";
+            using var cmd = conn.CreateCommand();
+            if (cekiciId.HasValue) { sql += " AND (CekiciId = @id OR CekiciId IS NULL)"; cmd.Parameters.AddWithValue("@id", cekiciId.Value); }
+            if (bas.HasValue) { sql += " AND Tarih >= @bas"; cmd.Parameters.AddWithValue("@bas", bas.Value.ToString("yyyy-MM-dd")); }
+            if (bit.HasValue) { sql += " AND Tarih <= @bit"; cmd.Parameters.AddWithValue("@bit", bit.Value.ToString("yyyy-MM-dd")); }
+            sql += " ORDER BY Tarih DESC, GiderId DESC";
+            cmd.CommandText = sql;
+            using var rdr = cmd.ExecuteReader();
+            while (rdr.Read())
+            {
+                list.Add(new GenelGider
+                {
+                    GiderId = rdr.IsDBNull(0) ? 0 : rdr.GetInt32(0),
+                    CekiciId = rdr.IsDBNull(1) ? null : rdr.GetInt32(1),
+                    Plaka = rdr.IsDBNull(2) ? null : rdr.GetString(2),
+                    Tarih = DateTime.TryParse(rdr.IsDBNull(3) ? null : rdr.GetString(3), out var dt) ? dt : DateTime.Today,
+                    Tutar = rdr.IsDBNull(4) ? 0 : Convert.ToDecimal(rdr.GetDouble(4)),
+                    Aciklama = rdr.IsDBNull(5) ? null : rdr.GetString(5)
+                });
+            }
+            return list;
+        }
+
+        public static int GenelGiderEkle(GenelGider g)
+        {
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"INSERT INTO GenelGiderler (CekiciId, Plaka, Tarih, Tutar, Aciklama)
+                                VALUES (@cid,@p,@t,@u,@a); SELECT last_insert_rowid();";
+            cmd.Parameters.AddWithValue("@cid", (object?)g.CekiciId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@p", (object?)g.Plaka ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@t", g.Tarih.ToString("yyyy-MM-dd"));
+            cmd.Parameters.AddWithValue("@u", Convert.ToDouble(g.Tutar));
+            cmd.Parameters.AddWithValue("@a", (object?)g.Aciklama ?? DBNull.Value);
+            var id = (long)cmd.ExecuteScalar()!; return (int)id;
+        }
+
+        public static void GenelGiderGuncelle(GenelGider g)
+        {
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"UPDATE GenelGiderler SET CekiciId=@cid, Plaka=@p, Tarih=@t, Tutar=@u, Aciklama=@a WHERE GiderId=@id";
+            cmd.Parameters.AddWithValue("@cid", (object?)g.CekiciId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@p", (object?)g.Plaka ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@t", g.Tarih.ToString("yyyy-MM-dd"));
+            cmd.Parameters.AddWithValue("@u", Convert.ToDouble(g.Tutar));
+            cmd.Parameters.AddWithValue("@a", (object?)g.Aciklama ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@id", g.GiderId);
+            cmd.ExecuteNonQuery();
+        }
+
+        public static void GenelGiderSil(int id)
+        {
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = "DELETE FROM GenelGiderler WHERE GiderId=@id";
+            cmd.Parameters.AddWithValue("@id", id);
+            cmd.ExecuteNonQuery();
+        }
+
+        // Stubs for other screens (implement similarly if needed)
+        public static void CheckAndCreateOrUpdateSanaiGiderTablosu() { }
+        public static List<SanaiGider> GetSanaiGiderleri(int? cekiciId, DateTime? bas, DateTime? bit) => new();
+        public static int SanaiGiderEkle(SanaiGider s) => 0;
+        public static void SanaiGiderGuncelle(SanaiGider s) { }
+        public static void SanaiGiderSil(int id) { }
+
+        public static List<PersonelGider> GetPersonelGiderleri(int? cekiciId, DateTime? bas, DateTime? bit) => new();
+        public static int PersonelGiderEkle(PersonelGider p) => 0;
+        public static void PersonelGiderGuncelle(PersonelGider p) { }
+        public static void PersonelGiderSil(int id) { }
+
+        public static List<VergiArac> GetVergiAraclari(int? cekiciId, DateTime? bas, DateTime? bit) => new();
+        public static int VergiAracEkle(VergiArac v) => 0;
+        public static void VergiAracGuncelle(VergiArac v) { }
+        public static void VergiAracSil(int id) { }
+
+        public static List<Arac> GetAraclar()
+        {
+            var list = new List<Arac>();
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = @"SELECT  C.Plaka, S.SoforAdi FROM Cekiciler as C
+        LEFT JOIN Soforler S ON S.SoforId = C.SoforId
+        WHERE   IFNULL(C.Arsivli,0)=0
+        ORDER BY C.Plaka;";
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    list.Add(new Arac
+                    {
+                        Plaka = reader.IsDBNull(0) ? string.Empty : reader.GetString(0),
+                        SoforAdi = reader.IsDBNull(1) ? string.Empty : reader.GetString(1)
+                    });
+                }
+            }
+            catch { }
             return list;
         }
     }
