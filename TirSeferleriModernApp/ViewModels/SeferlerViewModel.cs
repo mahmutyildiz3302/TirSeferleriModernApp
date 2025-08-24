@@ -208,8 +208,9 @@ namespace TirSeferleriModernApp.ViewModels
         {
             if (SeciliSefer == null) return;
             var bosDoluParam = NormalizeBosDoluForDb(SeciliSefer.BosDolu);
-            var u = DatabaseService.GetUcretForRoute(SeciliSefer.YuklemeYeri, SeciliSefer.BosaltmaYeri, null, bosDoluParam);
-            if (u.HasValue) SeciliSefer.Fiyat = u.Value;
+            var ekstra = SeciliSefer.Ekstra; // "EKSTRA YOK" dahil olabilir
+            var u = DatabaseService.GetUcretForRoute(SeciliSefer.YuklemeYeri, SeciliSefer.BosaltmaYeri, ekstra, bosDoluParam);
+            SeciliSefer.Fiyat = u ?? 0m;
         }
 
         private void SeciliSefer_PropertyChanged(object? sender, PropertyChangedEventArgs e)
