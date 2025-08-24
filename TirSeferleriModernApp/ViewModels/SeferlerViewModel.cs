@@ -208,9 +208,18 @@ namespace TirSeferleriModernApp.ViewModels
         {
             if (SeciliSefer == null) return;
             var bosDoluParam = NormalizeBosDoluForDb(SeciliSefer.BosDolu);
-            var ekstra = SeciliSefer.Ekstra; // "EKSTRA YOK" dahil olabilir
-            var u = DatabaseService.GetUcretForRoute(SeciliSefer.YuklemeYeri, SeciliSefer.BosaltmaYeri, ekstra, bosDoluParam);
-            SeciliSefer.Fiyat = u ?? 0m;
+            var ekstra = SeciliSefer.Ekstra;
+            var u = DatabaseService.GetUcretForRoute(SeciliSefer.YuklemeYeri, SeciliSefer.BosaltmaYeri, ekstra, bosDoluParam) ?? 0m;
+
+            // Kural: Boş/Dolu seçimi yapılmamışsa ve boyut 20 ise fiyatı ikiye böl
+            if (string.IsNullOrWhiteSpace(SeciliSefer.BosDolu) && string.Equals(SeciliSefer.KonteynerBoyutu, "20", StringComparison.OrdinalIgnoreCase))
+            {
+                SeciliSefer.Fiyat = u / 2m;
+            }
+            else
+            {
+                SeciliSefer.Fiyat = u;
+            }
         }
 
         private void SeciliSefer_PropertyChanged(object? sender, PropertyChangedEventArgs e)
