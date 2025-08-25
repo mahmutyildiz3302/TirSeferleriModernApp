@@ -56,6 +56,17 @@ namespace TirSeferleriModernApp.Services
 
             // Seed default depots and aliases after tables are ready
             EnsureDefaultDepolar();
+
+            // Apply requested migration and seed for specific routes (idempotent)
+            try
+            {
+                MigrateGuzergahlarDropObsoleteColumns();
+                SeedGivenGuzergahlar();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[Initialize] Migration/Seed error: " + ex.Message);
+            }
         }
 
         private void EnsureDatabaseFile()
@@ -144,6 +155,187 @@ namespace TirSeferleriModernApp.Services
                 }
             }
             catch (Exception ex) { Debug.WriteLine(ex.Message); }
+        }
+
+        // Helper: check if a column exists in a table
+        private static bool ColumnExists(SqliteConnection conn, string table, string column)
+        {
+            using var cmd = conn.CreateCommand();
+            cmd.CommandText = $"PRAGMA table_info({table});";
+            using var rdr = cmd.ExecuteReader();
+            while (rdr.Read())
+            {
+                if (string.Equals(rdr.GetString(1), column, StringComparison.OrdinalIgnoreCase)) return true;
+            }
+            return false;
+        }
+
+        // Helper: ensure depo exists and return its Id (handles aliases)
+        private static int EnsureDepoAndGetId(SqliteConnection conn, string depoAdiRaw)
+        {
+            var a = (depoAdiRaw ?? string.Empty).Trim();
+            var an = NormalizeDepoName(a);
+
+            using (var check = conn.CreateCommand())
+            {
+                check.CommandText = "SELECT DepoId FROM Depolar WHERE UPPER(TRIM(DepoAdi)) IN (UPPER(TRIM(@a)), UPPER(TRIM(@an))) LIMIT 1";
+                check.Parameters.AddWithValue("@a", a);
+                check.Parameters.AddWithValue("@an", an);
+                var val = check.ExecuteScalar();
+                if (val != null && val != DBNull.Value) return Convert.ToInt32(val);
+            }
+
+            using (var ins = conn.CreateCommand())
+            {
+                ins.CommandText = "INSERT INTO Depolar (DepoAdi, Aciklama) VALUES (@a, @c); SELECT last_insert_rowid();";
+                ins.Parameters.AddWithValue("@a", a);
+                if (!string.Equals(a, an, StringComparison.OrdinalIgnoreCase))
+                    ins.Parameters.AddWithValue("@c", $"{a} = {an}");
+                else
+                    ins.Parameters.AddWithValue("@c", DBNull.Value);
+                var id = (long)ins.ExecuteScalar()!;
+                return (int)id;
+            }
+        }
+
+        // Migration: drop obsolete columns (Ucret, BosDolu, Ekstra) by table rebuild (idempotent)
+        public static void MigrateGuzergahlarDropObsoleteColumns()
+        {
+            EnsureDatabaseFileStatic();
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+
+            bool hasUcret = ColumnExists(conn, "Guzergahlar", "Ucret");
+            bool hasBosDolu = ColumnExists(conn, "Guzergahlar", "BosDolu");
+            bool hasEkstra = ColumnExists(conn, "Guzergahlar", "Ekstra");
+
+            if (!(hasUcret || hasBosDolu || hasEkstra)) return; // nothing to do
+
+            using var tx = conn.BeginTransaction();
+            try
+            {
+                using (var cmd = conn.CreateCommand())
+                {
+                    cmd.Transaction = tx;
+                    cmd.CommandText = @"CREATE TABLE IF NOT EXISTS Guzergahlar_new (
+                        GuzergahId INTEGER PRIMARY KEY AUTOINCREMENT,
+                        CikisDepoId INTEGER NOT NULL,
+                        VarisDepoId INTEGER NOT NULL,
+                        BosFiyat REAL,
+                        DoluFiyat REAL,
+                        EmanetBosFiyat REAL,
+                        EmanetDoluFiyat REAL,
+                        SodaBosFiyat REAL,
+                        SodaDoluFiyat REAL,
+                        Aciklama TEXT
+                    );";
+                    cmd.ExecuteNonQuery();
+                }
+
+                using (var copy = conn.CreateCommand())
+                {
+                    copy.Transaction = tx;
+                    copy.CommandText = @"INSERT INTO Guzergahlar_new (GuzergahId, CikisDepoId, VarisDepoId, BosFiyat, DoluFiyat, EmanetBosFiyat, EmanetDoluFiyat, SodaBosFiyat, SodaDoluFiyat, Aciklama)
+                                        SELECT GuzergahId, CikisDepoId, VarisDepoId, BosFiyat, DoluFiyat, EmanetBosFiyat, EmanetDoluFiyat, SodaBosFiyat, SodaDoluFiyat, Aciklama FROM Guzergahlar;";
+                    copy.ExecuteNonQuery();
+                }
+
+                using (var drop = conn.CreateCommand())
+                {
+                    drop.Transaction = tx;
+                    drop.CommandText = "DROP TABLE Guzergahlar;";
+                    drop.ExecuteNonQuery();
+                }
+
+                using (var rename = conn.CreateCommand())
+                {
+                    rename.Transaction = tx;
+                    rename.CommandText = "ALTER TABLE Guzergahlar_new RENAME TO Guzergahlar;";
+                    rename.ExecuteNonQuery();
+                }
+
+                tx.Commit();
+            }
+            catch (Exception ex)
+            {
+                tx.Rollback();
+                Debug.WriteLine("[Migration] Rebuild Guzergahlar failed: " + ex.Message);
+                throw;
+            }
+        }
+
+        // Seed specific routes (upsert) with requested prices
+        public static void SeedGivenGuzergahlar()
+        {
+            EnsureDatabaseFileStatic();
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            using var tx = conn.BeginTransaction();
+            try
+            {
+                var routes = new (string from, string to, decimal doluFiyat)[]
+                {
+                    ("ARDEP", "LİMAN", 1400m),
+                    ("DEMİRELLER", "LİMAN", 1650m),
+                    ("KAHRAMANLI", "LİMAN", 1650m),
+                    ("NİSA", "LİMAN", 1400m),
+                    ("OSG", "LİMAN", 1300m),
+                    ("FALCON", "LİMAN", 1400m)
+                };
+
+                foreach (var (fromName, toName, price) in routes)
+                {
+                    int cId = EnsureDepoAndGetId(conn, fromName);
+                    int vId = EnsureDepoAndGetId(conn, toName);
+
+                    // check existing
+                    int? guzId = null;
+                    using (var check = conn.CreateCommand())
+                    {
+                        check.Transaction = tx;
+                        check.CommandText = "SELECT GuzergahId FROM Guzergahlar WHERE CikisDepoId=@c AND VarisDepoId=@v LIMIT 1";
+                        check.Parameters.AddWithValue("@c", cId);
+                        check.Parameters.AddWithValue("@v", vId);
+                        var val = check.ExecuteScalar();
+                        if (val != null && val != DBNull.Value) guzId = Convert.ToInt32(val);
+                    }
+
+                    if (guzId.HasValue)
+                    {
+                        using var upd = conn.CreateCommand();
+                        upd.Transaction = tx;
+                        upd.CommandText = @"UPDATE Guzergahlar
+                                             SET BosFiyat=NULL,
+                                                 DoluFiyat=@p,
+                                                 EmanetBosFiyat=NULL,
+                                                 EmanetDoluFiyat=NULL,
+                                                 SodaBosFiyat=NULL,
+                                                 SodaDoluFiyat=NULL,
+                                                 Aciklama='' 
+                                             WHERE GuzergahId=@id";
+                        upd.Parameters.AddWithValue("@p", Convert.ToDouble(price));
+                        upd.Parameters.AddWithValue("@id", guzId.Value);
+                        upd.ExecuteNonQuery();
+                    }
+                    else
+                    {
+                        using var ins = conn.CreateCommand();
+                        ins.Transaction = tx;
+                        ins.CommandText = @"INSERT INTO Guzergahlar (CikisDepoId, VarisDepoId, BosFiyat, DoluFiyat, EmanetBosFiyat, EmanetDoluFiyat, SodaBosFiyat, SodaDoluFiyat, Aciklama)
+                                           VALUES (@c, @v, NULL, @p, NULL, NULL, NULL, NULL, '')";
+                        ins.Parameters.AddWithValue("@c", cId);
+                        ins.Parameters.AddWithValue("@v", vId);
+                        ins.Parameters.AddWithValue("@p", Convert.ToDouble(price));
+                        ins.ExecuteNonQuery();
+                    }
+                }
+
+                tx.Commit();
+            }
+            catch (Exception ex)
+            {
+                tx.Rollback();
+                Debug.WriteLine("[SeedGivenGuzergahlar] error: " + ex.Message);
+                throw;
+            }
         }
 
         // Schema checks (stubs where unknown)
