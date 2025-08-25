@@ -104,23 +104,25 @@
                           MouseDoubleClick="dgGuzergah_MouseDoubleClick">
                     <DataGrid.GroupStyle>
                         <GroupStyle>
-                            <GroupStyle.HeaderTemplate>
-                                <DataTemplate>
-                                    <Expander IsExpanded="False">
-                                        <Expander.Header>
-                                            <StackPanel Orientation="Horizontal">
-                                                <TextBlock Text="{Binding Name}" FontWeight="Bold"/>
-                                                <TextBlock Text="{Binding Converter={StaticResource GroupStatsConverter}}" Foreground="Gray"/>
-                                            </StackPanel>
-                                        </Expander.Header>
-                                    </Expander>
-                                </DataTemplate>
-                            </GroupStyle.HeaderTemplate>
-                            <GroupStyle.Panel>
-                                <ItemsPanelTemplate>
-                                    <DataGridRowsPresenter/>
-                                </ItemsPanelTemplate>
-                            </GroupStyle.Panel>
+                            <GroupStyle.ContainerStyle>
+                                <Style TargetType="{x:Type GroupItem}">
+                                    <Setter Property="Template">
+                                        <Setter.Value>
+                                            <ControlTemplate TargetType="{x:Type GroupItem}">
+                                                <Expander IsExpanded="False">
+                                                    <Expander.Header>
+                                                        <StackPanel Orientation="Horizontal">
+                                                            <TextBlock Text="{Binding Name}" FontWeight="Bold"/>
+                                                            <TextBlock Text="  {Binding Converter={StaticResource GroupStatsConverter}}" Foreground="Gray"/>
+                                                        </StackPanel>
+                                                    </Expander.Header>
+                                                    <ItemsPresenter/>
+                                                </Expander>
+                                            </ControlTemplate>
+                                        </Setter.Value>
+                                    </Setter>
+                                </Style>
+                            </GroupStyle.ContainerStyle>
                         </GroupStyle>
                     </DataGrid.GroupStyle>
                     <DataGrid.Columns>
