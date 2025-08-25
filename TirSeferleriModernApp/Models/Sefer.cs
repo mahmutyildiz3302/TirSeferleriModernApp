@@ -10,7 +10,14 @@ namespace TirSeferleriModernApp.Models
     {
         public int SeferId { get; set; } // Id -> SeferId olarak değiştirildi
         public string? KonteynerNo { get; set; }
-        public string? KonteynerBoyutu { get; set; } // "20" ya da "40"
+
+        // "20" ya da "40"; değişikliklerin ViewModel'e bildirilmesi için SetProperty ile tanımlandı
+        private string? _konteynerBoyutu;
+        public string? KonteynerBoyutu
+        {
+            get => _konteynerBoyutu;
+            set => SetProperty(ref _konteynerBoyutu, value);
+        }
 
         private string? _yuklemeYeri;
         public string? YuklemeYeri
