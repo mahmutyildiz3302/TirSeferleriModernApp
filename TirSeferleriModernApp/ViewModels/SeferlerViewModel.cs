@@ -111,7 +111,7 @@ namespace TirSeferleriModernApp.ViewModels
                 SeciliSoforAdi = info.soforAdi;      // üst şerit güncellensin
             }
 
-            // Her kaydet/güncelle öncesi fiyatı güzergah tablosuna göre güncelle
+            // Her kaydet/güncelle öncesi fiyatı otomatik hesapla
             RecalcFiyat();
 
             if (SeciliSefer.SeferId <= 0)
@@ -207,19 +207,48 @@ namespace TirSeferleriModernApp.ViewModels
         private void RecalcFiyat()
         {
             if (SeciliSefer == null) return;
-            var bosDoluParam = NormalizeBosDoluForDb(SeciliSefer.BosDolu);
-            var ekstra = SeciliSefer.Ekstra;
-            var u = DatabaseService.GetUcretForRoute(SeciliSefer.YuklemeYeri, SeciliSefer.BosaltmaYeri, ekstra, bosDoluParam) ?? 0m;
 
-            // Kural: Boş/Dolu seçimi yapılmamışsa ve boyut 20 ise fiyatı ikiye böl
-            if (string.IsNullOrWhiteSpace(SeciliSefer.BosDolu) && string.Equals(SeciliSefer.KonteynerBoyutu, "20", StringComparison.OrdinalIgnoreCase))
+            // 1) Ekstra kontrol (Emanet/Soda -> doğrudan 1000, Boş ise 100 düş)
+            var ekstra = SeciliSefer.Ekstra?.Trim();
+            bool isEmanetSoda = !string.IsNullOrWhiteSpace(ekstra) &&
+                                 (string.Equals(ekstra, "EMANET", StringComparison.OrdinalIgnoreCase) ||
+                                  string.Equals(ekstra, "SODA", StringComparison.OrdinalIgnoreCase));
+
+            var bosDolu = NormalizeBosDoluForDb(SeciliSefer.BosDolu);
+            var boyut = SeciliSefer.KonteynerBoyutu?.Trim();
+
+            if (isEmanetSoda)
             {
-                SeciliSefer.Fiyat = u / 2m;
+                decimal price = 1000m;
+                if (string.Equals(bosDolu, "Bos", StringComparison.OrdinalIgnoreCase))
+                    price -= 100m; // boşta 100 azalt
+                SeciliSefer.Fiyat = price;
+                return;
+            }
+
+            // 2) Temel fiyat: güzergah tanımlarından
+            var basePrice = DatabaseService.GetUcretForRoute(SeciliSefer.YuklemeYeri, SeciliSefer.BosaltmaYeri, null, null) ?? 0m;
+            decimal result = basePrice;
+
+            // 3) Boş/Dolu kuralı
+            if (string.Equals(bosDolu, "Bos", StringComparison.OrdinalIgnoreCase))
+            {
+                // Boş: 100 TL düş
+                result = basePrice - 100m;
+
+                // 4) Boyut kuralı (boş + 20'lik => yarısı)
+                if (string.Equals(boyut, "20", StringComparison.OrdinalIgnoreCase))
+                {
+                    result = result / 2m; // boşta 20'lik ise yarısı
+                }
             }
             else
             {
-                SeciliSefer.Fiyat = u;
+                // Dolu: boyut bağımsız, temel fiyatı kullan
+                result = basePrice;
             }
+
+            SeciliSefer.Fiyat = result < 0 ? 0 : result;
         }
 
         private void SeciliSefer_PropertyChanged(object? sender, PropertyChangedEventArgs e)
