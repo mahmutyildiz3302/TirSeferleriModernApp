@@ -28,7 +28,7 @@ namespace TirSeferleriModernApp.Views
         {
             var ozet = KarHesapShared.Hesapla(_plaka, dpBas.SelectedDate, dpBit.SelectedDate);
             txtGider.Text = ozet.ToplamGider.ToString("N2", CultureInfo.CurrentCulture);
-            txtKar.Text   = ozet.Kar.ToString("N2", CultureInfo.CurrentCulture);
+            txtKar.Text = ozet.Kar.ToString("N2", CultureInfo.CurrentCulture);
 
             var gelirler = KarHesapShared.GetGelirler(_plaka, dpBas.SelectedDate, dpBit.SelectedDate);
             var toplamGelir = gelirler.Sum(x => x.Fiyat);

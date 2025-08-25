@@ -1,9 +1,9 @@
 ﻿using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
-using System.Collections.Concurrent;
 using System.Diagnostics;
 using System.IO;
+using System.Text.RegularExpressions;
 using TirSeferleriModernApp.Models;
 using static TirSeferleriModernApp.Views.VergilerAracView;
 
@@ -15,9 +15,6 @@ namespace TirSeferleriModernApp.Services
         public static readonly string ConnectionString = $"Data Source={DbFile}";
         private readonly string _dbFile;
         private readonly string _instanceConnectionString;
-        private static readonly List<Sefer> SeferListesi = [];        // SeferListesi'ni tanımlar
-
-        private static readonly ConcurrentQueue<string> MessageQueue = new(); // Bu satırı ekleyin
 
         public DatabaseService(string dbFile)
         {
@@ -56,6 +53,9 @@ namespace TirSeferleriModernApp.Services
             CheckAndCreateOrUpdateDepoTablosu();
             CheckAndCreateOrUpdateGuzergahTablosu();
             CheckAndCreateOrUpdateYakitGiderTablosu();
+
+            // Seed default depots and aliases after tables are ready
+            EnsureDefaultDepolar();
         }
 
         private void EnsureDatabaseFile()
@@ -76,44 +76,74 @@ namespace TirSeferleriModernApp.Services
             }
         }
 
-        private static void CreateOrUpdateTable(string tableName, string createScript, string[] columns)
+        // Aliases for depo names (UI shortcuts to canonical names)
+        // Examples:
+        //  TER-4 / TER4 => TERMİNAL4
+        //  TER-6 / TER6 => TERMİNAL6
+        //  TER-7 / TER7 => TERMİNAL7
+        //  TER-2 / TER2 => TERMİNAL2
+        private static string NormalizeDepoName(string? name)
         {
-            using var connection = new SqliteConnection(ConnectionString);
-            connection.Open();
-            ExecuteScript(connection, createScript);
-            EnsureColumns(connection, tableName, columns);
-        }
+            if (string.IsNullOrWhiteSpace(name)) return string.Empty;
+            var n = name.Trim();
 
-        private static void ExecuteScript(SqliteConnection connection, string script)
-        {
-            using var command = connection.CreateCommand();
-            command.CommandText = script;
-            command.ExecuteNonQuery();
-        }
-
-        private static void EnsureColumns(SqliteConnection connection, string tableName, string[] columns)
-        {
-            foreach (var column in columns)
+            // Normalize TER patterns to TERMİNAL{n}
+            // Accept forms: TER-1, TER1, ter-2, TER 3 (with or without hyphen/space)
+            var m = Regex.Match(n, @"^TER[\s-]*([0-9]+)$", RegexOptions.IgnoreCase);
+            if (m.Success && int.TryParse(m.Groups[1].Value, out var terNo))
             {
-                string columnName = column.Split(' ')[0];
-                var checkColumnCommand = connection.CreateCommand();
-                checkColumnCommand.CommandText = $"PRAGMA table_info({tableName});";
+                return $"TERMİNAL{terNo}";
+            }
 
-                using var reader = checkColumnCommand.ExecuteReader();
-                bool columnExists = false;
-                while (reader.Read())
-                {
-                    if (reader.GetString(1).Equals(columnName, StringComparison.OrdinalIgnoreCase))
-                    { columnExists = true; break; }
-                }
+            // Specific single known mapping kept for safety (no-op if above caught it)
+            if (string.Equals(n, "TER-4", StringComparison.OrdinalIgnoreCase)) return "TERMİNAL4";
 
-                if (!columnExists)
+            return n;
+        }
+
+        // Ensure default depots exist (idempotent)
+        public static void EnsureDefaultDepolar()
+        {
+            try
+            {
+                EnsureDatabaseFileStatic();
+                using var conn = new SqliteConnection(ConnectionString); conn.Open();
+
+                // Defaults seen in various UI lists (excluding helper items like "(Tümünü Seç)" and "(Boş Olanlar)")
+                var defaults = new[]
                 {
-                    var addColumnCommand = connection.CreateCommand();
-                    addColumnCommand.CommandText = $"ALTER TABLE {tableName} ADD COLUMN {column};";
-                    addColumnCommand.ExecuteNonQuery();
+                    // From first list
+                    "ARDEP", "DEMİRELLER", "ESKİ MADEN", "FALCON", "KAHRAMANLI", "LİMAN-ŞİŞECAM", "NİSA", "NİSA-4", "OSG",
+                    // From second list
+                    "CCIS", "LİMAN", "OLS", "OLS-1", "TER-2", "TER6", "TER-6", "TER7", "TER-7",
+                    // From third list and earlier context
+                    "EKANET", "TER-4"
+                };
+
+                foreach (var raw in defaults)
+                {
+                    var depoAdi = raw.Trim();
+                    // Check existence case-insensitively and trim-aware
+                    using var check = conn.CreateCommand();
+                    check.CommandText = "SELECT DepoId FROM Depolar WHERE UPPER(TRIM(DepoAdi)) = UPPER(TRIM(@a)) LIMIT 1";
+                    check.Parameters.AddWithValue("@a", depoAdi);
+                    var exists = check.ExecuteScalar() != null;
+                    if (!exists)
+                    {
+                        using var ins = conn.CreateCommand();
+                        ins.CommandText = "INSERT INTO Depolar (DepoAdi, Aciklama) VALUES (@a, @c)";
+                        ins.Parameters.AddWithValue("@a", depoAdi);
+                        // If alias has a canonical name, store it to Aciklama for clarity
+                        var canonical = NormalizeDepoName(depoAdi);
+                        if (!string.Equals(canonical, depoAdi, StringComparison.OrdinalIgnoreCase))
+                            ins.Parameters.AddWithValue("@c", $"{depoAdi} = {canonical}");
+                        else
+                            ins.Parameters.AddWithValue("@c", DBNull.Value);
+                        ins.ExecuteNonQuery();
+                    }
                 }
             }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); }
         }
 
         // Schema checks (stubs where unknown)
@@ -132,7 +162,7 @@ namespace TirSeferleriModernApp.Services
                                     );";
                 cmd.ExecuteNonQuery();
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); }
         }
 
         public static void CheckAndCreateOrUpdatePersonelGiderTablosu()
@@ -151,7 +181,7 @@ namespace TirSeferleriModernApp.Services
                                     );";
                 cmd.ExecuteNonQuery();
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); }
         }
 
         public static void CheckAndCreateOrUpdateVergiAracTablosu()
@@ -176,7 +206,7 @@ namespace TirSeferleriModernApp.Services
                                     );";
                 cmd.ExecuteNonQuery();
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); }
         }
 
         public static void CheckAndCreateOrUpdateDepoTablosu()
@@ -193,7 +223,7 @@ namespace TirSeferleriModernApp.Services
                                     );";
                 cmd.ExecuteNonQuery();
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); }
         }
 
         public static void CheckAndCreateOrUpdateSeferlerTablosu()
@@ -230,7 +260,7 @@ namespace TirSeferleriModernApp.Services
                 ];
                 EnsureTable("Seferler", createScript, requiredColumns);
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); }
         }
 
         public static void CheckAndCreateOrUpdateGiderlerTablosu()
@@ -253,7 +283,7 @@ namespace TirSeferleriModernApp.Services
             ];
                 EnsureTable("Giderler", createScript, requiredColumns);
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); }
         }
 
         public static void CheckAndCreateOrUpdateKarHesapTablosu()
@@ -267,7 +297,7 @@ namespace TirSeferleriModernApp.Services
                CekiciId INTEGER NOT NULL );", connection);
                 command.ExecuteNonQuery();
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); }
         }
 
         private static void EnsureTable(string tableName, string createScript, string[] columns)
@@ -322,7 +352,7 @@ namespace TirSeferleriModernApp.Services
                     return (cekiciId, dorseId, soforId, soforAdi, dorsePlaka);
                 }
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); }
             return (null, null, null, null, null);
         }
 
@@ -337,7 +367,7 @@ namespace TirSeferleriModernApp.Services
                 var val = cmd.ExecuteScalar();
                 return val == null || val is DBNull ? null : (string)val;
             }
-            catch { return null; }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); return null; }
         }
 
         // Sefer CRUD (uses ValidateSeferInternal)
@@ -480,14 +510,24 @@ namespace TirSeferleriModernApp.Services
                 using var connection = new SqliteConnection(ConnectionString);
                 connection.Open();
                 using var cmd = connection.CreateCommand();
+
+                // Accept both the given name and its normalized (canonical) form
+                var c = cikisDepoAdi.Trim();
+                var v = varisDepoAdi.Trim();
+                var cn = NormalizeDepoName(c);
+                var vn = NormalizeDepoName(v);
+
                 cmd.CommandText = $@"SELECT g.{col}
                                      FROM Guzergahlar g
                                      INNER JOIN Depolar cd ON cd.DepoId = g.CikisDepoId
                                      INNER JOIN Depolar vd ON vd.DepoId = g.VarisDepoId
-                                     WHERE cd.DepoAdi = @c AND vd.DepoAdi = @v
+                                     WHERE (UPPER(cd.DepoAdi) = UPPER(@c) OR UPPER(cd.DepoAdi) = UPPER(@cn))
+                                       AND (UPPER(vd.DepoAdi) = UPPER(@v) OR UPPER(vd.DepoAdi) = UPPER(@vn))
                                      LIMIT 1";
-                cmd.Parameters.AddWithValue("@c", cikisDepoAdi);
-                cmd.Parameters.AddWithValue("@v", varisDepoAdi);
+                cmd.Parameters.AddWithValue("@c", c);
+                cmd.Parameters.AddWithValue("@cn", cn);
+                cmd.Parameters.AddWithValue("@v", v);
+                cmd.Parameters.AddWithValue("@vn", vn);
                 var val = cmd.ExecuteScalar();
                 if (val == null || val is DBNull) return null;
                 return Convert.ToDecimal((double)val);
@@ -547,7 +587,7 @@ namespace TirSeferleriModernApp.Services
                 ];
                 EnsureTable("Guzergahlar", createScript, requiredColumns);
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); }
         }
 
         public static List<string> GetDepoAdlari()
@@ -566,7 +606,7 @@ namespace TirSeferleriModernApp.Services
                     if (!reader.IsDBNull(0)) list.Add(reader.GetString(0));
                 }
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); }
             return list;
         }
 
@@ -586,7 +626,7 @@ namespace TirSeferleriModernApp.Services
                     if (!reader.IsDBNull(0)) list.Add(reader.GetString(0));
                 }
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); }
             return list;
         }
 
@@ -612,7 +652,7 @@ namespace TirSeferleriModernApp.Services
                     alter.ExecuteNonQuery();
                 }
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); }
         }
 
         public static void EnsureCekicilerArsivliColumn()
@@ -637,7 +677,7 @@ namespace TirSeferleriModernApp.Services
                     alter.ExecuteNonQuery();
                 }
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); }
         }
 
         public static void EnsureDorselerArsivliColumn()
@@ -662,7 +702,7 @@ namespace TirSeferleriModernApp.Services
                     alter.ExecuteNonQuery();
                 }
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); }
         }
 
         public static int GetSeferCountByCekiciId(int cekiciId)
@@ -676,7 +716,7 @@ namespace TirSeferleriModernApp.Services
                 cmd.Parameters.AddWithValue("@id", cekiciId);
                 return Convert.ToInt32(cmd.ExecuteScalar());
             }
-            catch { return 0; }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); return 0; }
         }
 
         public static int GetSeferCountByDorseId(int dorseId)
@@ -690,7 +730,7 @@ namespace TirSeferleriModernApp.Services
                 cmd.Parameters.AddWithValue("@id", dorseId);
                 return Convert.ToInt32(cmd.ExecuteScalar());
             }
-            catch { return 0; }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); return 0; }
         }
 
         public static int RestoreMissingCekicilerFromSeferler()
@@ -710,7 +750,7 @@ namespace TirSeferleriModernApp.Services
                 }
                 return count;
             }
-            catch { return 0; }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); return 0; }
         }
 
         public static int RestoreMissingDorselerFromSeferler()
@@ -722,10 +762,10 @@ namespace TirSeferleriModernApp.Services
                 cmd.CommandText = @"INSERT INTO Dorseler (Plaka, Arsivli)
                                     SELECT DISTINCT s.CekiciPlaka, 0 FROM Seferler s
                                     LEFT JOIN Dorseler d ON d.Plaka = s.CekiciPlaka
-                                    WHERE 1=0"; // Seferler tablosunda dorse plaka tutulmuyorsa pasif; ileride güncelleyin
+                                    WHERE 1=0";
                 return cmd.ExecuteNonQuery();
             }
-            catch { return 0; }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); return 0; }
         }
 
         public static int RestoreMissingSoforlerFromSeferler()
@@ -740,7 +780,7 @@ namespace TirSeferleriModernApp.Services
                                     WHERE IFNULL(TRIM(s.SoforAdi),'')<>'' AND d.SoforAdi IS NULL";
                 return cmd.ExecuteNonQuery();
             }
-            catch { return 0; }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); return 0; }
         }
 
         public static void CheckAndCreateOrUpdateYakitGiderTablosu()
@@ -763,7 +803,7 @@ namespace TirSeferleriModernApp.Services
                                         Aciklama TEXT);";
                 cmd.ExecuteNonQuery();
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); }
         }
 
         public static List<YakitGider> GetYakitGiderleri(int? cekiciId, DateTime? bas, DateTime? bit)
@@ -945,7 +985,7 @@ namespace TirSeferleriModernApp.Services
                     });
                 }
             }
-            catch { }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); }
             return list;
         }
     }

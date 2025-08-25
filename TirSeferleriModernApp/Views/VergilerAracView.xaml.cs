@@ -104,7 +104,7 @@ namespace TirSeferleriModernApp.Views
 
             var headerToplam = BuildToplamSatir(_sonListe);
             var footerToplam = BuildToplamSatir(_sonListe);
-            List<VergiArac> list = [headerToplam, .._sonListe, footerToplam];
+            List<VergiArac> list = [headerToplam, .. _sonListe, footerToplam];
             dgVergiler.ItemsSource = list;
         }
 

@@ -11,6 +11,8 @@ namespace TirSeferleriModernApp.Converters
     /// </summary>
     public class SelectedPlakaToItemMatchConverter : IMultiValueConverter
     {
+        private static readonly string[] separator = new[] { " - " };
+
         public object Convert(object[] values, Type targetType, object parameter, CultureInfo culture)
         {
             if (values == null || values.Length < 2)
@@ -22,7 +24,7 @@ namespace TirSeferleriModernApp.Converters
             if (string.IsNullOrWhiteSpace(selectedPlaka) || string.IsNullOrWhiteSpace(itemText))
                 return false;
 
-            var platePart = itemText.Split(new[] { " - " }, StringSplitOptions.None).FirstOrDefault()?.Trim();
+            var platePart = itemText.Split(separator, StringSplitOptions.None).FirstOrDefault()?.Trim();
             if (string.IsNullOrWhiteSpace(platePart))
                 return false;
 

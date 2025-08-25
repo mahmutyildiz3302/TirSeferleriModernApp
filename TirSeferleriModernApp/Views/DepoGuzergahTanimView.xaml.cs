@@ -136,12 +136,12 @@ namespace TirSeferleriModernApp.Views
             int? cikisId = cmbCikisDepo.SelectedValue is int c ? c : null;
             int? varisId = cmbVarisDepo.SelectedValue is int v ? v : null;
             if (!cikisId.HasValue || !varisId.HasValue) { MessageBox.Show("Cikis ve Varis deposunu secin"); return; }
-            decimal.TryParse(txtBosFiyat.Text, out var bos);
-            decimal.TryParse(txtDoluFiyat.Text, out var dolu);
-            decimal.TryParse(txtEmanetBosFiyat.Text, out var eBos);
-            decimal.TryParse(txtEmanetDoluFiyat.Text, out var eDolu);
-            decimal.TryParse(txtSodaBosFiyat.Text, out var sBos);
-            decimal.TryParse(txtSodaDoluFiyat.Text, out var sDolu);
+            _ = decimal.TryParse(txtBosFiyat.Text, out var bos);
+            _ = decimal.TryParse(txtDoluFiyat.Text, out var dolu);
+            _ = decimal.TryParse(txtEmanetBosFiyat.Text, out var eBos);
+            _ = decimal.TryParse(txtEmanetDoluFiyat.Text, out var eDolu);
+            _ = decimal.TryParse(txtSodaBosFiyat.Text, out var sBos);
+            _ = decimal.TryParse(txtSodaDoluFiyat.Text, out var sDolu);
             var ack = txtGuzergahAciklama.Text?.Trim();
             using var conn = new SqliteConnection(ConnectionString); conn.Open();
             using var cmd = new SqliteCommand(@"INSERT INTO Guzergahlar (CikisDepoId, VarisDepoId, BosFiyat, DoluFiyat, EmanetBosFiyat, EmanetDoluFiyat, SodaBosFiyat, SodaDoluFiyat, Aciklama)
@@ -165,12 +165,12 @@ namespace TirSeferleriModernApp.Views
             int? cikisId = cmbCikisDepo.SelectedValue is int c ? c : null;
             int? varisId = cmbVarisDepo.SelectedValue is int v ? v : null;
             if (!cikisId.HasValue || !varisId.HasValue) { MessageBox.Show("Cikis ve Varis deposunu secin"); return; }
-            decimal.TryParse(txtBosFiyat.Text, out var bos);
-            decimal.TryParse(txtDoluFiyat.Text, out var dolu);
-            decimal.TryParse(txtEmanetBosFiyat.Text, out var eBos);
-            decimal.TryParse(txtEmanetDoluFiyat.Text, out var eDolu);
-            decimal.TryParse(txtSodaBosFiyat.Text, out var sBos);
-            decimal.TryParse(txtSodaDoluFiyat.Text, out var sDolu);
+            _ = decimal.TryParse(txtBosFiyat.Text, out var bos);
+            _ = decimal.TryParse(txtDoluFiyat.Text, out var dolu);
+            _ = decimal.TryParse(txtEmanetBosFiyat.Text, out var eBos);
+            _ = decimal.TryParse(txtEmanetDoluFiyat.Text, out var eDolu);
+            _ = decimal.TryParse(txtSodaBosFiyat.Text, out var sBos);
+            _ = decimal.TryParse(txtSodaDoluFiyat.Text, out var sDolu);
             var ack = txtGuzergahAciklama.Text?.Trim();
             using var conn = new SqliteConnection(ConnectionString); conn.Open();
             using var cmd = new SqliteCommand(@"UPDATE Guzergahlar SET CikisDepoId=@c, VarisDepoId=@v, BosFiyat=@bf, DoluFiyat=@df, EmanetBosFiyat=@ebf, EmanetDoluFiyat=@edf, SodaBosFiyat=@sbf, SodaDoluFiyat=@sdf, Aciklama=@a WHERE GuzergahId=@id", conn);

@@ -1,23 +1,22 @@
-﻿#pragma warning disable IDE0290 // Birincil oluşturucuyu kullan önerisini bastır
-using CommunityToolkit.Mvvm.ComponentModel;
+﻿using CommunityToolkit.Mvvm.ComponentModel;
 using CommunityToolkit.Mvvm.Input;
+using MaterialDesignThemes.Wpf;
 using System.Collections.ObjectModel;
-using System.Windows.Input;
-using TirSeferleriModernApp.Services;
 using System.Diagnostics;
+using System.Linq;
 using System.Windows;
 using System.Windows.Controls;
+using System.Windows.Input;
+using TirSeferleriModernApp.Extensions;
+using TirSeferleriModernApp.Services;
 using TirSeferleriModernApp.Views;
-using System.Linq; // IDE0028 için eklendi
-using TirSeferleriModernApp.Extensions; // ReplaceAll() için eklendi
-using MaterialDesignThemes.Wpf; // SnackbarMessageQueue için
 
 namespace TirSeferleriModernApp.ViewModels
 {
     public partial class MainViewModel : ObservableObject
     {
-        private readonly SecimTakibi _secimTakibi;         // IDE0044: readonly
-        private readonly DatabaseService _databaseService;  // IDE0044: readonly
+        private readonly SecimTakibi _secimTakibi;
+        private readonly DatabaseService _databaseService;
 
         [ObservableProperty]
         private ObservableCollection<string> _araclarMenu = [];
@@ -101,32 +100,28 @@ namespace TirSeferleriModernApp.ViewModels
         }
 
         public ICommand BtnGeriDonCommand { get; }
-        public ICommand BtnAraclarCommand  { get; }
+        public ICommand BtnAraclarCommand { get; }
         public ICommand ToggleAraclarMenuCommand { get; }
         public ICommand BtnSeferlerCommand { get; }
         public ICommand BtnGiderlerCommand { get; }
-        public ICommand BtnKarCommand      { get; }
+        public ICommand BtnKarCommand { get; }
         public ICommand DebugListesiKomutu { get; }
-        public ICommand SelectAracCommand  { get; }
+        public ICommand SelectAracCommand { get; }
         public ICommand ToggleTanimlarMenuCommand { get; }
         public ICommand AcTanimlarCommand { get; }
         public ICommand AcDepoGuzergahTanimCommand { get; }
 
         // Giderler alt buton komutları
-        public ICommand BtnYakitCommand   { get; }
-        public ICommand BtnSanaiCommand   { get; }
-        public ICommand BtnGenelCommand   { get; }
+        public ICommand BtnYakitCommand { get; }
+        public ICommand BtnSanaiCommand { get; }
+        public ICommand BtnGenelCommand { get; }
         public ICommand BtnVergilerAracCommand { get; }
         public ICommand BtnPersonelCommand { get; }
 
-        public MainViewModel() : this(new SecimTakibi(), "TirSeferleri.db")
-        {
-            Trace.WriteLine("[MainViewModel.cs] Parametresiz constructor çağrıldı.");
-        }
+        public MainViewModel() : this(new SecimTakibi(), "TirSeferleri.db") { }
 
         public MainViewModel(SecimTakibi secimTakibi, string dbFile)
         {
-            Trace.WriteLine("[MainViewModel.cs:20] MainViewModel constructor çağrıldı.");
             _secimTakibi = secimTakibi;
             _databaseService = new DatabaseService(dbFile);
 
@@ -134,25 +129,23 @@ namespace TirSeferleriModernApp.ViewModels
             _tanimlarMenuAcik = false;
 
             BtnGeriDonCommand = new RelayCommand(ExecuteGeriDon);
-            BtnAraclarCommand  = new RelayCommand(ExecuteAraclar);
+            BtnAraclarCommand = new RelayCommand(ExecuteAraclar);
             ToggleAraclarMenuCommand = new RelayCommand(ExecuteToggleAraclar);
             BtnSeferlerCommand = new RelayCommand(ExecuteSeferler);
             BtnGiderlerCommand = new RelayCommand(ExecuteGiderler);
-            BtnKarCommand      = new RelayCommand(ExecuteKar);
+            BtnKarCommand = new RelayCommand(ExecuteKar);
             DebugListesiKomutu = new RelayCommand(ExecuteDebugListesi);
-            SelectAracCommand  = new RelayCommand<string>(ExecuteSelectArac);
+            SelectAracCommand = new RelayCommand<string>(ExecuteSelectArac);
             ToggleTanimlarMenuCommand = new RelayCommand(ExecuteToggleTanimlar);
             AcTanimlarCommand = new RelayCommand(ExecuteTanimlar);
             AcDepoGuzergahTanimCommand = new RelayCommand(ExecuteDepoGuzergahTanim);
 
             // Alt gider komutları: seçili plaka zorunlu
-            BtnYakitCommand        = new RelayCommand(() => OpenGiderWithPlaka(plaka => CurrentContent = new YakitGiderView(plaka)));
-            BtnSanaiCommand        = new RelayCommand(() => OpenGiderWithPlaka(plaka => CurrentContent = new SanaiGiderView(plaka)));
-            BtnGenelCommand        = new RelayCommand(() => OpenGiderWithPlaka(plaka => CurrentContent = new GenelGiderView(plaka)));
+            BtnYakitCommand = new RelayCommand(() => OpenGiderWithPlaka(plaka => CurrentContent = new YakitGiderView(plaka)));
+            BtnSanaiCommand = new RelayCommand(() => OpenGiderWithPlaka(plaka => CurrentContent = new SanaiGiderView(plaka)));
+            BtnGenelCommand = new RelayCommand(() => OpenGiderWithPlaka(plaka => CurrentContent = new GenelGiderView(plaka)));
             BtnVergilerAracCommand = new RelayCommand(() => OpenGiderWithPlaka(plaka => CurrentContent = new VergilerAracView(plaka)));
-            BtnPersonelCommand     = new RelayCommand(() => OpenGiderWithPlaka(plaka => CurrentContent = new PersonelGiderView(plaka)));
-            
-            Trace.WriteLine("[MainViewModel.cs:28] ViewModel oluşturuldu.");
+            BtnPersonelCommand = new RelayCommand(() => OpenGiderWithPlaka(plaka => CurrentContent = new PersonelGiderView(plaka)));
         }
 
         private void ExecuteToggleTanimlar()
@@ -170,23 +163,17 @@ namespace TirSeferleriModernApp.ViewModels
 
         private void ExecuteGeriDon()
         {
-            Trace.WriteLine("[MainViewModel.cs:33] BtnGeriDon butonuna tıklandı.");
-            Trace.WriteLine("[MainViewModel.cs:34] Geri dönme işlemi başlatıldı.");
             _secimTakibi.GeriDon();
-            Trace.WriteLine("[MainViewModel.cs:36] Geri dönme işlemi tamamlandı.");
         }
 
         private void ExecuteAraclar()
         {
-            Trace.WriteLine("[MainViewModel.cs:41] Araçlar menüsü verileri yükleniyor.");
             LoadAraclarMenu();
-            Trace.WriteLine("[MainViewModel.cs:43] Araçlar menüsü verileri yüklendi (görünürlük: " + AraclarMenuAcik + ").");
         }
 
         private void ExecuteToggleAraclar()
         {
             AraclarMenuAcik = !AraclarMenuAcik;
-            Trace.WriteLine($"[MainViewModel.cs] Araçlar menüsü {(AraclarMenuAcik ? "açıldı" : "kapandı")}.");
             if (AraclarMenuAcik && AraclarMenu.Count == 0)
             {
                 LoadAraclarMenu();
@@ -195,7 +182,6 @@ namespace TirSeferleriModernApp.ViewModels
 
         private void ExecuteSeferler()
         {
-            Trace.WriteLine("[MainViewModel.cs:53] Seferler menüsü işlemleri başlatıldı.");
             // Toggle mantığı: aynı menüye tekrar basılırsa kapat
             if (AktifAltMenu == "📋 Seferler")
             {
@@ -219,7 +205,6 @@ namespace TirSeferleriModernApp.ViewModels
 
         private void ExecuteGiderler()
         {
-            Trace.WriteLine("[MainViewModel.cs:58] Giderler menüsü işlemleri başlatıldı.");
             // Toggle: aynı menüye tekrar basılırsa kapat
             if (AktifAltMenu == "💸 Giderler")
             {
@@ -234,7 +219,6 @@ namespace TirSeferleriModernApp.ViewModels
 
         private void ExecuteKar()
         {
-            Trace.WriteLine("[MainViewModel.cs:63] Kar hesap menüsü işlemleri başlatıldı.");
             // Toggle mantığı: aynı menüye tekrar basılırsa kapat
             if (AktifAltMenu == "📊 Kar Hesap")
             {
@@ -341,4 +325,3 @@ namespace TirSeferleriModernApp.ViewModels
         }
     }
 }
-#pragma warning restore IDE0290 // Birincil oluşturucuyu kullan önerisini geri aç

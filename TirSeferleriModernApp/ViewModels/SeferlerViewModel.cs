@@ -85,7 +85,7 @@ namespace TirSeferleriModernApp.ViewModels
         }
 
         public string KaydetButonMetni => SeciliSefer?.SeferId > 0 ? "Seçimi Güncelle" : "Yeni Sefer Kaydet";
-        public string TemizleButonMetni => "Temizle";
+        public static string TemizleButonMetni => "Temizle";
 
         public ObservableCollection<Sefer> SeferListesi { get; set; } = [];
 

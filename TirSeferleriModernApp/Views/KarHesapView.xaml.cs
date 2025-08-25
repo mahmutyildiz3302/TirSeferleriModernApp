@@ -60,7 +60,7 @@ namespace TirSeferleriModernApp.Views
             var ozet = KarHesapShared.Hesapla(plaka, dpBas.SelectedDate, dpBit.SelectedDate);
             // Önce ozet bilgilerini yaz
             txtGider.Text = ozet.ToplamGider.ToString("N2", CultureInfo.CurrentCulture);
-            txtKar.Text   = ozet.Kar.ToString("N2", CultureInfo.CurrentCulture);
+            txtKar.Text = ozet.Kar.ToString("N2", CultureInfo.CurrentCulture);
 
             // Gelirler: [Toplam] + veri + [Toplam]
             var gelirler = KarHesapShared.GetGelirler(plaka, dpBas.SelectedDate, dpBit.SelectedDate);
