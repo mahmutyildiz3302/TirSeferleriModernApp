@@ -48,12 +48,7 @@ namespace TirSeferleriModernApp.Views
                                                        cd.DepoAdi AS CikisDepoAdi,
                                                        g.VarisDepoId,
                                                        vd.DepoAdi AS VarisDepoAdi,
-                                                       g.BosFiyat,
-                                                       g.DoluFiyat,
-                                                       g.EmanetBosFiyat,
-                                                       g.EmanetDoluFiyat,
-                                                       g.SodaBosFiyat,
-                                                       g.SodaDoluFiyat,
+                                                       g.Fiyat,
                                                        g.Aciklama
                                                 FROM Guzergahlar g
                                                 LEFT JOIN Depolar cd ON cd.DepoId = g.CikisDepoId
@@ -121,12 +116,7 @@ namespace TirSeferleriModernApp.Views
                 _seciliGuzergah = row;
                 cmbCikisDepo.SelectedValue = row["CikisDepoId"];
                 cmbVarisDepo.SelectedValue = row["VarisDepoId"];
-                txtBosFiyat.Text = row["BosFiyat"]?.ToString() ?? string.Empty;
-                txtDoluFiyat.Text = row["DoluFiyat"]?.ToString() ?? string.Empty;
-                txtEmanetBosFiyat.Text = row["EmanetBosFiyat"]?.ToString() ?? string.Empty;
-                txtEmanetDoluFiyat.Text = row["EmanetDoluFiyat"]?.ToString() ?? string.Empty;
-                txtSodaBosFiyat.Text = row["SodaBosFiyat"]?.ToString() ?? string.Empty;
-                txtSodaDoluFiyat.Text = row["SodaDoluFiyat"]?.ToString() ?? string.Empty;
+                txtFiyat.Text = row["Fiyat"]?.ToString() ?? string.Empty;
                 txtGuzergahAciklama.Text = row["Aciklama"]?.ToString() ?? string.Empty;
             }
         }
@@ -136,24 +126,14 @@ namespace TirSeferleriModernApp.Views
             int? cikisId = cmbCikisDepo.SelectedValue is int c ? c : null;
             int? varisId = cmbVarisDepo.SelectedValue is int v ? v : null;
             if (!cikisId.HasValue || !varisId.HasValue) { MessageBox.Show("Cikis ve Varis deposunu secin"); return; }
-            _ = decimal.TryParse(txtBosFiyat.Text, out var bos);
-            _ = decimal.TryParse(txtDoluFiyat.Text, out var dolu);
-            _ = decimal.TryParse(txtEmanetBosFiyat.Text, out var eBos);
-            _ = decimal.TryParse(txtEmanetDoluFiyat.Text, out var eDolu);
-            _ = decimal.TryParse(txtSodaBosFiyat.Text, out var sBos);
-            _ = decimal.TryParse(txtSodaDoluFiyat.Text, out var sDolu);
+            _ = decimal.TryParse(txtFiyat.Text, out var fiyat);
             var ack = txtGuzergahAciklama.Text?.Trim();
             using var conn = new SqliteConnection(ConnectionString); conn.Open();
-            using var cmd = new SqliteCommand(@"INSERT INTO Guzergahlar (CikisDepoId, VarisDepoId, BosFiyat, DoluFiyat, EmanetBosFiyat, EmanetDoluFiyat, SodaBosFiyat, SodaDoluFiyat, Aciklama)
-                                               VALUES (@c, @v, @bf, @df, @ebf, @edf, @sbf, @sdf, @a)", conn);
+            using var cmd = new SqliteCommand(@"INSERT INTO Guzergahlar (CikisDepoId, VarisDepoId, Fiyat, Aciklama)
+                                               VALUES (@c, @v, @f, @a)", conn);
             cmd.Parameters.AddWithValue("@c", cikisId.Value);
             cmd.Parameters.AddWithValue("@v", varisId.Value);
-            cmd.Parameters.AddWithValue("@bf", (double)bos);
-            cmd.Parameters.AddWithValue("@df", (double)dolu);
-            cmd.Parameters.AddWithValue("@ebf", (double)eBos);
-            cmd.Parameters.AddWithValue("@edf", (double)eDolu);
-            cmd.Parameters.AddWithValue("@sbf", (double)sBos);
-            cmd.Parameters.AddWithValue("@sdf", (double)sDolu);
+            cmd.Parameters.AddWithValue("@f", (double)fiyat);
             cmd.Parameters.AddWithValue("@a", (object?)ack ?? System.DBNull.Value);
             cmd.ExecuteNonQuery();
             ClearGuzergahForm(); LoadGuzergahlar();
@@ -165,23 +145,13 @@ namespace TirSeferleriModernApp.Views
             int? cikisId = cmbCikisDepo.SelectedValue is int c ? c : null;
             int? varisId = cmbVarisDepo.SelectedValue is int v ? v : null;
             if (!cikisId.HasValue || !varisId.HasValue) { MessageBox.Show("Cikis ve Varis deposunu secin"); return; }
-            _ = decimal.TryParse(txtBosFiyat.Text, out var bos);
-            _ = decimal.TryParse(txtDoluFiyat.Text, out var dolu);
-            _ = decimal.TryParse(txtEmanetBosFiyat.Text, out var eBos);
-            _ = decimal.TryParse(txtEmanetDoluFiyat.Text, out var eDolu);
-            _ = decimal.TryParse(txtSodaBosFiyat.Text, out var sBos);
-            _ = decimal.TryParse(txtSodaDoluFiyat.Text, out var sDolu);
+            _ = decimal.TryParse(txtFiyat.Text, out var fiyat);
             var ack = txtGuzergahAciklama.Text?.Trim();
             using var conn = new SqliteConnection(ConnectionString); conn.Open();
-            using var cmd = new SqliteCommand(@"UPDATE Guzergahlar SET CikisDepoId=@c, VarisDepoId=@v, BosFiyat=@bf, DoluFiyat=@df, EmanetBosFiyat=@ebf, EmanetDoluFiyat=@edf, SodaBosFiyat=@sbf, SodaDoluFiyat=@sdf, Aciklama=@a WHERE GuzergahId=@id", conn);
+            using var cmd = new SqliteCommand(@"UPDATE Guzergahlar SET CikisDepoId=@c, VarisDepoId=@v, Fiyat=@f, Aciklama=@a WHERE GuzergahId=@id", conn);
             cmd.Parameters.AddWithValue("@c", cikisId.Value);
             cmd.Parameters.AddWithValue("@v", varisId.Value);
-            cmd.Parameters.AddWithValue("@bf", (double)bos);
-            cmd.Parameters.AddWithValue("@df", (double)dolu);
-            cmd.Parameters.AddWithValue("@ebf", (double)eBos);
-            cmd.Parameters.AddWithValue("@edf", (double)eDolu);
-            cmd.Parameters.AddWithValue("@sbf", (double)sBos);
-            cmd.Parameters.AddWithValue("@sdf", (double)sDolu);
+            cmd.Parameters.AddWithValue("@f", (double)fiyat);
             cmd.Parameters.AddWithValue("@a", (object?)ack ?? System.DBNull.Value);
             cmd.Parameters.AddWithValue("@id", _seciliGuzergah.Row["GuzergahId"]);
             cmd.ExecuteNonQuery();
@@ -205,12 +175,7 @@ namespace TirSeferleriModernApp.Views
             _seciliGuzergah = null;
             cmbCikisDepo.SelectedIndex = -1;
             cmbVarisDepo.SelectedIndex = -1;
-            txtBosFiyat.Text = string.Empty;
-            txtDoluFiyat.Text = string.Empty;
-            txtEmanetBosFiyat.Text = string.Empty;
-            txtEmanetDoluFiyat.Text = string.Empty;
-            txtSodaBosFiyat.Text = string.Empty;
-            txtSodaDoluFiyat.Text = string.Empty;
+            txtFiyat.Text = string.Empty;
             txtGuzergahAciklama.Text = string.Empty;
         }
     }

@@ -60,7 +60,7 @@ namespace TirSeferleriModernApp.Services
             // Apply requested migration and seed for specific routes (idempotent)
             try
             {
-                MigrateGuzergahlarDropObsoleteColumns();
+                MigrateGuzergahlarToSingleFiyat();
                 SeedGivenGuzergahlar();
             }
             catch (Exception ex)
@@ -198,17 +198,17 @@ namespace TirSeferleriModernApp.Services
             }
         }
 
-        // Migration: drop obsolete columns (Ucret, BosDolu, Ekstra) by table rebuild (idempotent)
-        public static void MigrateGuzergahlarDropObsoleteColumns()
+        // Migration: collapse price columns into a single Fiyat column and drop the rest (idempotent)
+        public static void MigrateGuzergahlarToSingleFiyat()
         {
             EnsureDatabaseFileStatic();
             using var conn = new SqliteConnection(ConnectionString); conn.Open();
 
-            bool hasUcret = ColumnExists(conn, "Guzergahlar", "Ucret");
-            bool hasBosDolu = ColumnExists(conn, "Guzergahlar", "BosDolu");
-            bool hasEkstra = ColumnExists(conn, "Guzergahlar", "Ekstra");
+            bool hasFiyat = ColumnExists(conn, "Guzergahlar", "Fiyat");
+            bool hasAnyOld = ColumnExists(conn, "Guzergahlar", "BosFiyat") || ColumnExists(conn, "Guzergahlar", "DoluFiyat") || ColumnExists(conn, "Guzergahlar", "EmanetBosFiyat") || ColumnExists(conn, "Guzergahlar", "EmanetDoluFiyat") || ColumnExists(conn, "Guzergahlar", "SodaBosFiyat") || ColumnExists(conn, "Guzergahlar", "SodaDoluFiyat");
 
-            if (!(hasUcret || hasBosDolu || hasEkstra)) return; // nothing to do
+            // If already only Fiyat (and no old columns), nothing to do
+            if (hasFiyat && !hasAnyOld) return;
 
             using var tx = conn.BeginTransaction();
             try
@@ -220,22 +220,36 @@ namespace TirSeferleriModernApp.Services
                         GuzergahId INTEGER PRIMARY KEY AUTOINCREMENT,
                         CikisDepoId INTEGER NOT NULL,
                         VarisDepoId INTEGER NOT NULL,
-                        BosFiyat REAL,
-                        DoluFiyat REAL,
-                        EmanetBosFiyat REAL,
-                        EmanetDoluFiyat REAL,
-                        SodaBosFiyat REAL,
-                        SodaDoluFiyat REAL,
+                        Fiyat REAL,
                         Aciklama TEXT
                     );";
                     cmd.ExecuteNonQuery();
                 }
 
+                // Copy with coalesce if old columns exist; else simple copy
                 using (var copy = conn.CreateCommand())
                 {
                     copy.Transaction = tx;
-                    copy.CommandText = @"INSERT INTO Guzergahlar_new (GuzergahId, CikisDepoId, VarisDepoId, BosFiyat, DoluFiyat, EmanetBosFiyat, EmanetDoluFiyat, SodaBosFiyat, SodaDoluFiyat, Aciklama)
-                                        SELECT GuzergahId, CikisDepoId, VarisDepoId, BosFiyat, DoluFiyat, EmanetBosFiyat, EmanetDoluFiyat, SodaBosFiyat, SodaDoluFiyat, Aciklama FROM Guzergahlar;";
+                    if (hasAnyOld)
+                    {
+                        copy.CommandText = @"INSERT INTO Guzergahlar_new (GuzergahId, CikisDepoId, VarisDepoId, Fiyat, Aciklama)
+                                            SELECT GuzergahId,
+                                                   CikisDepoId,
+                                                   VarisDepoId,
+                                                   COALESCE(DoluFiyat, BosFiyat, EmanetDoluFiyat, EmanetBosFiyat, SodaDoluFiyat, SodaBosFiyat, NULL),
+                                                   Aciklama
+                                            FROM Guzergahlar";
+                    }
+                    else if (hasFiyat)
+                    {
+                        copy.CommandText = @"INSERT INTO Guzergahlar_new (GuzergahId, CikisDepoId, VarisDepoId, Fiyat, Aciklama)
+                                            SELECT GuzergahId, CikisDepoId, VarisDepoId, Fiyat, Aciklama FROM Guzergahlar";
+                    }
+                    else
+                    {
+                        // Table exists with neither? Then just create empty new table
+                        copy.CommandText = "SELECT 1"; // no-op
+                    }
                     copy.ExecuteNonQuery();
                 }
 
@@ -258,7 +272,7 @@ namespace TirSeferleriModernApp.Services
             catch (Exception ex)
             {
                 tx.Rollback();
-                Debug.WriteLine("[Migration] Rebuild Guzergahlar failed: " + ex.Message);
+                Debug.WriteLine("[Migration] ToSingleFiyat failed: " + ex.Message);
                 throw;
             }
         }
@@ -271,7 +285,7 @@ namespace TirSeferleriModernApp.Services
             using var tx = conn.BeginTransaction();
             try
             {
-                var routes = new (string from, string to, decimal doluFiyat)[]
+                var routes = new (string from, string to, decimal fiyat)[]
                 {
                     ("ARDEP", "LİMAN", 1400m),
                     ("DEMİRELLER", "LİMAN", 1650m),
@@ -303,12 +317,7 @@ namespace TirSeferleriModernApp.Services
                         using var upd = conn.CreateCommand();
                         upd.Transaction = tx;
                         upd.CommandText = @"UPDATE Guzergahlar
-                                             SET BosFiyat=NULL,
-                                                 DoluFiyat=@p,
-                                                 EmanetBosFiyat=NULL,
-                                                 EmanetDoluFiyat=NULL,
-                                                 SodaBosFiyat=NULL,
-                                                 SodaDoluFiyat=NULL,
+                                             SET Fiyat=@p,
                                                  Aciklama='' 
                                              WHERE GuzergahId=@id";
                         upd.Parameters.AddWithValue("@p", Convert.ToDouble(price));
@@ -319,8 +328,8 @@ namespace TirSeferleriModernApp.Services
                     {
                         using var ins = conn.CreateCommand();
                         ins.Transaction = tx;
-                        ins.CommandText = @"INSERT INTO Guzergahlar (CikisDepoId, VarisDepoId, BosFiyat, DoluFiyat, EmanetBosFiyat, EmanetDoluFiyat, SodaBosFiyat, SodaDoluFiyat, Aciklama)
-                                           VALUES (@c, @v, NULL, @p, NULL, NULL, NULL, NULL, '')";
+                        ins.CommandText = @"INSERT INTO Guzergahlar (CikisDepoId, VarisDepoId, Fiyat, Aciklama)
+                                           VALUES (@c, @v, @p, '')";
                         ins.Parameters.AddWithValue("@c", cId);
                         ins.Parameters.AddWithValue("@v", vId);
                         ins.Parameters.AddWithValue("@p", Convert.ToDouble(price));
@@ -338,7 +347,66 @@ namespace TirSeferleriModernApp.Services
             }
         }
 
-        // Schema checks (stubs where unknown)
+        public static decimal? GetUcretForRoute(string? cikisDepoAdi, string? varisDepoAdi, string? ekstra, string? bosDolu)
+        {
+            if (string.IsNullOrWhiteSpace(cikisDepoAdi) || string.IsNullOrWhiteSpace(varisDepoAdi)) return null;
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var cmd = connection.CreateCommand();
+
+                // Accept both the given name and its normalized (canonical) form
+                var c = cikisDepoAdi.Trim();
+                var v = varisDepoAdi.Trim();
+                var cn = NormalizeDepoName(c);
+                var vn = NormalizeDepoName(v);
+
+                cmd.CommandText = @"SELECT g.Fiyat
+                                     FROM Guzergahlar g
+                                     INNER JOIN Depolar cd ON cd.DepoId = g.CikisDepoId
+                                     INNER JOIN Depolar vd ON vd.DepoId = g.VarisDepoId
+                                     WHERE (UPPER(cd.DepoAdi) = UPPER(@c) OR UPPER(cd.DepoAdi) = UPPER(@cn))
+                                       AND (UPPER(vd.DepoAdi) = UPPER(@v) OR UPPER(vd.DepoAdi) = UPPER(@vn))
+                                     LIMIT 1";
+                cmd.Parameters.AddWithValue("@c", c);
+                cmd.Parameters.AddWithValue("@cn", cn);
+                cmd.Parameters.AddWithValue("@v", v);
+                cmd.Parameters.AddWithValue("@vn", vn);
+                var val = cmd.ExecuteScalar();
+                if (val == null || val is DBNull) return null;
+                return Convert.ToDecimal((double)val);
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[DatabaseService] GetUcretForRoute hata: {ex.Message}");
+                return null;
+            }
+        }
+
+        public static void CheckAndCreateOrUpdateGuzergahTablosu()
+        {
+            try
+            {
+                EnsureDatabaseFileStatic();
+                string createScript = @"CREATE TABLE IF NOT EXISTS Guzergahlar (
+                    GuzergahId INTEGER PRIMARY KEY AUTOINCREMENT,
+                    CikisDepoId INTEGER NOT NULL,
+                    VarisDepoId INTEGER NOT NULL,
+                    Fiyat REAL,
+                    Aciklama TEXT
+                );";
+                string[] requiredColumns = [
+                    "CikisDepoId INTEGER",
+                    "VarisDepoId INTEGER",
+                    "Fiyat REAL",
+                    "Aciklama TEXT"
+                ];
+                EnsureTable("Guzergahlar", createScript, requiredColumns);
+            }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); }
+        }
+
         public static void CheckAndCreateOrUpdateGenelGiderTablosu()
         {
             try
@@ -691,95 +759,6 @@ namespace TirSeferleriModernApp.Services
             cmd.Parameters.AddWithValue("@DorseId", (object?)s.DorseId ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@SoforId", (object?)s.SoforId ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@SoforAdi", (object?)s.SoforAdi ?? DBNull.Value);
-        }
-
-        public static decimal? GetUcretForRoute(string? cikisDepoAdi, string? varisDepoAdi, string? ekstra, string? bosDolu)
-        {
-            if (string.IsNullOrWhiteSpace(cikisDepoAdi) || string.IsNullOrWhiteSpace(varisDepoAdi)) return null;
-            try
-            {
-                string col = GetPriceColumnName(ekstra, bosDolu);
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                using var cmd = connection.CreateCommand();
-
-                // Accept both the given name and its normalized (canonical) form
-                var c = cikisDepoAdi.Trim();
-                var v = varisDepoAdi.Trim();
-                var cn = NormalizeDepoName(c);
-                var vn = NormalizeDepoName(v);
-
-                cmd.CommandText = $@"SELECT g.{col}
-                                     FROM Guzergahlar g
-                                     INNER JOIN Depolar cd ON cd.DepoId = g.CikisDepoId
-                                     INNER JOIN Depolar vd ON vd.DepoId = g.VarisDepoId
-                                     WHERE (UPPER(cd.DepoAdi) = UPPER(@c) OR UPPER(cd.DepoAdi) = UPPER(@cn))
-                                       AND (UPPER(vd.DepoAdi) = UPPER(@v) OR UPPER(vd.DepoAdi) = UPPER(@vn))
-                                     LIMIT 1";
-                cmd.Parameters.AddWithValue("@c", c);
-                cmd.Parameters.AddWithValue("@cn", cn);
-                cmd.Parameters.AddWithValue("@v", v);
-                cmd.Parameters.AddWithValue("@vn", vn);
-                var val = cmd.ExecuteScalar();
-                if (val == null || val is DBNull) return null;
-                return Convert.ToDecimal((double)val);
-            }
-            catch (Exception ex)
-            {
-                Debug.WriteLine($"[DatabaseService] GetUcretForRoute hata: {ex.Message}");
-                return null;
-            }
-        }
-
-        private static string GetPriceColumnName(string? ekstra, string? bosDolu)
-        {
-            var isBos = string.Equals(bosDolu, "Bos", StringComparison.OrdinalIgnoreCase);
-            if (string.IsNullOrWhiteSpace(ekstra) || string.Equals(ekstra, "EKSTRA YOK", StringComparison.OrdinalIgnoreCase))
-            {
-                return isBos ? "BosFiyat" : "DoluFiyat";
-            }
-            if (string.Equals(ekstra, "Emanet", StringComparison.OrdinalIgnoreCase))
-            {
-                return isBos ? "EmanetBosFiyat" : "EmanetDoluFiyat";
-            }
-            if (string.Equals(ekstra, "Soda", StringComparison.OrdinalIgnoreCase))
-            {
-                return isBos ? "SodaBosFiyat" : "SodaDoluFiyat";
-            }
-            return isBos ? "BosFiyat" : "DoluFiyat";
-        }
-
-        public static void CheckAndCreateOrUpdateGuzergahTablosu()
-        {
-            try
-            {
-                EnsureDatabaseFileStatic();
-                string createScript = @"CREATE TABLE IF NOT EXISTS Guzergahlar (
-                    GuzergahId INTEGER PRIMARY KEY AUTOINCREMENT,
-                    CikisDepoId INTEGER NOT NULL,
-                    VarisDepoId INTEGER NOT NULL,
-                    BosFiyat REAL,
-                    DoluFiyat REAL,
-                    EmanetBosFiyat REAL,
-                    EmanetDoluFiyat REAL,
-                    SodaBosFiyat REAL,
-                    SodaDoluFiyat REAL,
-                    Aciklama TEXT
-                );";
-                string[] requiredColumns = [
-                    "CikisDepoId INTEGER",
-                    "VarisDepoId INTEGER",
-                    "BosFiyat REAL",
-                    "DoluFiyat REAL",
-                    "EmanetBosFiyat REAL",
-                    "EmanetDoluFiyat REAL",
-                    "SodaBosFiyat REAL",
-                    "SodaDoluFiyat REAL",
-                    "Aciklama TEXT"
-                ];
-                EnsureTable("Guzergahlar", createScript, requiredColumns);
-            }
-            catch (Exception ex) { Debug.WriteLine(ex.Message); }
         }
 
         public static List<string> GetDepoAdlari()

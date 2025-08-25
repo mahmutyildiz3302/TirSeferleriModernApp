@@ -64,12 +64,7 @@
                             <TextBlock Text="Guzergah Tanimi" FontSize="18" FontWeight="Bold" Margin="0,0,0,5"/>
                             <ComboBox x:Name="cmbCikisDepo" materialDesignControls:HintAssist.Hint="Cikis Noktasi" Width="300" Margin="0,0,0,5" DisplayMemberPath="Value" SelectedValuePath="Key"/>
                             <ComboBox x:Name="cmbVarisDepo" materialDesignControls:HintAssist.Hint="Varis Noktasi" Width="300" Margin="0,0,0,5" DisplayMemberPath="Value" SelectedValuePath="Key"/>
-                            <TextBox x:Name="txtBosFiyat" materialDesignControls:HintAssist.Hint="Bos Fiyat" Width="300" Margin="0,0,0,5"/>
-                            <TextBox x:Name="txtDoluFiyat" materialDesignControls:HintAssist.Hint="Dolu Fiyat" Width="300" Margin="0,0,0,5"/>
-                            <TextBox x:Name="txtEmanetBosFiyat" materialDesignControls:HintAssist.Hint="Emanet Bos Fiyat" Width="300" Margin="0,0,0,5"/>
-                            <TextBox x:Name="txtEmanetDoluFiyat" materialDesignControls:HintAssist.Hint="Emanet Dolu Fiyat" Width="300" Margin="0,0,0,5"/>
-                            <TextBox x:Name="txtSodaBosFiyat" materialDesignControls:HintAssist.Hint="Soda Bos Fiyat" Width="300" Margin="0,0,0,5"/>
-                            <TextBox x:Name="txtSodaDoluFiyat" materialDesignControls:HintAssist.Hint="Soda Dolu Fiyat" Width="300" Margin="0,0,0,5"/>
+                            <TextBox x:Name="txtFiyat" materialDesignControls:HintAssist.Hint="Fiyat" Width="300" Margin="0,0,0,5"/>
                             <TextBox x:Name="txtGuzergahAciklama" materialDesignControls:HintAssist.Hint="Aciklama (opsiyonel)" Width="300" Margin="0,0,0,5"/>
                             <StackPanel Orientation="Horizontal" HorizontalAlignment="Left" Margin="0,0,0,10">
                                 <Button Content="Kaydet" Width="120" Margin="0,0,10,0" Click="BtnGuzergahKaydet_Click"/>
@@ -94,12 +89,7 @@
                     <DataGrid.Columns>
                         <DataGridTextColumn Header="Cikis Noktasi" Binding="{Binding CikisDepoAdi}" Width="150"/>
                         <DataGridTextColumn Header="Varis Noktasi" Binding="{Binding VarisDepoAdi}" Width="150"/>
-                        <DataGridTextColumn Header="Bos Fiyat" Binding="{Binding BosFiyat}" Width="90"/>
-                        <DataGridTextColumn Header="Dolu Fiyat" Binding="{Binding DoluFiyat}" Width="90"/>
-                        <DataGridTextColumn Header="Emanet Bos" Binding="{Binding EmanetBosFiyat}" Width="100"/>
-                        <DataGridTextColumn Header="Emanet Dolu" Binding="{Binding EmanetDoluFiyat}" Width="100"/>
-                        <DataGridTextColumn Header="Soda Bos" Binding="{Binding SodaBosFiyat}" Width="100"/>
-                        <DataGridTextColumn Header="Soda Dolu" Binding="{Binding SodaDoluFiyat}" Width="100"/>
+                        <DataGridTextColumn Header="Fiyat" Binding="{Binding Fiyat}" Width="100"/>
                         <DataGridTextColumn Header="Aciklama" Binding="{Binding Aciklama}" Width="*"/>
                     </DataGrid.Columns>
                 </DataGrid>
