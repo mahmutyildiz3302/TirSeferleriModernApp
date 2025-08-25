@@ -5,6 +5,7 @@ using System.Windows.Controls;
 using System.Collections.Generic;
 using System.Linq;
 using System.Windows.Data;
+using System.Windows.Threading;
 
 namespace TirSeferleriModernApp.Views
 {
@@ -186,28 +187,33 @@ namespace TirSeferleriModernApp.Views
 
         private void BtnTumunuAc_Click(object sender, RoutedEventArgs e)
         {
-            ToggleAllGroups(true);
+            ToggleAllGroupsSafe(true);
         }
 
         private void BtnTumunuKapat_Click(object sender, RoutedEventArgs e)
         {
-            ToggleAllGroups(false);
+            ToggleAllGroupsSafe(false);
         }
 
-        private void ToggleAllGroups(bool expand)
+        private void ToggleAllGroupsSafe(bool expand)
         {
             if (dgGuzergah == null) return;
-            // DataGrid GroupStyle header is an Expander. Walk visual tree and expand/collapse.
-            foreach (var obj in FindVisualChildren<Expander>(dgGuzergah))
+            // Snapshot list of expanders first to avoid visual tree mutation during traversal
+            Dispatcher.BeginInvoke(new System.Action(() =>
             {
-                obj.IsExpanded = expand;
-            }
+                var snapshot = FindVisualChildren<Expander>(dgGuzergah).ToList();
+                foreach (var exp in snapshot)
+                {
+                    exp.IsExpanded = expand;
+                }
+            }), DispatcherPriority.Background);
         }
 
         private static IEnumerable<T> FindVisualChildren<T>(DependencyObject depObj) where T : DependencyObject
         {
             if (depObj == null) yield break;
-            for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(depObj); i++)
+            int count = System.Windows.Media.VisualTreeHelper.GetChildrenCount(depObj);
+            for (int i = 0; i < count; i++)
             {
                 var child = System.Windows.Media.VisualTreeHelper.GetChild(depObj, i);
                 if (child is T t) yield return t;
