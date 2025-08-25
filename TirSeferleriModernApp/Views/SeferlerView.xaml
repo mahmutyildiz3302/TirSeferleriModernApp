@@ -6,6 +6,7 @@
              xmlns:viewmodels="clr-namespace:TirSeferleriModernApp.ViewModels" 
              xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
              xmlns:conv="clr-namespace:TirSeferleriModernApp.Converters"
+             x:Name="RootSeferlerView"
              mc:Ignorable="d"
              d:DesignHeight="600" d:DesignWidth="900">
 
@@ -175,10 +176,10 @@
                         <DataGridTextColumn Header="Sefer ID" Binding="{Binding SeferId}" Visibility="Collapsed" IsReadOnly="True"/>
                         <DataGridTextColumn Header="Konteyner No" Binding="{Binding KonteynerNo, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                         <DataGridTextColumn Header="Boyut" Binding="{Binding KonteynerBoyutu, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                        <DataGridComboBoxColumn Header="Yükleme" SelectedItemBinding="{Binding YuklemeYeri, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ItemsSource="{Binding DataContext.DepoAdlari, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
-                        <DataGridComboBoxColumn Header="Boşaltma" SelectedItemBinding="{Binding BosaltmaYeri, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ItemsSource="{Binding DataContext.DepoAdlari, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
-                        <DataGridComboBoxColumn Header="Ekstra" SelectedItemBinding="{Binding Ekstra, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ItemsSource="{Binding DataContext.EkstraAdlari, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
-                        <DataGridComboBoxColumn Header="Boş/Dolu" SelectedItemBinding="{Binding BosDolu, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ItemsSource="{Binding DataContext.BosDoluSecenekleri, RelativeSource={RelativeSource AncestorType=UserControl}}"/>
+                        <DataGridComboBoxColumn Header="Yükleme" SelectedItemBinding="{Binding YuklemeYeri, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ItemsSource="{Binding DataContext.DepoAdlari, ElementName=RootSeferlerView}"/>
+                        <DataGridComboBoxColumn Header="Boşaltma" SelectedItemBinding="{Binding BosaltmaYeri, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ItemsSource="{Binding DataContext.DepoAdlari, ElementName=RootSeferlerView}"/>
+                        <DataGridComboBoxColumn Header="Ekstra" SelectedItemBinding="{Binding Ekstra, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ItemsSource="{Binding DataContext.EkstraAdlari, ElementName=RootSeferlerView}"/>
+                        <DataGridComboBoxColumn Header="Boş/Dolu" SelectedItemBinding="{Binding BosDolu, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ItemsSource="{Binding DataContext.BosDoluSecenekleri, ElementName=RootSeferlerView}"/>
                         <DataGridTextColumn Header="Tarih" Binding="{Binding Tarih, Mode=TwoWay, StringFormat=dd.MM.yyyy}"/>
                         <DataGridTextColumn Header="Saat" Binding="{Binding Saat, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                         <DataGridTextColumn Header="Fiyat" Binding="{Binding Fiyat}" IsReadOnly="True"/>
