@@ -60,7 +60,13 @@ namespace TirSeferleriModernApp.Services
             // Apply requested migration and seed for specific routes (idempotent)
             try
             {
+                // 1) Ensure single-price layout
                 MigrateGuzergahlarToSingleFiyat();
+                // 2) Ensure OtomatikMi column and unique index
+                EnsureGuzergahAutoColumnAndUniqueIndex();
+                // 3) Ensure complete digraph of automatic routes with price=0
+                GenerateAllGuzergahlar();
+                // 4) Seed domain routes with given prices (will update/insert, unique index prevents dups)
                 SeedGivenGuzergahlar();
             }
             catch (Exception ex)
@@ -120,7 +126,6 @@ namespace TirSeferleriModernApp.Services
                 EnsureDatabaseFileStatic();
                 using var conn = new SqliteConnection(ConnectionString); conn.Open();
 
-                // Defaults seen in various UI lists (excluding helper items like "(Tümünü Seç)" and "(Boş Olanlar)")
                 var defaults = new[]
                 {
                     // From first list
@@ -134,7 +139,6 @@ namespace TirSeferleriModernApp.Services
                 foreach (var raw in defaults)
                 {
                     var depoAdi = raw.Trim();
-                    // Check existence case-insensitively and trim-aware
                     using var check = conn.CreateCommand();
                     check.CommandText = "SELECT DepoId FROM Depolar WHERE UPPER(TRIM(DepoAdi)) = UPPER(TRIM(@a)) LIMIT 1";
                     check.Parameters.AddWithValue("@a", depoAdi);
@@ -277,73 +281,147 @@ namespace TirSeferleriModernApp.Services
             }
         }
 
-        // Seed specific routes (upsert) with requested prices
-        public static void SeedGivenGuzergahlar()
+        // Ensure OtomatikMi column and unique index
+        public static void EnsureGuzergahAutoColumnAndUniqueIndex()
+        {
+            EnsureDatabaseFileStatic();
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+
+            // add column if missing
+            if (!ColumnExists(conn, "Guzergahlar", "OtomatikMi"))
+            {
+                using var alter = conn.CreateCommand();
+                alter.CommandText = "ALTER TABLE Guzergahlar ADD COLUMN OtomatikMi INTEGER NOT NULL DEFAULT 1;";
+                try { alter.ExecuteNonQuery(); } catch (Exception ex) { Debug.WriteLine("[EnsureGuzergahAutoColumn] " + ex.Message); }
+            }
+
+            // unique index
+            using (var idx = conn.CreateCommand())
+            {
+                idx.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS ux_guzergah_cikis_varis ON Guzergahlar(CikisDepoId, VarisDepoId);";
+                try { idx.ExecuteNonQuery(); } catch (Exception ex) { Debug.WriteLine("[EnsureGuzergahUnique] " + ex.Message); }
+            }
+        }
+
+        // Generate complete digraph of routes with price=0 (auto) - idempotent
+        public static int GenerateAllGuzergahlar()
         {
             EnsureDatabaseFileStatic();
             using var conn = new SqliteConnection(ConnectionString); conn.Open();
             using var tx = conn.BeginTransaction();
             try
             {
-                var routes = new (string from, string to, decimal fiyat)[]
-                {
-                    ("ARDEP", "LİMAN", 1400m),
-                    ("DEMİRELLER", "LİMAN", 1650m),
-                    ("KAHRAMANLI", "LİMAN", 1650m),
-                    ("NİSA", "LİMAN", 1400m),
-                    ("OSG", "LİMAN", 1300m),
-                    ("FALCON", "LİMAN", 1400m)
-                };
-
-                foreach (var (fromName, toName, price) in routes)
-                {
-                    int cId = EnsureDepoAndGetId(conn, fromName);
-                    int vId = EnsureDepoAndGetId(conn, toName);
-
-                    // check existing
-                    int? guzId = null;
-                    using (var check = conn.CreateCommand())
-                    {
-                        check.Transaction = tx;
-                        check.CommandText = "SELECT GuzergahId FROM Guzergahlar WHERE CikisDepoId=@c AND VarisDepoId=@v LIMIT 1";
-                        check.Parameters.AddWithValue("@c", cId);
-                        check.Parameters.AddWithValue("@v", vId);
-                        var val = check.ExecuteScalar();
-                        if (val != null && val != DBNull.Value) guzId = Convert.ToInt32(val);
-                    }
-
-                    if (guzId.HasValue)
-                    {
-                        using var upd = conn.CreateCommand();
-                        upd.Transaction = tx;
-                        upd.CommandText = @"UPDATE Guzergahlar
-                                             SET Fiyat=@p,
-                                                 Aciklama='' 
-                                             WHERE GuzergahId=@id";
-                        upd.Parameters.AddWithValue("@p", Convert.ToDouble(price));
-                        upd.Parameters.AddWithValue("@id", guzId.Value);
-                        upd.ExecuteNonQuery();
-                    }
-                    else
-                    {
-                        using var ins = conn.CreateCommand();
-                        ins.Transaction = tx;
-                        ins.CommandText = @"INSERT INTO Guzergahlar (CikisDepoId, VarisDepoId, Fiyat, Aciklama)
-                                           VALUES (@c, @v, @p, '')";
-                        ins.Parameters.AddWithValue("@c", cId);
-                        ins.Parameters.AddWithValue("@v", vId);
-                        ins.Parameters.AddWithValue("@p", Convert.ToDouble(price));
-                        ins.ExecuteNonQuery();
-                    }
-                }
-
+                using var cmd = conn.CreateCommand();
+                cmd.Transaction = tx;
+                cmd.CommandText = @"INSERT OR IGNORE INTO Guzergahlar (CikisDepoId, VarisDepoId, Fiyat, Aciklama, OtomatikMi)
+                                    SELECT d1.DepoId, d2.DepoId, 0, NULL, 1
+                                    FROM Depolar d1
+                                    CROSS JOIN Depolar d2
+                                    WHERE d1.DepoId <> d2.DepoId";
+                int added = cmd.ExecuteNonQuery();
                 tx.Commit();
+                return added;
             }
             catch (Exception ex)
             {
                 tx.Rollback();
-                Debug.WriteLine("[SeedGivenGuzergahlar] error: " + ex.Message);
-                throw;
+                Debug.WriteLine("[GenerateAllGuzergahlar] " + ex.Message);
+                return 0;
+            }
+        }
+
+        // When a new depot is added: add only edges involving it (both directions) - idempotent
+        public static int HandleNewDepo(int depoId)
+        {
+            EnsureDatabaseFileStatic();
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            using var tx = conn.BeginTransaction();
+            try
+            {
+                int total = 0;
+                using (var cmd1 = conn.CreateCommand())
+                {
+                    cmd1.Transaction = tx;
+                    cmd1.CommandText = @"INSERT OR IGNORE INTO Guzergahlar (CikisDepoId, VarisDepoId, Fiyat, Aciklama, OtomatikMi)
+                                          SELECT @id, d.DepoId, 0, NULL, 1 FROM Depolar d WHERE d.DepoId <> @id";
+                    cmd1.Parameters.AddWithValue("@id", depoId);
+                    total += cmd1.ExecuteNonQuery();
+                }
+                using (var cmd2 = conn.CreateCommand())
+                {
+                    cmd2.Transaction = tx;
+                    cmd2.CommandText = @"INSERT OR IGNORE INTO Guzergahlar (CikisDepoId, VarisDepoId, Fiyat, Aciklama, OtomatikMi)
+                                          SELECT d.DepoId, @id, 0, NULL, 1 FROM Depolar d WHERE d.DepoId <> @id";
+                    cmd2.Parameters.AddWithValue("@id", depoId);
+                    total += cmd2.ExecuteNonQuery();
+                }
+                tx.Commit();
+                return total;
+            }
+            catch (Exception ex)
+            {
+                tx.Rollback();
+                Debug.WriteLine("[HandleNewDepo] " + ex.Message);
+                return 0;
+            }
+        }
+
+        // On delete: remove auto routes; if manual exist and !force, cancel; else remove all then delete depot
+        public static bool OnDepoDelete(int depoId, bool force = false)
+        {
+            EnsureDatabaseFileStatic();
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            using var tx = conn.BeginTransaction();
+            try
+            {
+                using (var delAuto = conn.CreateCommand())
+                {
+                    delAuto.Transaction = tx;
+                    delAuto.CommandText = "DELETE FROM Guzergahlar WHERE (CikisDepoId=@id OR VarisDepoId=@id) AND IFNULL(OtomatikMi,1)=1";
+                    delAuto.Parameters.AddWithValue("@id", depoId);
+                    delAuto.ExecuteNonQuery();
+                }
+
+                long manualCount = 0;
+                using (var cnt = conn.CreateCommand())
+                {
+                    cnt.Transaction = tx;
+                    cnt.CommandText = "SELECT COUNT(1) FROM Guzergahlar WHERE (CikisDepoId=@id OR VarisDepoId=@id) AND IFNULL(OtomatikMi,1)=0";
+                    cnt.Parameters.AddWithValue("@id", depoId);
+                    manualCount = (long)(cnt.ExecuteScalar() ?? 0L);
+                }
+
+                if (manualCount > 0 && !force)
+                {
+                    tx.Rollback();
+                    return false; // manual ilişkiler var, iptal
+                }
+
+                if (force)
+                {
+                    using var delAll = conn.CreateCommand();
+                    delAll.Transaction = tx;
+                    delAll.CommandText = "DELETE FROM Guzergahlar WHERE (CikisDepoId=@id OR VarisDepoId=@id)";
+                    delAll.Parameters.AddWithValue("@id", depoId);
+                    delAll.ExecuteNonQuery();
+                }
+
+                using (var delDepo = conn.CreateCommand())
+                {
+                    delDepo.Transaction = tx;
+                    delDepo.CommandText = "DELETE FROM Depolar WHERE DepoId=@id";
+                    delDepo.Parameters.AddWithValue("@id", depoId);
+                    delDepo.ExecuteNonQuery();
+                }
+
+                tx.Commit();
+                return true;
+            }
+            catch (Exception ex)
+            {
+                tx.Rollback();
+                Debug.WriteLine("[OnDepoDelete] " + ex.Message);
+                return false;
             }
         }
 
@@ -394,15 +472,23 @@ namespace TirSeferleriModernApp.Services
                     CikisDepoId INTEGER NOT NULL,
                     VarisDepoId INTEGER NOT NULL,
                     Fiyat REAL,
-                    Aciklama TEXT
+                    Aciklama TEXT,
+                    OtomatikMi INTEGER NOT NULL DEFAULT 1
                 );";
                 string[] requiredColumns = [
                     "CikisDepoId INTEGER",
                     "VarisDepoId INTEGER",
                     "Fiyat REAL",
-                    "Aciklama TEXT"
+                    "Aciklama TEXT",
+                    "OtomatikMi INTEGER NOT NULL DEFAULT 1"
                 ];
                 EnsureTable("Guzergahlar", createScript, requiredColumns);
+
+                // unique index after ensuring table/columns
+                using var conn = new SqliteConnection(ConnectionString); conn.Open();
+                using var idx = conn.CreateCommand();
+                idx.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS ux_guzergah_cikis_varis ON Guzergahlar(CikisDepoId, VarisDepoId);";
+                idx.ExecuteNonQuery();
             }
             catch (Exception ex) { Debug.WriteLine(ex.Message); }
         }
@@ -1158,6 +1244,63 @@ namespace TirSeferleriModernApp.Services
             }
             catch (Exception ex) { Debug.WriteLine(ex.Message); }
             return list;
+        }
+
+        // Seed domain-specific routes with given prices as MANUAL (OtomatikMi=0).
+        // If an automatic route already exists for the pair, update price and flip to manual.
+        public static void SeedGivenGuzergahlar()
+        {
+            EnsureDatabaseFileStatic();
+            using var conn = new SqliteConnection(ConnectionString); conn.Open();
+            using var tx = conn.BeginTransaction();
+            try
+            {
+                var routes = new (string from, string to, decimal fiyat)[]
+                {
+                    ("ARDEP", "LİMAN", 1400m),
+                    ("DEMİRELLER", "LİMAN", 1650m),
+                    ("KAHRAMANLI", "LİMAN", 1650m),
+                    ("NİSA", "LİMAN", 1400m),
+                    ("OSG", "LİMAN", 1300m),
+                    ("FALCON", "LİMAN", 1400m)
+                };
+
+                foreach (var (fromName, toName, price) in routes)
+                {
+                    int cId = EnsureDepoAndGetId(conn, fromName);
+                    int vId = EnsureDepoAndGetId(conn, toName);
+
+                    // Upsert with manual flag
+                    using var upd = conn.CreateCommand();
+                    upd.Transaction = tx;
+                    upd.CommandText = @"UPDATE Guzergahlar
+                                          SET Fiyat=@p, Aciklama='', OtomatikMi=0
+                                        WHERE CikisDepoId=@c AND VarisDepoId=@v";
+                    upd.Parameters.AddWithValue("@p", Convert.ToDouble(price));
+                    upd.Parameters.AddWithValue("@c", cId);
+                    upd.Parameters.AddWithValue("@v", vId);
+                    int affected = upd.ExecuteNonQuery();
+                    if (affected == 0)
+                    {
+                        using var ins = conn.CreateCommand();
+                        ins.Transaction = tx;
+                        ins.CommandText = @"INSERT OR IGNORE INTO Guzergahlar (CikisDepoId, VarisDepoId, Fiyat, Aciklama, OtomatikMi)
+                                              VALUES (@c, @v, @p, '', 0)";
+                        ins.Parameters.AddWithValue("@c", cId);
+                        ins.Parameters.AddWithValue("@v", vId);
+                        ins.Parameters.AddWithValue("@p", Convert.ToDouble(price));
+                        ins.ExecuteNonQuery();
+                    }
+                }
+
+                tx.Commit();
+            }
+            catch (Exception ex)
+            {
+                tx.Rollback();
+                Debug.WriteLine("[SeedGivenGuzergahlar] error: " + ex.Message);
+                throw;
+            }
         }
     }
 }
