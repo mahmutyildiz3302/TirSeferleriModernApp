@@ -118,7 +118,7 @@ namespace TirSeferleriModernApp.Services
             return n;
         }
 
-        // Ensure default depots exist (idempotent)
+        // Ensure default depots exist (idempotent). Always store canonical names, not aliases.
         public static void EnsureDefaultDepolar()
         {
             try
@@ -126,34 +126,33 @@ namespace TirSeferleriModernApp.Services
                 EnsureDatabaseFileStatic();
                 using var conn = new SqliteConnection(ConnectionString); conn.Open();
 
+                // Removed TER6/TER-6 and TER7/TER-7 from defaults to respect user deletions
                 var defaults = new[]
                 {
-                    // From first list
                     "ARDEP", "DEMİRELLER", "ESKİ MADEN", "FALCON", "KAHRAMANLI", "LİMAN-ŞİŞECAM", "NİSA", "NİSA-4", "OSG",
-                    // From second list
-                    "CCIS", "LİMAN", "OLS", "OLS-1", "TER-2", "TER6", "TER-6", "TER7", "TER-7",
-                    // From third list and earlier context
+                    "CCIS", "LİMAN", "OLS", "OLS-1", "TER-2",
                     "EKANET", "TER-4"
                 };
 
                 foreach (var raw in defaults)
                 {
-                    var depoAdi = raw.Trim();
+                    var alias = raw.Trim();
+                    var canonical = NormalizeDepoName(alias);
+
+                    // If canonical already exists, skip; prevents re-creating alias rows
                     using var check = conn.CreateCommand();
-                    check.CommandText = "SELECT DepoId FROM Depolar WHERE UPPER(TRIM(DepoAdi)) = UPPER(TRIM(@a)) LIMIT 1";
-                    check.Parameters.AddWithValue("@a", depoAdi);
+                    check.CommandText = "SELECT DepoId FROM Depolar WHERE UPPER(TRIM(DepoAdi)) = UPPER(TRIM(@canon)) LIMIT 1";
+                    check.Parameters.AddWithValue("@canon", canonical);
                     var exists = check.ExecuteScalar() != null;
                     if (!exists)
                     {
                         using var ins = conn.CreateCommand();
-                        ins.CommandText = "INSERT INTO Depolar (DepoAdi, Aciklama) VALUES (@a, @c)";
-                        ins.Parameters.AddWithValue("@a", depoAdi);
-                        // If alias has a canonical name, store it to Aciklama for clarity
-                        var canonical = NormalizeDepoName(depoAdi);
-                        if (!string.Equals(canonical, depoAdi, StringComparison.OrdinalIgnoreCase))
-                            ins.Parameters.AddWithValue("@c", $"{depoAdi} = {canonical}");
+                        ins.CommandText = "INSERT INTO Depolar (DepoAdi, Aciklama) VALUES (@name, @acik)";
+                        ins.Parameters.AddWithValue("@name", canonical);
+                        if (!string.Equals(alias, canonical, StringComparison.OrdinalIgnoreCase))
+                            ins.Parameters.AddWithValue("@acik", $"{alias} = {canonical}");
                         else
-                            ins.Parameters.AddWithValue("@c", DBNull.Value);
+                            ins.Parameters.AddWithValue("@acik", DBNull.Value);
                         ins.ExecuteNonQuery();
                     }
                 }
@@ -174,7 +173,7 @@ namespace TirSeferleriModernApp.Services
             return false;
         }
 
-        // Helper: ensure depo exists and return its Id (handles aliases)
+        // Helper: ensure depo exists and return its Id (handles aliases). Always create canonical entry when inserting.
         private static int EnsureDepoAndGetId(SqliteConnection conn, string depoAdiRaw)
         {
             var a = (depoAdiRaw ?? string.Empty).Trim();
@@ -191,12 +190,12 @@ namespace TirSeferleriModernApp.Services
 
             using (var ins = conn.CreateCommand())
             {
-                ins.CommandText = "INSERT INTO Depolar (DepoAdi, Aciklama) VALUES (@a, @c); SELECT last_insert_rowid();";
-                ins.Parameters.AddWithValue("@a", a);
+                ins.CommandText = "INSERT INTO Depolar (DepoAdi, Aciklama) VALUES (@name, @acik); SELECT last_insert_rowid();";
+                ins.Parameters.AddWithValue("@name", an); // insert canonical
                 if (!string.Equals(a, an, StringComparison.OrdinalIgnoreCase))
-                    ins.Parameters.AddWithValue("@c", $"{a} = {an}");
+                    ins.Parameters.AddWithValue("@acik", $"{a} = {an}");
                 else
-                    ins.Parameters.AddWithValue("@c", DBNull.Value);
+                    ins.Parameters.AddWithValue("@acik", DBNull.Value);
                 var id = (long)ins.ExecuteScalar()!;
                 return (int)id;
             }
