@@ -26,9 +26,9 @@ namespace TirSeferleriModernApp.Services
         private static bool ValidateSeferInternal(Sefer s)
         {
             if (s == null) return false;
+            // Konteyner boyutu zorunlu; diğerleri opsiyonel olsun ki kullanıcı eksiklerle de kaydedebilsin
             if (string.IsNullOrWhiteSpace(s.KonteynerBoyutu)) return false;
-            if (string.IsNullOrWhiteSpace(s.YuklemeYeri)) return false;
-            if (string.IsNullOrWhiteSpace(s.BosaltmaYeri)) return false;
+            // YuklemeYeri/BosaltmaYeri zorunlu olmasın
             return true;
         }
 
