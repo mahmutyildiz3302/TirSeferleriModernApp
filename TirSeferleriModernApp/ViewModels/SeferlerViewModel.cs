@@ -208,7 +208,7 @@ namespace TirSeferleriModernApp.ViewModels
         {
             if (SeciliSefer == null) return;
 
-            // 1) Ekstra kontrol (Emanet/Soda -> doğrudan 1000, Boş ise 100 düş)
+            // 1) Ekstra kontrol (Emanet/Soda -> her durumda 1000)
             var ekstra = SeciliSefer.Ekstra?.Trim();
             bool isEmanetSoda = !string.IsNullOrWhiteSpace(ekstra) &&
                                  (string.Equals(ekstra, "EMANET", StringComparison.OrdinalIgnoreCase) ||
@@ -219,10 +219,8 @@ namespace TirSeferleriModernApp.ViewModels
 
             if (isEmanetSoda)
             {
-                decimal price = 1000m;
-                if (string.Equals(bosDolu, "Bos", StringComparison.OrdinalIgnoreCase))
-                    price -= 100m; // boşta 100 azalt
-                SeciliSefer.Fiyat = price;
+                // Boş/Dolu ve boyuttan bağımsız sabit fiyat
+                SeciliSefer.Fiyat = 1000m;
                 return;
             }
 
