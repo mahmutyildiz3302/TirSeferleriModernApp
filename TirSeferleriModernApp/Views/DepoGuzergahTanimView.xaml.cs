@@ -3,6 +3,8 @@ using System.Data;
 using System.Windows;
 using System.Windows.Controls;
 using System.Collections.Generic;
+using System.Linq;
+using System.Windows.Data;
 
 namespace TirSeferleriModernApp.Views
 {
@@ -56,7 +58,9 @@ namespace TirSeferleriModernApp.Views
                                                 ORDER BY cd.DepoAdi, vd.DepoAdi", conn);
             using var rdr = cmd.ExecuteReader();
             var dt = new DataTable(); dt.Load(rdr);
-            dgGuzergah.ItemsSource = dt.DefaultView;
+            // Bind to grouped CollectionViewSource
+            var cvs = (CollectionViewSource)FindResource("GuzergahGrouped");
+            cvs.Source = dt.DefaultView;
         }
 
         private void dgDepolar_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -80,6 +84,7 @@ namespace TirSeferleriModernApp.Views
             cmd.Parameters.AddWithValue("@c", (object?)ack ?? System.DBNull.Value);
             cmd.ExecuteNonQuery();
             txtDepoAdi.Text = string.Empty; txtDepoAciklama.Text = string.Empty; _seciliDepo = null; LoadDepolar(); LoadDepoCombos();
+            LoadGuzergahlar();
         }
 
         private void BtnDepoGuncelle_Click(object sender, RoutedEventArgs e)
@@ -177,6 +182,37 @@ namespace TirSeferleriModernApp.Views
             cmbVarisDepo.SelectedIndex = -1;
             txtFiyat.Text = string.Empty;
             txtGuzergahAciklama.Text = string.Empty;
+        }
+
+        private void BtnTumunuAc_Click(object sender, RoutedEventArgs e)
+        {
+            ToggleAllGroups(true);
+        }
+
+        private void BtnTumunuKapat_Click(object sender, RoutedEventArgs e)
+        {
+            ToggleAllGroups(false);
+        }
+
+        private void ToggleAllGroups(bool expand)
+        {
+            if (dgGuzergah == null) return;
+            // DataGrid GroupStyle header is an Expander. Walk visual tree and expand/collapse.
+            foreach (var obj in FindVisualChildren<Expander>(dgGuzergah))
+            {
+                obj.IsExpanded = expand;
+            }
+        }
+
+        private static IEnumerable<T> FindVisualChildren<T>(DependencyObject depObj) where T : DependencyObject
+        {
+            if (depObj == null) yield break;
+            for (int i = 0; i < System.Windows.Media.VisualTreeHelper.GetChildrenCount(depObj); i++)
+            {
+                var child = System.Windows.Media.VisualTreeHelper.GetChild(depObj, i);
+                if (child is T t) yield return t;
+                foreach (var childOfChild in FindVisualChildren<T>(child)) yield return childOfChild;
+            }
         }
     }
 }
