@@ -13,6 +13,10 @@ namespace TirSeferleriModernApp.ViewModels
     public partial class SeferlerViewModel(SnackbarMessageQueue messageQueue, DatabaseService databaseService) : ObservableObject
     {
         private Sefer? _seciliSefer; // lazy init
+        private bool _routeDefaultsApplied;          // bu sefer için otomatik varsayılanlar uygulandı mı?
+        private bool _hadBothEndpointsAtStart;       // sefer seçildiğinde her iki nokta zaten dolu muydu?
+        private bool _haveBothEndpoints;             // mevcut durumda iki uç da dolu mu? (ilk kez dolu olduğunda tetiklemek için)
+
         public Sefer? SeciliSefer
         {
             get
@@ -21,6 +25,9 @@ namespace TirSeferleriModernApp.ViewModels
                 {
                     _seciliSefer = new Sefer { Tarih = DateTime.Today };
                     _seciliSefer.PropertyChanged += SeciliSefer_PropertyChanged;
+                    _routeDefaultsApplied = false;
+                    _hadBothEndpointsAtStart = false;
+                    _haveBothEndpoints = false;
                 }
                 return _seciliSefer;
             }
@@ -34,7 +41,13 @@ namespace TirSeferleriModernApp.ViewModels
                     _seciliSefer = value;
 
                     if (_seciliSefer != null)
+                    {
                         _seciliSefer.PropertyChanged += SeciliSefer_PropertyChanged;
+                        // yeni sefer için bayrakları sıfırla
+                        _routeDefaultsApplied = false;
+                        _hadBothEndpointsAtStart = !string.IsNullOrWhiteSpace(_seciliSefer.YuklemeYeri) && !string.IsNullOrWhiteSpace(_seciliSefer.BosaltmaYeri);
+                        _haveBothEndpoints = _hadBothEndpointsAtStart;
+                    }
 
                     OnPropertyChanged(nameof(SeciliSefer));
                     OnPropertyChanged(nameof(KaydetButonMetni));
@@ -251,6 +264,21 @@ namespace TirSeferleriModernApp.ViewModels
 
         private void SeciliSefer_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
+            if (e.PropertyName == nameof(Sefer.YuklemeYeri) ||
+                e.PropertyName == nameof(Sefer.BosaltmaYeri))
+            {
+                // Yükleme ve Boşaltma ilk kez birlikte seçildiğinde varsayılanları uygula
+                var nowBoth = !string.IsNullOrWhiteSpace(SeciliSefer?.YuklemeYeri) && !string.IsNullOrWhiteSpace(SeciliSefer?.BosaltmaYeri);
+                if (!_routeDefaultsApplied && !_hadBothEndpointsAtStart && !_haveBothEndpoints && nowBoth)
+                {
+                    _routeDefaultsApplied = true;
+                    SeciliSefer!.KonteynerBoyutu = "40";
+                    SeciliSefer!.BosDolu = "Dolu";
+                    SeciliSefer!.Ekstra = "EKSTRA YOK";
+                }
+                _haveBothEndpoints = nowBoth;
+            }
+
             if (e.PropertyName == nameof(Sefer.YuklemeYeri) ||
                 e.PropertyName == nameof(Sefer.BosaltmaYeri) ||
                 e.PropertyName == nameof(Sefer.Ekstra) ||
