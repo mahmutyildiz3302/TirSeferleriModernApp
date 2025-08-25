@@ -104,6 +104,12 @@
                           MouseDoubleClick="dgGuzergah_MouseDoubleClick">
                     <DataGrid.GroupStyle>
                         <GroupStyle>
+                            <!-- Ensure rows presenter is used for group items -->
+                            <GroupStyle.Panel>
+                                <ItemsPanelTemplate>
+                                    <DataGridRowsPresenter/>
+                                </ItemsPanelTemplate>
+                            </GroupStyle.Panel>
                             <GroupStyle.ContainerStyle>
                                 <Style TargetType="{x:Type GroupItem}">
                                     <Setter Property="Template">
@@ -116,6 +122,7 @@
                                                             <TextBlock Text="  {Binding Converter={StaticResource GroupStatsConverter}}" Foreground="Gray"/>
                                                         </StackPanel>
                                                     </Expander.Header>
+                                                    <!-- ItemsPresenter will use GroupStyle.Panel (DataGridRowsPresenter) -->
                                                     <ItemsPresenter/>
                                                 </Expander>
                                             </ControlTemplate>
