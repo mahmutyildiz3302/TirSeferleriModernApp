@@ -11,28 +11,13 @@ namespace TirSeferleriModernApp.Views
         private const string ConnectionString = "Data Source=TirSeferleri.db";
         private DataRowView? _seciliDepo;
         private DataRowView? _seciliGuzergah;
-        private DataRowView? _seciliEkstra;
 
         public DepoGuzergahTanimView()
         {
             InitializeComponent();
-            EnsureEkstraUcretTable();
             LoadDepolar();
             LoadDepoCombos();
             LoadGuzergahlar();
-            LoadEkstraUcretler();
-        }
-
-        private static void EnsureEkstraUcretTable()
-        {
-            using var conn = new SqliteConnection(ConnectionString); conn.Open();
-            using var cmd = new SqliteCommand(@"CREATE TABLE IF NOT EXISTS EkstraUcretler (
-                                                    EkstraId INTEGER PRIMARY KEY AUTOINCREMENT,
-                                                    Ad TEXT NOT NULL,
-                                                    Ucret REAL,
-                                                    Aciklama TEXT
-                                                );", conn);
-            cmd.ExecuteNonQuery();
         }
 
         private void LoadDepolar()
@@ -77,15 +62,6 @@ namespace TirSeferleriModernApp.Views
             using var rdr = cmd.ExecuteReader();
             var dt = new DataTable(); dt.Load(rdr);
             dgGuzergah.ItemsSource = dt.DefaultView;
-        }
-
-        private void LoadEkstraUcretler()
-        {
-            using var conn = new SqliteConnection(ConnectionString); conn.Open();
-            using var cmd = new SqliteCommand("SELECT EkstraId, Ad, Ucret, Aciklama FROM EkstraUcretler ORDER BY Ad", conn);
-            using var rdr = cmd.ExecuteReader();
-            var dt = new DataTable(); dt.Load(rdr);
-            dgEkstraUcretler.ItemsSource = dt.DefaultView;
         }
 
         private void dgDepolar_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
@@ -236,69 +212,6 @@ namespace TirSeferleriModernApp.Views
             txtSodaBosFiyat.Text = string.Empty;
             txtSodaDoluFiyat.Text = string.Empty;
             txtGuzergahAciklama.Text = string.Empty;
-        }
-
-        private void dgEkstraUcretler_MouseDoubleClick(object sender, System.Windows.Input.MouseButtonEventArgs e)
-        {
-            if ((sender as DataGrid)?.SelectedItem is DataRowView row)
-            {
-                _seciliEkstra = row;
-                txtEkstraAd.Text = row["Ad"]?.ToString() ?? string.Empty;
-                txtEkstraUcret.Text = row["Ucret"]?.ToString() ?? string.Empty;
-                txtEkstraAciklama.Text = row["Aciklama"]?.ToString() ?? string.Empty;
-            }
-        }
-
-        private void BtnEkstraKaydet_Click(object sender, RoutedEventArgs e)
-        {
-            var ad = txtEkstraAd.Text?.Trim();
-            if (string.IsNullOrWhiteSpace(ad)) { MessageBox.Show("Ad girin"); return; }
-            decimal ucret = 0; if (!decimal.TryParse(txtEkstraUcret.Text, out ucret)) ucret = 0;
-            var ack = txtEkstraAciklama.Text?.Trim();
-            using var conn = new SqliteConnection(ConnectionString); conn.Open();
-            using var cmd = new SqliteCommand("INSERT INTO EkstraUcretler (Ad, Ucret, Aciklama) VALUES (@a, @u, @c)", conn);
-            cmd.Parameters.AddWithValue("@a", ad);
-            cmd.Parameters.AddWithValue("@u", (double)ucret);
-            cmd.Parameters.AddWithValue("@c", (object?)ack ?? System.DBNull.Value);
-            cmd.ExecuteNonQuery();
-            ClearEkstraForm(); LoadEkstraUcretler();
-        }
-
-        private void BtnEkstraGuncelle_Click(object sender, RoutedEventArgs e)
-        {
-            if (_seciliEkstra == null) { MessageBox.Show("Guncellenecek kaydi secin"); return; }
-            var ad = txtEkstraAd.Text?.Trim();
-            if (string.IsNullOrWhiteSpace(ad)) { MessageBox.Show("Ad girin"); return; }
-            decimal ucret = 0; if (!decimal.TryParse(txtEkstraUcret.Text, out ucret)) ucret = 0;
-            var ack = txtEkstraAciklama.Text?.Trim();
-            using var conn = new SqliteConnection(ConnectionString); conn.Open();
-            using var cmd = new SqliteCommand("UPDATE EkstraUcretler SET Ad=@a, Ucret=@u, Aciklama=@c WHERE EkstraId=@id", conn);
-            cmd.Parameters.AddWithValue("@a", ad);
-            cmd.Parameters.AddWithValue("@u", (double)ucret);
-            cmd.Parameters.AddWithValue("@c", (object?)ack ?? System.DBNull.Value);
-            cmd.Parameters.AddWithValue("@id", _seciliEkstra.Row["EkstraId"]);
-            cmd.ExecuteNonQuery();
-            ClearEkstraForm(); LoadEkstraUcretler();
-        }
-
-        private void BtnEkstraSil_Click(object sender, RoutedEventArgs e)
-        {
-            if (dgEkstraUcretler.SelectedItem is not DataRowView row) { MessageBox.Show("Silinecek kaydi secin"); return; }
-            if (MessageBox.Show("Silinsin mi?", "Onay", MessageBoxButton.YesNo, MessageBoxImage.Question) != MessageBoxResult.Yes) return;
-            using var conn = new SqliteConnection(ConnectionString); conn.Open();
-            using var cmd = new SqliteCommand("DELETE FROM EkstraUcretler WHERE EkstraId=@id", conn);
-            cmd.Parameters.AddWithValue("@id", row["EkstraId"]);
-            cmd.ExecuteNonQuery();
-            if (_seciliEkstra != null && Equals(_seciliEkstra.Row["EkstraId"], row["EkstraId"])) _seciliEkstra = null;
-            LoadEkstraUcretler(); ClearEkstraForm();
-        }
-
-        private void ClearEkstraForm()
-        {
-            _seciliEkstra = null;
-            txtEkstraAd.Text = string.Empty;
-            txtEkstraUcret.Text = string.Empty;
-            txtEkstraAciklama.Text = string.Empty;
         }
     }
 }

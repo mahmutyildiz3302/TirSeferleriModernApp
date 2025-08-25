@@ -48,18 +48,15 @@
             </Grid>
         </Border>
 
-        <!-- Alt: Guzergah ve Ekstra Ucretler (1/2 ekran) -->
+        <!-- Alt: Guzergah (1/2 ekran) -->
         <Border Grid.Row="1" Background="#E8F0FE" BorderBrush="Gray" BorderThickness="1" Padding="10">
             <Grid>
                 <Grid.ColumnDefinitions>
                     <ColumnDefinition Width="Auto"/>
                     <ColumnDefinition Width="*"/>
                 </Grid.ColumnDefinitions>
-                <Grid.RowDefinitions>
-                    <RowDefinition Height="*"/>
-                </Grid.RowDefinitions>
 
-                <!-- Sol: formlar -->
+                <!-- Sol: guzergah formu -->
                 <Border Grid.Column="0" BorderBrush="#D0D0D0" BorderThickness="1" CornerRadius="4" Padding="10" Margin="0,0,10,0" VerticalAlignment="Stretch">
                     <ScrollViewer VerticalScrollBarVisibility="Auto" Height="Auto">
                         <StackPanel>
@@ -79,72 +76,33 @@
                                 <Button Content="Guncelle" Width="120" Margin="0,0,10,0" Click="BtnGuzergahGuncelle_Click"/>
                                 <Button Content="Sil" Width="120" Click="BtnGuzergahSil_Click"/>
                             </StackPanel>
-
-                            <Separator Margin="0,10,0,10"/>
-
-                            <!-- Ekstra Ucretler Formu -->
-                            <TextBlock Text="Ekstra Ucretler" FontSize="18" FontWeight="Bold" Margin="0,0,0,5"/>
-                            <TextBox x:Name="txtEkstraAd" materialDesignControls:HintAssist.Hint="Ad (orn. Soda, Emanet)" Width="300" Margin="0,0,0,5"/>
-                            <TextBox x:Name="txtEkstraUcret" materialDesignControls:HintAssist.Hint="Ucret" Width="300" Margin="0,0,0,5"/>
-                            <TextBox x:Name="txtEkstraAciklama" materialDesignControls:HintAssist.Hint="Aciklama (opsiyonel)" Width="300" Margin="0,0,0,5"/>
-                            <StackPanel Orientation="Horizontal" HorizontalAlignment="Left">
-                                <Button Content="Kaydet" Width="120" Margin="0,0,10,0" Click="BtnEkstraKaydet_Click"/>
-                                <Button Content="Guncelle" Width="120" Margin="0,0,10,0" Click="BtnEkstraGuncelle_Click"/>
-                                <Button Content="Sil" Width="120" Click="BtnEkstraSil_Click"/>
-                            </StackPanel>
                         </StackPanel>
                     </ScrollViewer>
                 </Border>
 
-                <!-- Sag: listeler -->
-                <Grid Grid.Column="1">
-                    <Grid.RowDefinitions>
-                        <RowDefinition Height="*"/>
-                        <RowDefinition Height="*"/>
-                    </Grid.RowDefinitions>
-
-                    <!-- Guzergahlar -->
-                    <DataGrid Grid.Row="0"
-                              x:Name="dgGuzergah"
-                              AutoGenerateColumns="False"
-                              IsReadOnly="True"
-                              Background="White"
-                              HorizontalAlignment="Stretch"
-                              VerticalAlignment="Stretch"
-                              MouseDoubleClick="dgGuzergah_MouseDoubleClick"
-                              ScrollViewer.CanContentScroll="True"
-                              ScrollViewer.VerticalScrollBarVisibility="Auto">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Cikis Noktasi" Binding="{Binding CikisDepoAdi}" Width="150"/>
-                            <DataGridTextColumn Header="Varis Noktasi" Binding="{Binding VarisDepoAdi}" Width="150"/>
-                            <DataGridTextColumn Header="Bos Fiyat" Binding="{Binding BosFiyat}" Width="90"/>
-                            <DataGridTextColumn Header="Dolu Fiyat" Binding="{Binding DoluFiyat}" Width="90"/>
-                            <DataGridTextColumn Header="Emanet Bos" Binding="{Binding EmanetBosFiyat}" Width="100"/>
-                            <DataGridTextColumn Header="Emanet Dolu" Binding="{Binding EmanetDoluFiyat}" Width="100"/>
-                            <DataGridTextColumn Header="Soda Bos" Binding="{Binding SodaBosFiyat}" Width="100"/>
-                            <DataGridTextColumn Header="Soda Dolu" Binding="{Binding SodaDoluFiyat}" Width="100"/>
-                            <DataGridTextColumn Header="Aciklama" Binding="{Binding Aciklama}" Width="*"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-
-                    <!-- Ekstra Ucretler -->
-                    <DataGrid Grid.Row="1"
-                              x:Name="dgEkstraUcretler"
-                              AutoGenerateColumns="False"
-                              IsReadOnly="True"
-                              Background="White"
-                              HorizontalAlignment="Stretch"
-                              VerticalAlignment="Stretch"
-                              MouseDoubleClick="dgEkstraUcretler_MouseDoubleClick"
-                              ScrollViewer.CanContentScroll="True"
-                              ScrollViewer.VerticalScrollBarVisibility="Auto">
-                        <DataGrid.Columns>
-                            <DataGridTextColumn Header="Ad" Binding="{Binding Ad}" Width="150"/>
-                            <DataGridTextColumn Header="Ucret" Binding="{Binding Ucret}" Width="90"/>
-                            <DataGridTextColumn Header="Aciklama" Binding="{Binding Aciklama}" Width="*"/>
-                        </DataGrid.Columns>
-                    </DataGrid>
-                </Grid>
+                <!-- Sag: sadece guzergah listesi -->
+                <DataGrid Grid.Column="1"
+                          x:Name="dgGuzergah"
+                          AutoGenerateColumns="False"
+                          IsReadOnly="True"
+                          Background="White"
+                          HorizontalAlignment="Stretch"
+                          VerticalAlignment="Stretch"
+                          MouseDoubleClick="dgGuzergah_MouseDoubleClick"
+                          ScrollViewer.CanContentScroll="True"
+                          ScrollViewer.VerticalScrollBarVisibility="Auto">
+                    <DataGrid.Columns>
+                        <DataGridTextColumn Header="Cikis Noktasi" Binding="{Binding CikisDepoAdi}" Width="150"/>
+                        <DataGridTextColumn Header="Varis Noktasi" Binding="{Binding VarisDepoAdi}" Width="150"/>
+                        <DataGridTextColumn Header="Bos Fiyat" Binding="{Binding BosFiyat}" Width="90"/>
+                        <DataGridTextColumn Header="Dolu Fiyat" Binding="{Binding DoluFiyat}" Width="90"/>
+                        <DataGridTextColumn Header="Emanet Bos" Binding="{Binding EmanetBosFiyat}" Width="100"/>
+                        <DataGridTextColumn Header="Emanet Dolu" Binding="{Binding EmanetDoluFiyat}" Width="100"/>
+                        <DataGridTextColumn Header="Soda Bos" Binding="{Binding SodaBosFiyat}" Width="100"/>
+                        <DataGridTextColumn Header="Soda Dolu" Binding="{Binding SodaDoluFiyat}" Width="100"/>
+                        <DataGridTextColumn Header="Aciklama" Binding="{Binding Aciklama}" Width="*"/>
+                    </DataGrid.Columns>
+                </DataGrid>
             </Grid>
         </Border>
     </Grid>
