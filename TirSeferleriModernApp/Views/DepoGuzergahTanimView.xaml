@@ -6,6 +6,7 @@
              Background="#F0F0F0">
     <UserControl.Resources>
         <conv:GroupStatsConverter x:Key="GroupStatsConverter"/>
+        <conv:GroupHeaderStatsConverter x:Key="GroupHeaderStatsConverter"/>
         <CollectionViewSource x:Key="GuzergahGrouped">
             <CollectionViewSource.GroupDescriptions>
                 <PropertyGroupDescription PropertyName="CikisDepoAdi"/>
@@ -119,7 +120,14 @@
                                                     <Expander.Header>
                                                         <StackPanel Orientation="Horizontal">
                                                             <TextBlock Text="{Binding Name}" FontWeight="Bold"/>
-                                                            <TextBlock Text="  {Binding Converter={StaticResource GroupStatsConverter}}" Foreground="Gray"/>
+                                                            <TextBlock Margin="8,0,0,0">
+                                                                <TextBlock.Text>
+                                                                    <MultiBinding Converter="{StaticResource GroupHeaderStatsConverter}">
+                                                                        <Binding/>
+                                                                        <Binding RelativeSource="{RelativeSource AncestorType=ItemsControl}" Path="ItemsSource.SourceCollection.Count"/>
+                                                                    </MultiBinding>
+                                                                </TextBlock.Text>
+                                                            </TextBlock>
                                                         </StackPanel>
                                                     </Expander.Header>
                                                     <!-- ItemsPresenter will use GroupStyle.Panel (DataGridRowsPresenter) -->
