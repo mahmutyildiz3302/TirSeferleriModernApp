@@ -19,23 +19,9 @@ namespace TirSeferleriModernApp.Converters
             try
             {
                 var items = grp.Items.Cast<object>();
-                var fiyatlar = items.Select(it =>
-                {
-                    var prop = it.GetType().GetProperty("Fiyat");
-                    if (prop != null)
-                    {
-                        var v = prop.GetValue(it);
-                        if (v is decimal dec) return dec;
-                        if (v is double dbl) return (decimal)dbl;
-                        if (v is float fl) return (decimal)fl;
-                    }
-                    return 0m;
-                }).ToList();
-                int count = fiyatlar.Count;
-                decimal min = count > 0 ? fiyatlar.Min() : 0m;
-                decimal max = count > 0 ? fiyatlar.Max() : 0m;
-                decimal avg = count > 0 ? (decimal)fiyatlar.Average(x => (double)x) : 0m;
-                return $"— {count} rota / toplam={total} | min={min:0} maks={max:0} ort={avg:0}";
+                int count = items.Count();
+                // Yalnýzca rota sayýsý ve toplamý göster; min/maks/ort kaldýrýldý
+                return $"— {count} rota / toplam={total}";
             }
             catch
             {
