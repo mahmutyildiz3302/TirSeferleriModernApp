@@ -14,7 +14,7 @@ namespace TirSeferleriModernApp.ViewModels
     {
         private Sefer? _seciliSefer; // lazy init
         private bool _routeDefaultsApplied;          // bu sefer için otomatik varsayılanlar uygulandı mı?
-        private bool _hadBothEndpointsAtStart;       // sefer seçildiğinde her iki nokta zaten dolu muydu?
+        private bool _hadBothEndpointsAtStart;       // sefer seçildiğinde her iki nokta zaten dolu miydi?
         private bool _haveBothEndpoints;             // mevcut durumda iki uç da dolu mu? (ilk kez dolu olduğunda tetiklemek için)
 
         public Sefer? SeciliSefer
@@ -235,6 +235,7 @@ namespace TirSeferleriModernApp.ViewModels
                 // Boş/Dolu ve boyuttan bağımsız sabit fiyat
                 SeciliSefer.Fiyat = 1000m;
                 SeciliSefer.Kdv = Math.Round(SeciliSefer.Fiyat > 0 ? SeciliSefer.Fiyat * 0.20m : 0m, 2);
+                SeciliSefer.Tevkifat = Math.Round(SeciliSefer.Kdv > 0 ? SeciliSefer.Kdv * 0.20m : 0m, 2);
                 return;
             }
 
@@ -262,6 +263,7 @@ namespace TirSeferleriModernApp.ViewModels
 
             SeciliSefer.Fiyat = result < 0 ? 0 : result;
             SeciliSefer.Kdv = Math.Round(SeciliSefer.Fiyat > 0 ? SeciliSefer.Fiyat * 0.20m : 0m, 2);
+            SeciliSefer.Tevkifat = Math.Round(SeciliSefer.Kdv > 0 ? SeciliSefer.Kdv * 0.20m : 0m, 2);
         }
 
         private void SeciliSefer_PropertyChanged(object? sender, PropertyChangedEventArgs e)

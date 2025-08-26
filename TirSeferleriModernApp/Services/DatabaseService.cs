@@ -620,6 +620,7 @@ namespace TirSeferleriModernApp.Services
                         Saat TEXT,
                         Fiyat REAL,
                         Kdv REAL,
+                        Tevkifat REAL,
                         Aciklama TEXT,
                         CekiciId INTEGER,
                         CekiciPlaka TEXT,
@@ -631,6 +632,7 @@ namespace TirSeferleriModernApp.Services
                     "Ekstra TEXT",
                     "BosDolu TEXT",
                     "Kdv REAL",
+                    "Tevkifat REAL",
                     "CekiciId INTEGER",
                     "CekiciPlaka TEXT",
                     "DorseId INTEGER",
@@ -782,8 +784,8 @@ namespace TirSeferleriModernApp.Services
             using var connection = new SqliteConnection(ConnectionString);
             connection.Open();
             using var cmd = connection.CreateCommand();
-            cmd.CommandText = @"INSERT INTO Seferler (KonteynerNo, KonteynerBoyutu, YuklemeYeri, BosaltmaYeri, Ekstra, BosDolu, Tarih, Saat, Fiyat, Kdv, Aciklama, CekiciId, CekiciPlaka, DorseId, SoforId, SoforAdi)
-                               VALUES (@KonteynerNo, @KonteynerBoyutu, @YuklemeYeri, @BosaltmaYeri, @Ekstra, @BosDolu, @Tarih, @Saat, @Fiyat, @Kdv, @Aciklama, @CekiciId, @CekiciPlaka, @DorseId, @SoforId, @SoforAdi);
+            cmd.CommandText = @"INSERT INTO Seferler (KonteynerNo, KonteynerBoyutu, YuklemeYeri, BosaltmaYeri, Ekstra, BosDolu, Tarih, Saat, Fiyat, Kdv, Tevkifat, Aciklama, CekiciId, CekiciPlaka, DorseId, SoforId, SoforAdi)
+                               VALUES (@KonteynerNo, @KonteynerBoyutu, @YuklemeYeri, @BosaltmaYeri, @Ekstra, @BosDolu, @Tarih, @Saat, @Fiyat, @Kdv, @Tevkifat, @Aciklama, @CekiciId, @CekiciPlaka, @DorseId, @SoforId, @SoforAdi);
                                SELECT last_insert_rowid();";
             BindSeferParams(cmd, s);
             var id = (long)cmd.ExecuteScalar()!;
@@ -807,6 +809,7 @@ namespace TirSeferleriModernApp.Services
                                 Saat=@Saat,
                                 Fiyat=@Fiyat,
                                 Kdv=@Kdv,
+                                Tevkifat=@Tevkifat,
                                 Aciklama=@Aciklama,
                                 CekiciId=@CekiciId,
                                 CekiciPlaka=@CekiciPlaka,
@@ -831,6 +834,7 @@ namespace TirSeferleriModernApp.Services
             cmd.Parameters.AddWithValue("@Saat", (object?)s.Saat ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@Fiyat", Convert.ToDouble(s.Fiyat));
             cmd.Parameters.AddWithValue("@Kdv", Convert.ToDouble(s.Kdv));
+            cmd.Parameters.AddWithValue("@Tevkifat", Convert.ToDouble(s.Tevkifat));
             cmd.Parameters.AddWithValue("@Aciklama", (object?)s.Aciklama ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@CekiciId", (object?)s.CekiciId ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@CekiciPlaka", (object?)s.CekiciPlaka ?? DBNull.Value);
@@ -845,7 +849,7 @@ namespace TirSeferleriModernApp.Services
             using var connection = new SqliteConnection(ConnectionString);
             connection.Open();
             using var cmd = connection.CreateCommand();
-            cmd.CommandText = "SELECT SeferId, KonteynerNo, KonteynerBoyutu, YuklemeYeri, BosaltmaYeri, Ekstra, BosDolu, Tarih, Saat, Fiyat, Kdv, Aciklama, CekiciId, CekiciPlaka, DorseId, SoforId, SoforAdi FROM Seferler ORDER BY SeferId DESC";
+            cmd.CommandText = "SELECT SeferId, KonteynerNo, KonteynerBoyutu, YuklemeYeri, BosaltmaYeri, Ekstra, BosDolu, Tarih, Saat, Fiyat, Kdv, Tevkifat, Aciklama, CekiciId, CekiciPlaka, DorseId, SoforId, SoforAdi FROM Seferler ORDER BY SeferId DESC";
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
             {
@@ -862,12 +866,13 @@ namespace TirSeferleriModernApp.Services
                     Saat = reader.IsDBNull(8) ? null : reader.GetString(8),
                     Fiyat = reader.IsDBNull(9) ? 0 : Convert.ToDecimal(reader.GetDouble(9)),
                     Kdv = reader.IsDBNull(10) ? 0 : Convert.ToDecimal(reader.GetDouble(10)),
-                    Aciklama = reader.IsDBNull(11) ? null : reader.GetString(11),
-                    CekiciId = reader.IsDBNull(12) ? null : reader.GetInt32(12),
-                    CekiciPlaka = reader.IsDBNull(13) ? null : reader.GetString(13),
-                    DorseId = reader.IsDBNull(14) ? null : reader.GetInt32(14),
-                    SoforId = reader.IsDBNull(15) ? null : reader.GetInt32(15),
-                    SoforAdi = reader.IsDBNull(16) ? null : reader.GetString(16)
+                    Tevkifat = reader.IsDBNull(11) ? 0 : Convert.ToDecimal(reader.GetDouble(11)),
+                    Aciklama = reader.IsDBNull(12) ? null : reader.GetString(12),
+                    CekiciId = reader.IsDBNull(13) ? null : reader.GetInt32(13),
+                    CekiciPlaka = reader.IsDBNull(14) ? null : reader.GetString(14),
+                    DorseId = reader.IsDBNull(15) ? null : reader.GetInt32(15),
+                    SoforId = reader.IsDBNull(16) ? null : reader.GetInt32(16),
+                    SoforAdi = reader.IsDBNull(17) ? null : reader.GetString(17)
                 };
                 result.Add(s);
             }
@@ -880,7 +885,7 @@ namespace TirSeferleriModernApp.Services
             using var connection = new SqliteConnection(ConnectionString);
             connection.Open();
             using var cmd = connection.CreateCommand();
-            cmd.CommandText = "SELECT SeferId, KonteynerNo, KonteynerBoyutu, YuklemeYeri, BosaltmaYeri, Ekstra, BosDolu, Tarih, Saat, Fiyat, Kdv, Aciklama, CekiciId, CekiciPlaka, DorseId, SoforId, SoforAdi FROM Seferler WHERE CekiciPlaka = @p ORDER BY SeferId DESC";
+            cmd.CommandText = "SELECT SeferId, KonteynerNo, KonteynerBoyutu, YuklemeYeri, BosaltmaYeri, Ekstra, BosDolu, Tarih, Saat, Fiyat, Kdv, Tevkifat, Aciklama, CekiciId, CekiciPlaka, DorseId, SoforId, SoforAdi FROM Seferler WHERE CekiciPlaka = @p ORDER BY SeferId DESC";
             cmd.Parameters.AddWithValue("@p", cekiciPlaka);
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
@@ -898,12 +903,13 @@ namespace TirSeferleriModernApp.Services
                     Saat = reader.IsDBNull(8) ? null : reader.GetString(8),
                     Fiyat = reader.IsDBNull(9) ? 0 : Convert.ToDecimal(reader.GetDouble(9)),
                     Kdv = reader.IsDBNull(10) ? 0 : Convert.ToDecimal(reader.GetDouble(10)),
-                    Aciklama = reader.IsDBNull(11) ? null : reader.GetString(11),
-                    CekiciId = reader.IsDBNull(12) ? null : reader.GetInt32(12),
-                    CekiciPlaka = reader.IsDBNull(13) ? null : reader.GetString(13),
-                    DorseId = reader.IsDBNull(14) ? null : reader.GetInt32(14),
-                    SoforId = reader.IsDBNull(15) ? null : reader.GetInt32(15),
-                    SoforAdi = reader.IsDBNull(16) ? null : reader.GetString(16)
+                    Tevkifat = reader.IsDBNull(11) ? 0 : Convert.ToDecimal(reader.GetDouble(11)),
+                    Aciklama = reader.IsDBNull(12) ? null : reader.GetString(12),
+                    CekiciId = reader.IsDBNull(13) ? null : reader.GetInt32(13),
+                    CekiciPlaka = reader.IsDBNull(14) ? null : reader.GetString(14),
+                    DorseId = reader.IsDBNull(15) ? null : reader.GetInt32(15),
+                    SoforId = reader.IsDBNull(16) ? null : reader.GetInt32(16),
+                    SoforAdi = reader.IsDBNull(17) ? null : reader.GetString(17)
                 };
                 result.Add(s);
             }

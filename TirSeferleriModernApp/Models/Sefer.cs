@@ -65,6 +65,14 @@ namespace TirSeferleriModernApp.Models
             set => SetProperty(ref _kdv, value);
         }
 
+        // Tevkifat: KDV * %20 (0 ise 0). DB'ye de yazılır.
+        private decimal _tevkifat;
+        public decimal Tevkifat
+        {
+            get => _tevkifat;
+            set => SetProperty(ref _tevkifat, value);
+        }
+
         public string? Aciklama { get; set; }
         public int? CekiciId { get; set; }
         public string? CekiciPlaka { get; set; }
