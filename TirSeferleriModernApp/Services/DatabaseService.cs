@@ -3,6 +3,7 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Text.RegularExpressions;
 using TirSeferleriModernApp.Models;
 using static TirSeferleriModernApp.Views.VergilerAracView;
@@ -22,22 +23,7 @@ namespace TirSeferleriModernApp.Services
             _instanceConnectionString = $"Data Source={_dbFile}";
         }
 
-        // Helper: basic sefer validation (server-side)
-        private static bool ValidateSeferInternal(Sefer s)
-        {
-            if (s == null) return false;
-            // Konteyner boyutu zorunlu; diğerleri opsiyonel olsun ki kullanıcı eksiklerle de kaydedebilsin
-            if (string.IsNullOrWhiteSpace(s.KonteynerBoyutu)) return false;
-            // YuklemeYeri/BosaltmaYeri zorunlu olmasın
-            return true;
-        }
-
-        private static DateTime ParseDate(string? s)
-        {
-            if (DateTime.TryParse(s, out var dt)) return dt;
-            return DateTime.Today;
-        }
-
+        // -------------------- Initialization --------------------
         public void Initialize()
         {
             EnsureDatabaseFile();
@@ -54,19 +40,14 @@ namespace TirSeferleriModernApp.Services
             CheckAndCreateOrUpdateGuzergahTablosu();
             CheckAndCreateOrUpdateYakitGiderTablosu();
 
-            // Seed default depots and aliases after tables are ready
+            // Seed only first time
             EnsureDefaultDepolar();
 
-            // Apply requested migration and seed for specific routes (idempotent)
             try
             {
-                // 1) Ensure single-price layout
                 MigrateGuzergahlarToSingleFiyat();
-                // 2) Ensure OtomatikMi column and unique index
                 EnsureGuzergahAutoColumnAndUniqueIndex();
-                // 3) Ensure complete digraph of automatic routes with price=0
                 GenerateAllGuzergahlar();
-                // 4) Seed domain routes with given prices (will update/insert, unique index prevents dups)
                 SeedGivenGuzergahlar();
             }
             catch (Exception ex)
@@ -93,74 +74,19 @@ namespace TirSeferleriModernApp.Services
             }
         }
 
-        // Aliases for depo names (UI shortcuts to canonical names)
-        // Examples:
-        //  TER-4 / TER4 => TERMİNAL4
-        //  TER-6 / TER6 => TERMİNAL6
-        //  TER-7 / TER7 => TERMİNAL7
-        //  TER-2 / TER2 => TERMİNAL2
-        private static string NormalizeDepoName(string? name)
+        // -------------------- Helpers --------------------
+        private static DateTime ParseDate(string? s)
         {
-            if (string.IsNullOrWhiteSpace(name)) return string.Empty;
-            var n = name.Trim();
-
-            // Normalize TER patterns to TERMİNAL{n}
-            // Accept forms: TER-1, TER1, ter-2, TER 3 (with or without hyphen/space)
-            var m = Regex.Match(n, @"^TER[\s-]*([0-9]+)$", RegexOptions.IgnoreCase);
-            if (m.Success && int.TryParse(m.Groups[1].Value, out var terNo))
-            {
-                return $"TERMİNAL{terNo}";
-            }
-
-            // Specific single known mapping kept for safety (no-op if above caught it)
-            if (string.Equals(n, "TER-4", StringComparison.OrdinalIgnoreCase)) return "TERMİNAL4";
-
-            return n;
+            if (DateTime.TryParse(s, out var dt)) return dt;
+            return DateTime.Today;
         }
 
-        // Ensure default depots exist (idempotent). Always store canonical names, not aliases.
-        public static void EnsureDefaultDepolar()
+        private static bool ValidateSeferInternal(Sefer s)
         {
-            try
-            {
-                EnsureDatabaseFileStatic();
-                using var conn = new SqliteConnection(ConnectionString); conn.Open();
-
-                // Removed TER6/TER-6 and TER7/TER-7 from defaults to respect user deletions
-                var defaults = new[]
-                {
-                    "ARDEP", "DEMİRELLER", "ESKİ MADEN", "FALCON", "KAHRAMANLI", "LİMAN-ŞİŞECAM", "NİSA", "NİSA-4", "OSG",
-                    "CCIS", "LİMAN", "OLS", "OLS-1", "TER-2",
-                    "EKANET", "TER-4"
-                };
-
-                foreach (var raw in defaults)
-                {
-                    var alias = raw.Trim();
-                    var canonical = NormalizeDepoName(alias);
-
-                    // If canonical already exists, skip; prevents re-creating alias rows
-                    using var check = conn.CreateCommand();
-                    check.CommandText = "SELECT DepoId FROM Depolar WHERE UPPER(TRIM(DepoAdi)) = UPPER(TRIM(@canon)) LIMIT 1";
-                    check.Parameters.AddWithValue("@canon", canonical);
-                    var exists = check.ExecuteScalar() != null;
-                    if (!exists)
-                    {
-                        using var ins = conn.CreateCommand();
-                        ins.CommandText = "INSERT INTO Depolar (DepoAdi, Aciklama) VALUES (@name, @acik)";
-                        ins.Parameters.AddWithValue("@name", canonical);
-                        if (!string.Equals(alias, canonical, StringComparison.OrdinalIgnoreCase))
-                            ins.Parameters.AddWithValue("@acik", $"{alias} = {canonical}");
-                        else
-                            ins.Parameters.AddWithValue("@acik", DBNull.Value);
-                        ins.ExecuteNonQuery();
-                    }
-                }
-            }
-            catch (Exception ex) { Debug.WriteLine(ex.Message); }
+            if (s == null) return false;
+            return !string.IsNullOrWhiteSpace(s.KonteynerBoyutu);
         }
 
-        // Helper: check if a column exists in a table
         private static bool ColumnExists(SqliteConnection conn, string table, string column)
         {
             using var cmd = conn.CreateCommand();
@@ -168,40 +94,92 @@ namespace TirSeferleriModernApp.Services
             using var rdr = cmd.ExecuteReader();
             while (rdr.Read())
             {
-                if (string.Equals(rdr.GetString(1), column, StringComparison.OrdinalIgnoreCase)) return true;
+                if (!rdr.IsDBNull(1) && string.Equals(rdr.GetString(1), column, StringComparison.OrdinalIgnoreCase))
+                    return true;
             }
             return false;
         }
 
-        // Helper: ensure depo exists and return its Id (handles aliases). Always create canonical entry when inserting.
-        private static int EnsureDepoAndGetId(SqliteConnection conn, string depoAdiRaw)
+        // Aliases to canonical
+        private static string NormalizeDepoName(string? name)
+        {
+            if (string.IsNullOrWhiteSpace(name)) return string.Empty;
+            var n = name.Trim();
+            var m = Regex.Match(n, @"^TER[\s-]*([0-9]+)$", RegexOptions.IgnoreCase);
+            if (m.Success && int.TryParse(m.Groups[1].Value, out var terNo))
+                return $"TERMİNAL{terNo}";
+            if (string.Equals(n, "TER-4", StringComparison.OrdinalIgnoreCase)) return "TERMİNAL4";
+            return n;
+        }
+
+        private static int? TryGetDepoIdByName(SqliteConnection conn, string depoAdiRaw)
         {
             var a = (depoAdiRaw ?? string.Empty).Trim();
             var an = NormalizeDepoName(a);
-
-            using (var check = conn.CreateCommand())
-            {
-                check.CommandText = "SELECT DepoId FROM Depolar WHERE UPPER(TRIM(DepoAdi)) IN (UPPER(TRIM(@a)), UPPER(TRIM(@an))) LIMIT 1";
-                check.Parameters.AddWithValue("@a", a);
-                check.Parameters.AddWithValue("@an", an);
-                var val = check.ExecuteScalar();
-                if (val != null && val != DBNull.Value) return Convert.ToInt32(val);
-            }
-
-            using (var ins = conn.CreateCommand())
-            {
-                ins.CommandText = "INSERT INTO Depolar (DepoAdi, Aciklama) VALUES (@name, @acik); SELECT last_insert_rowid();";
-                ins.Parameters.AddWithValue("@name", an); // insert canonical
-                if (!string.Equals(a, an, StringComparison.OrdinalIgnoreCase))
-                    ins.Parameters.AddWithValue("@acik", $"{a} = {an}");
-                else
-                    ins.Parameters.AddWithValue("@acik", DBNull.Value);
-                var id = (long)ins.ExecuteScalar()!;
-                return (int)id;
-            }
+            using var check = conn.CreateCommand();
+            check.CommandText = "SELECT DepoId FROM Depolar WHERE UPPER(TRIM(DepoAdi)) IN (UPPER(TRIM(@a)), UPPER(TRIM(@an))) LIMIT 1";
+            check.Parameters.AddWithValue("@a", a);
+            check.Parameters.AddWithValue("@an", an);
+            var val = check.ExecuteScalar();
+            if (val == null || val == DBNull.Value) return null;
+            return Convert.ToInt32(val);
         }
 
-        // Migration: collapse price columns into a single Fiyat column and drop the rest (idempotent)
+        private static int EnsureDepoAndGetId(SqliteConnection conn, string depoAdiRaw)
+        {
+            var id = TryGetDepoIdByName(conn, depoAdiRaw);
+            if (id != null) return id.Value;
+            var canonical = NormalizeDepoName(depoAdiRaw);
+            using var ins = conn.CreateCommand();
+            ins.CommandText = "INSERT INTO Depolar (DepoAdi, Aciklama) VALUES (@name, @acik); SELECT last_insert_rowid();";
+            ins.Parameters.AddWithValue("@name", canonical);
+            if (!string.Equals(canonical, depoAdiRaw, StringComparison.OrdinalIgnoreCase))
+                ins.Parameters.AddWithValue("@acik", $"{depoAdiRaw.Trim()} = {canonical}");
+            else
+                ins.Parameters.AddWithValue("@acik", DBNull.Value);
+            return (int)(long)ins.ExecuteScalar()!;
+        }
+
+        // -------------------- Seed (respect user deletions) --------------------
+        public static void EnsureDefaultDepolar()
+        {
+            try
+            {
+                EnsureDatabaseFileStatic();
+                using var conn = new SqliteConnection(ConnectionString); conn.Open();
+
+                // Seed only when empty
+                using (var cnt = conn.CreateCommand())
+                {
+                    cnt.CommandText = "SELECT COUNT(1) FROM Depolar";
+                    var c = Convert.ToInt32(cnt.ExecuteScalar() ?? 0);
+                    if (c > 0) return;
+                }
+
+                string[] defaults =
+                {
+                    "ARDEP", "DEMİRELLER", "ESKİ MADEN", "FALCON", "KAHRAMANLI", "LİMAN-ŞİŞECAM", "NİSA", "NİSA-4", "OSG",
+                    "CCIS", "LİMAN", "OLS", "OLS-1", "TER-2", "EKANET", "TER-4"
+                };
+
+                foreach (var raw in defaults)
+                {
+                    var alias = raw.Trim();
+                    var canonical = NormalizeDepoName(alias);
+                    using var ins = conn.CreateCommand();
+                    ins.CommandText = "INSERT INTO Depolar (DepoAdi, Aciklama) VALUES (@name, @acik)";
+                    ins.Parameters.AddWithValue("@name", canonical);
+                    if (!string.Equals(alias, canonical, StringComparison.OrdinalIgnoreCase))
+                        ins.Parameters.AddWithValue("@acik", $"{alias} = {canonical}");
+                    else
+                        ins.Parameters.AddWithValue("@acik", DBNull.Value);
+                    ins.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); }
+        }
+
+        // -------------------- Migrations / Schema helpers --------------------
         public static void MigrateGuzergahlarToSingleFiyat()
         {
             EnsureDatabaseFileStatic();
@@ -209,8 +187,6 @@ namespace TirSeferleriModernApp.Services
 
             bool hasFiyat = ColumnExists(conn, "Guzergahlar", "Fiyat");
             bool hasAnyOld = ColumnExists(conn, "Guzergahlar", "BosFiyat") || ColumnExists(conn, "Guzergahlar", "DoluFiyat") || ColumnExists(conn, "Guzergahlar", "EmanetBosFiyat") || ColumnExists(conn, "Guzergahlar", "EmanetDoluFiyat") || ColumnExists(conn, "Guzergahlar", "SodaBosFiyat") || ColumnExists(conn, "Guzergahlar", "SodaDoluFiyat");
-
-            // If already only Fiyat (and no old columns), nothing to do
             if (hasFiyat && !hasAnyOld) return;
 
             using var tx = conn.BeginTransaction();
@@ -229,7 +205,6 @@ namespace TirSeferleriModernApp.Services
                     cmd.ExecuteNonQuery();
                 }
 
-                // Copy with coalesce if old columns exist; else simple copy
                 using (var copy = conn.CreateCommand())
                 {
                     copy.Transaction = tx;
@@ -250,8 +225,7 @@ namespace TirSeferleriModernApp.Services
                     }
                     else
                     {
-                        // Table exists with neither? Then just create empty new table
-                        copy.CommandText = "SELECT 1"; // no-op
+                        copy.CommandText = "SELECT 1";
                     }
                     copy.ExecuteNonQuery();
                 }
@@ -280,13 +254,11 @@ namespace TirSeferleriModernApp.Services
             }
         }
 
-        // Ensure OtomatikMi column and unique index
         public static void EnsureGuzergahAutoColumnAndUniqueIndex()
         {
             EnsureDatabaseFileStatic();
             using var conn = new SqliteConnection(ConnectionString); conn.Open();
 
-            // add column if missing
             if (!ColumnExists(conn, "Guzergahlar", "OtomatikMi"))
             {
                 using var alter = conn.CreateCommand();
@@ -294,15 +266,11 @@ namespace TirSeferleriModernApp.Services
                 try { alter.ExecuteNonQuery(); } catch (Exception ex) { Debug.WriteLine("[EnsureGuzergahAutoColumn] " + ex.Message); }
             }
 
-            // unique index
-            using (var idx = conn.CreateCommand())
-            {
-                idx.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS ux_guzergah_cikis_varis ON Guzergahlar(CikisDepoId, VarisDepoId);";
-                try { idx.ExecuteNonQuery(); } catch (Exception ex) { Debug.WriteLine("[EnsureGuzergahUnique] " + ex.Message); }
-            }
+            using var idx = conn.CreateCommand();
+            idx.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS ux_guzergah_cikis_varis ON Guzergahlar(CikisDepoId, VarisDepoId);";
+            try { idx.ExecuteNonQuery(); } catch (Exception ex) { Debug.WriteLine("[EnsureGuzergahUnique] " + ex.Message); }
         }
 
-        // Generate complete digraph of routes with price=0 (auto) - idempotent
         public static int GenerateAllGuzergahlar()
         {
             EnsureDatabaseFileStatic();
@@ -329,7 +297,6 @@ namespace TirSeferleriModernApp.Services
             }
         }
 
-        // When a new depot is added: add only edges involving it (both directions) - idempotent
         public static int HandleNewDepo(int depoId)
         {
             EnsureDatabaseFileStatic();
@@ -365,7 +332,6 @@ namespace TirSeferleriModernApp.Services
             }
         }
 
-        // On delete: remove auto routes; if manual exist and !force, cancel; else remove all then delete depot
         public static bool OnDepoDelete(int depoId, bool force = false)
         {
             EnsureDatabaseFileStatic();
@@ -393,7 +359,7 @@ namespace TirSeferleriModernApp.Services
                 if (manualCount > 0 && !force)
                 {
                     tx.Rollback();
-                    return false; // manual ilişkiler var, iptal
+                    return false;
                 }
 
                 if (force)
@@ -432,13 +398,10 @@ namespace TirSeferleriModernApp.Services
                 using var connection = new SqliteConnection(ConnectionString);
                 connection.Open();
                 using var cmd = connection.CreateCommand();
-
-                // Accept both the given name and its normalized (canonical) form
                 var c = cikisDepoAdi.Trim();
                 var v = varisDepoAdi.Trim();
                 var cn = NormalizeDepoName(c);
                 var vn = NormalizeDepoName(v);
-
                 cmd.CommandText = @"SELECT g.Fiyat
                                      FROM Guzergahlar g
                                      INNER JOIN Depolar cd ON cd.DepoId = g.CikisDepoId
@@ -461,6 +424,7 @@ namespace TirSeferleriModernApp.Services
             }
         }
 
+        // -------------------- Schema creation helpers --------------------
         public static void CheckAndCreateOrUpdateGuzergahTablosu()
         {
             try
@@ -483,7 +447,6 @@ namespace TirSeferleriModernApp.Services
                 ];
                 EnsureTable("Guzergahlar", createScript, requiredColumns);
 
-                // unique index after ensuring table/columns
                 using var conn = new SqliteConnection(ConnectionString); conn.Open();
                 using var idx = conn.CreateCommand();
                 idx.CommandText = "CREATE UNIQUE INDEX IF NOT EXISTS ux_guzergah_cikis_varis ON Guzergahlar(CikisDepoId, VarisDepoId);";
@@ -621,11 +584,11 @@ namespace TirSeferleriModernApp.Services
                 Tarih TEXT NOT NULL
             );";
                 string[] requiredColumns = [
-                "CekiciId INTEGER",
-                "Aciklama TEXT",
-                "Tutar REAL",
-                "Tarih TEXT"
-            ];
+                    "CekiciId INTEGER",
+                    "Aciklama TEXT",
+                    "Tutar REAL",
+                    "Tarih TEXT"
+                ];
                 EnsureTable("Giderler", createScript, requiredColumns);
             }
             catch (Exception ex) { Debug.WriteLine(ex.Message); }
@@ -673,7 +636,7 @@ namespace TirSeferleriModernApp.Services
             }
         }
 
-        // Vehicle helpers used by UI
+        // -------------------- Vehicle helpers --------------------
         public static (int? cekiciId, int? dorseId, int? soforId, string? soforAdi, string? dorsePlaka) GetVehicleInfoByCekiciPlaka(string cekiciPlaka)
         {
             try
@@ -715,7 +678,33 @@ namespace TirSeferleriModernApp.Services
             catch (Exception ex) { Debug.WriteLine(ex.Message); return null; }
         }
 
-        // Sefer CRUD (uses ValidateSeferInternal)
+        public static List<Arac> GetAraclar()
+        {
+            var list = new List<Arac>();
+            try
+            {
+                using var connection = new SqliteConnection(ConnectionString);
+                connection.Open();
+                using var command = connection.CreateCommand();
+                command.CommandText = @"SELECT  C.Plaka, S.SoforAdi FROM Cekiciler as C
+        LEFT JOIN Soforler S ON S.SoforId = C.SoforId
+        WHERE   IFNULL(C.Arsivli,0)=0
+        ORDER BY C.Plaka;";
+                using var reader = command.ExecuteReader();
+                while (reader.Read())
+                {
+                    list.Add(new Arac
+                    {
+                        Plaka = reader.IsDBNull(0) ? string.Empty : reader.GetString(0),
+                        SoforAdi = reader.IsDBNull(1) ? string.Empty : reader.GetString(1)
+                    });
+                }
+            }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); }
+            return list;
+        }
+
+        // -------------------- Sefer CRUD --------------------
         public static int SeferEkle(Sefer s)
         {
             if (!ValidateSeferInternal(s)) return 0;
@@ -756,6 +745,25 @@ namespace TirSeferleriModernApp.Services
             BindSeferParams(cmd, s);
             cmd.Parameters.AddWithValue("@SeferId", s.SeferId);
             cmd.ExecuteNonQuery();
+        }
+
+        private static void BindSeferParams(SqliteCommand cmd, Sefer s)
+        {
+            cmd.Parameters.AddWithValue("@KonteynerNo", (object?)s.KonteynerNo ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@KonteynerBoyutu", (object?)s.KonteynerBoyutu ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@YuklemeYeri", (object?)s.YuklemeYeri ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@BosaltmaYeri", (object?)s.BosaltmaYeri ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Ekstra", (object?)s.Ekstra ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@BosDolu", (object?)s.BosDolu ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Tarih", s.Tarih == default ? DateTime.Today.ToString("yyyy-MM-dd") : s.Tarih.ToString("yyyy-MM-dd"));
+            cmd.Parameters.AddWithValue("@Saat", (object?)s.Saat ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@Fiyat", Convert.ToDouble(s.Fiyat));
+            cmd.Parameters.AddWithValue("@Aciklama", (object?)s.Aciklama ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@CekiciId", (object?)s.CekiciId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@CekiciPlaka", (object?)s.CekiciPlaka ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@DorseId", (object?)s.DorseId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@SoforId", (object?)s.SoforId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@SoforAdi", (object?)s.SoforAdi ?? DBNull.Value);
         }
 
         public static List<Sefer> GetSeferler()
@@ -827,25 +835,7 @@ namespace TirSeferleriModernApp.Services
             return result;
         }
 
-        private static void BindSeferParams(SqliteCommand cmd, Sefer s)
-        {
-            cmd.Parameters.AddWithValue("@KonteynerNo", (object?)s.KonteynerNo ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@KonteynerBoyutu", (object?)s.KonteynerBoyutu ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@YuklemeYeri", (object?)s.YuklemeYeri ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@BosaltmaYeri", (object?)s.BosaltmaYeri ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@Ekstra", (object?)s.Ekstra ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@BosDolu", (object?)s.BosDolu ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@Tarih", s.Tarih == default ? DateTime.Today.ToString("yyyy-MM-dd") : s.Tarih.ToString("yyyy-MM-dd"));
-            cmd.Parameters.AddWithValue("@Saat", (object?)s.Saat ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@Fiyat", Convert.ToDouble(s.Fiyat));
-            cmd.Parameters.AddWithValue("@Aciklama", (object?)s.Aciklama ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@CekiciId", (object?)s.CekiciId ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@CekiciPlaka", (object?)s.CekiciPlaka ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@DorseId", (object?)s.DorseId ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@SoforId", (object?)s.SoforId ?? DBNull.Value);
-            cmd.Parameters.AddWithValue("@SoforAdi", (object?)s.SoforAdi ?? DBNull.Value);
-        }
-
+        // -------------------- Lookup lists --------------------
         public static List<string> GetDepoAdlari()
         {
             var list = new List<string>();
@@ -886,6 +876,7 @@ namespace TirSeferleriModernApp.Services
             return list;
         }
 
+        // -------------------- Sofor/Cekici/Dorse schema helpers --------------------
         public static void EnsureSoforlerArsivliColumn()
         {
             try
@@ -1039,6 +1030,7 @@ namespace TirSeferleriModernApp.Services
             catch (Exception ex) { Debug.WriteLine(ex.Message); return 0; }
         }
 
+        // -------------------- Yakit Giderleri --------------------
         public static void CheckAndCreateOrUpdateYakitGiderTablosu()
         {
             try
@@ -1102,7 +1094,7 @@ namespace TirSeferleriModernApp.Services
             cmd.Parameters.AddWithValue("@cid", (object?)y.CekiciId ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@p", (object?)y.Plaka ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@t", y.Tarih.ToString("yyyy-MM-dd"));
-            cmd.Parameters.AddWithValue("@i", (object?)y.Istasyon ?? DBNull.Value);
+            cmd.Parameters.AddWithValue(",@i", (object?)y.Istasyon ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@l", Convert.ToDouble(y.Litre));
             cmd.Parameters.AddWithValue("@b", Convert.ToDouble(y.BirimFiyat));
             cmd.Parameters.AddWithValue("@u", Convert.ToDouble(y.Tutar));
@@ -1138,6 +1130,7 @@ namespace TirSeferleriModernApp.Services
             cmd.ExecuteNonQuery();
         }
 
+        // -------------------- Genel Giderler --------------------
         public static List<GenelGider> GetGenelGiderleri(int? cekiciId, DateTime? bas, DateTime? bit)
         {
             var list = new List<GenelGider>();
@@ -1202,7 +1195,7 @@ namespace TirSeferleriModernApp.Services
             cmd.ExecuteNonQuery();
         }
 
-        // Stubs for other screens (implement similarly if needed)
+        // -------------------- Stubs for screens not implemented here --------------------
         public static void CheckAndCreateOrUpdateSanaiGiderTablosu() { }
         public static List<SanaiGider> GetSanaiGiderleri(int? cekiciId, DateTime? bas, DateTime? bit) => new();
         public static int SanaiGiderEkle(SanaiGider s) => 0;
@@ -1219,34 +1212,7 @@ namespace TirSeferleriModernApp.Services
         public static void VergiAracGuncelle(VergiArac v) { }
         public static void VergiAracSil(int id) { }
 
-        public static List<Arac> GetAraclar()
-        {
-            var list = new List<Arac>();
-            try
-            {
-                using var connection = new SqliteConnection(ConnectionString);
-                connection.Open();
-                using var command = connection.CreateCommand();
-                command.CommandText = @"SELECT  C.Plaka, S.SoforAdi FROM Cekiciler as C
-        LEFT JOIN Soforler S ON S.SoforId = C.SoforId
-        WHERE   IFNULL(C.Arsivli,0)=0
-        ORDER BY C.Plaka;";
-                using var reader = command.ExecuteReader();
-                while (reader.Read())
-                {
-                    list.Add(new Arac
-                    {
-                        Plaka = reader.IsDBNull(0) ? string.Empty : reader.GetString(0),
-                        SoforAdi = reader.IsDBNull(1) ? string.Empty : reader.GetString(1)
-                    });
-                }
-            }
-            catch (Exception ex) { Debug.WriteLine(ex.Message); }
-            return list;
-        }
-
-        // Seed domain-specific routes with given prices as MANUAL (OtomatikMi=0).
-        // If an automatic route already exists for the pair, update price and flip to manual.
+        // -------------------- Domain Seeds --------------------
         public static void SeedGivenGuzergahlar()
         {
             EnsureDatabaseFileStatic();
@@ -1266,18 +1232,18 @@ namespace TirSeferleriModernApp.Services
 
                 foreach (var (fromName, toName, price) in routes)
                 {
-                    int cId = EnsureDepoAndGetId(conn, fromName);
-                    int vId = EnsureDepoAndGetId(conn, toName);
+                    int? cId = TryGetDepoIdByName(conn, fromName);
+                    int? vId = TryGetDepoIdByName(conn, toName);
+                    if (cId == null || vId == null) continue; // don't recreate deleted depots
 
-                    // Upsert with manual flag
                     using var upd = conn.CreateCommand();
                     upd.Transaction = tx;
                     upd.CommandText = @"UPDATE Guzergahlar
                                           SET Fiyat=@p, Aciklama='', OtomatikMi=0
                                         WHERE CikisDepoId=@c AND VarisDepoId=@v";
                     upd.Parameters.AddWithValue("@p", Convert.ToDouble(price));
-                    upd.Parameters.AddWithValue("@c", cId);
-                    upd.Parameters.AddWithValue("@v", vId);
+                    upd.Parameters.AddWithValue("@c", cId.Value);
+                    upd.Parameters.AddWithValue("@v", vId.Value);
                     int affected = upd.ExecuteNonQuery();
                     if (affected == 0)
                     {
@@ -1285,8 +1251,8 @@ namespace TirSeferleriModernApp.Services
                         ins.Transaction = tx;
                         ins.CommandText = @"INSERT OR IGNORE INTO Guzergahlar (CikisDepoId, VarisDepoId, Fiyat, Aciklama, OtomatikMi)
                                               VALUES (@c, @v, @p, '', 0)";
-                        ins.Parameters.AddWithValue("@c", cId);
-                        ins.Parameters.AddWithValue("@v", vId);
+                        ins.Parameters.AddWithValue("@c", cId.Value);
+                        ins.Parameters.AddWithValue("@v", vId.Value);
                         ins.Parameters.AddWithValue("@p", Convert.ToDouble(price));
                         ins.ExecuteNonQuery();
                     }
@@ -1298,7 +1264,6 @@ namespace TirSeferleriModernApp.Services
             {
                 tx.Rollback();
                 Debug.WriteLine("[SeedGivenGuzergahlar] error: " + ex.Message);
-                throw;
             }
         }
     }
