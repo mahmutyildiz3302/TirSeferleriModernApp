@@ -59,7 +59,7 @@ namespace TirSeferleriModernApp.ViewModels
 
         // Depo/ekstra/bos-dolu seçim listeleri
         public ObservableCollection<string> DepoAdlari { get; } = [];
-        public ObservableCollection<string> EkstraAdlari { get; } = ["EKSTRA YOK", "SODA", "EMANET"];
+        public ObservableCollection<string> EkstraAdlari { get; } = [" ", "SODA", "EMANET"]; // "EKSTRA YOK" -> tek boşluk
         public ObservableCollection<string> BosDoluSecenekleri { get; } = ["Boş", "Dolu"];
 
         // Soldaki menüden gelen bilgiler (bildirimli özellikler)
@@ -274,7 +274,7 @@ namespace TirSeferleriModernApp.ViewModels
                     _routeDefaultsApplied = true;
                     SeciliSefer!.KonteynerBoyutu = "40";
                     SeciliSefer!.BosDolu = "Dolu";
-                    SeciliSefer!.Ekstra = "EKSTRA YOK";
+                    SeciliSefer!.Ekstra = " "; // varsayılan: boşluk
                 }
                 _haveBothEndpoints = nowBoth;
             }

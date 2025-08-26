@@ -69,7 +69,6 @@
                           SelectedItem="{Binding SeciliSefer.Ekstra, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                           IsEditable="False"
                           MinWidth="200" Margin="0,5,0,10">
-                    <!-- Görünümde EKSTRA YOK -> boşluk gösterimi -->
                     <ComboBox.ItemTemplate>
                         <DataTemplate>
                             <TextBlock Text="{Binding Converter={StaticResource EkstraDisplayConverter}}"/>

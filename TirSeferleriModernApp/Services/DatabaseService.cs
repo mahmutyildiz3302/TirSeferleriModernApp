@@ -49,11 +49,27 @@ namespace TirSeferleriModernApp.Services
                 EnsureGuzergahAutoColumnAndUniqueIndex();
                 GenerateAllGuzergahlar();
                 SeedGivenGuzergahlar();
+
+                // Yeni: Seferler.Ekstra alanında 'EKSTRA YOK' olanları tek boşlukla değiştir
+                NormalizeEkstraBosluk();
             }
             catch (Exception ex)
             {
                 Debug.WriteLine("[Initialize] Migration/Seed error: " + ex.Message);
             }
+        }
+
+        private static void NormalizeEkstraBosluk()
+        {
+            try
+            {
+                EnsureDatabaseFileStatic();
+                using var conn = new SqliteConnection(ConnectionString); conn.Open();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "UPDATE Seferler SET Ekstra=' ' WHERE UPPER(TRIM(IFNULL(Ekstra,'')))='EKSTRA YOK'";
+                cmd.ExecuteNonQuery();
+            }
+            catch (Exception ex) { Debug.WriteLine(ex.Message); }
         }
 
         private void EnsureDatabaseFile()

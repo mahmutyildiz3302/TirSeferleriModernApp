@@ -18,7 +18,7 @@ namespace TirSeferleriModernApp.Converters
         {
             var s = value?.ToString();
             if (string.IsNullOrWhiteSpace(s))
-                return "EKSTRA YOK"; // boş gösterim -> modelde EKSTRA YOK
+                return " "; // boş gösterim -> veritabanında tek boşluk olarak tutulacak
             return s!;
         }
     }
