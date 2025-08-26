@@ -7,6 +7,8 @@ using TirSeferleriModernApp.Services;
 using TirSeferleriModernApp.Extensions;
 using MaterialDesignThemes.Wpf;
 using System.ComponentModel;
+using System.Linq;
+using System.Collections.Generic;
 
 namespace TirSeferleriModernApp.ViewModels
 {
@@ -137,9 +139,9 @@ namespace TirSeferleriModernApp.ViewModels
             }
             // Listeyi, filtre korunarak yenile
             if (!string.IsNullOrWhiteSpace(SeciliCekiciPlaka))
-                SeferListesi.ReplaceAll(DatabaseService.GetSeferlerByCekiciPlaka(SeciliCekiciPlaka));
+                SetSeferListWithTotals(DatabaseService.GetSeferlerByCekiciPlaka(SeciliCekiciPlaka));
             else
-                SeferListesi.ReplaceAll(DatabaseService.GetSeferler());
+                SetSeferListWithTotals(DatabaseService.GetSeferler());
         }
 
         private void SeferGuncelle(Sefer guncellenecekSefer)
@@ -205,16 +207,44 @@ namespace TirSeferleriModernApp.ViewModels
 
         public void LoadSeferler()
         {
-            SeferListesi.ReplaceAll(DatabaseService.GetSeferler());
+            SetSeferListWithTotals(DatabaseService.GetSeferler());
             DepoAdlari.ReplaceAll(DatabaseService.GetDepoAdlari());
             // EkstraAdlari sabit; DB'den doldurulmayacak
         }
 
         public void LoadSeferler(string cekiciPlaka)
         {
-            SeferListesi.ReplaceAll(DatabaseService.GetSeferlerByCekiciPlaka(cekiciPlaka));
+            SetSeferListWithTotals(DatabaseService.GetSeferlerByCekiciPlaka(cekiciPlaka));
             DepoAdlari.ReplaceAll(DatabaseService.GetDepoAdlari());
             // EkstraAdlari sabit; DB'den doldurulmayacak
+        }
+
+        private void SetSeferListWithTotals(IEnumerable<Sefer> data)
+        {
+            var list = data?.ToList() ?? new List<Sefer>();
+            var header = BuildToplamSatir(list);
+            var footer = BuildToplamSatir(list);
+            var withTotals = new List<Sefer>(list.Count + 2) { header };
+            withTotals.AddRange(list);
+            withTotals.Add(footer);
+            SeferListesi.ReplaceAll(withTotals);
+        }
+
+        private static Sefer BuildToplamSatir(IEnumerable<Sefer> list)
+        {
+            var src = list?.Where(x => x != null) ?? Enumerable.Empty<Sefer>();
+            return new Sefer
+            {
+                SeferId = 0,
+                KonteynerNo = string.Empty,
+                Tarih = DateTime.Today,
+                Fiyat = src.Sum(x => x.Fiyat),
+                Kdv = src.Sum(x => x.Kdv),
+                Tevkifat = src.Sum(x => x.Tevkifat),
+                KdvDahilTutar = src.Sum(x => x.KdvDahilTutar),
+                Aciklama = "Toplam",
+                CekiciPlaka = string.Empty
+            };
         }
 
         private void RecalcFiyat()

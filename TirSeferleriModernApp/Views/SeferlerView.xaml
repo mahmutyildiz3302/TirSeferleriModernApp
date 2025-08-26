@@ -13,6 +13,7 @@
     <UserControl.Resources>
         <conv:RowIndexToNumberConverter x:Key="RowIndexToNumber"/>
         <conv:EkstraDisplayConverter x:Key="EkstraDisplayConverter"/>
+        <conv:HideOnToplamConverter x:Key="HideOnToplamConverter"/>
     </UserControl.Resources>
 
     <Grid Margin="20">
@@ -175,20 +176,48 @@
                         <DataGridTemplateColumn Header="#" Width="50">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding RelativeSource={RelativeSource AncestorType=DataGridRow}, Path=AlternationIndex, Converter={StaticResource RowIndexToNumber}}" HorizontalAlignment="Center"/>
+                                    <TextBlock>
+                                        <TextBlock.Text>
+                                            <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                                <Binding RelativeSource="{RelativeSource AncestorType=DataGridRow}" Path="AlternationIndex"/>
+                                                <Binding Path="Aciklama"/>
+                                            </MultiBinding>
+                                        </TextBlock.Text>
+                                    </TextBlock>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                         </DataGridTemplateColumn>
 
                         <DataGridTextColumn Header="Sefer ID" Binding="{Binding SeferId}" Visibility="Collapsed" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="Konteyner No" Binding="{Binding KonteynerNo, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                        <DataGridTextColumn Header="Boyut" Binding="{Binding KonteynerBoyutu, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        <DataGridTextColumn Header="Konteyner No">
+                            <DataGridTextColumn.Binding>
+                                <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                    <Binding Path="KonteynerNo"/>
+                                    <Binding Path="Aciklama"/>
+                                </MultiBinding>
+                            </DataGridTextColumn.Binding>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Boyut">
+                            <DataGridTextColumn.Binding>
+                                <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                    <Binding Path="KonteynerBoyutu"/>
+                                    <Binding Path="Aciklama"/>
+                                </MultiBinding>
+                            </DataGridTextColumn.Binding>
+                        </DataGridTextColumn>
 
                         <!-- Yükleme: görüntüde metin, düzenlemede ComboBox -->
                         <DataGridTemplateColumn Header="Yükleme">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding YuklemeYeri}"/>
+                                    <TextBlock>
+                                        <TextBlock.Text>
+                                            <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                                <Binding Path="YuklemeYeri"/>
+                                                <Binding Path="Aciklama"/>
+                                            </MultiBinding>
+                                        </TextBlock.Text>
+                                    </TextBlock>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                             <DataGridTemplateColumn.CellEditingTemplate>
@@ -203,7 +232,14 @@
                         <DataGridTemplateColumn Header="Boşaltma">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding BosaltmaYeri}"/>
+                                    <TextBlock>
+                                        <TextBlock.Text>
+                                            <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                                <Binding Path="BosaltmaYeri"/>
+                                                <Binding Path="Aciklama"/>
+                                            </MultiBinding>
+                                        </TextBlock.Text>
+                                    </TextBlock>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                             <DataGridTemplateColumn.CellEditingTemplate>
@@ -218,7 +254,14 @@
                         <DataGridTemplateColumn Header="Emanet/Soda">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding Ekstra, Converter={StaticResource EkstraDisplayConverter}}"/>
+                                    <TextBlock>
+                                        <TextBlock.Text>
+                                            <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                                <Binding Path="Ekstra" Converter="{StaticResource EkstraDisplayConverter}"/>
+                                                <Binding Path="Aciklama"/>
+                                            </MultiBinding>
+                                        </TextBlock.Text>
+                                    </TextBlock>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                             <DataGridTemplateColumn.CellEditingTemplate>
@@ -239,7 +282,14 @@
                         <DataGridTemplateColumn Header="Boş/Dolu">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding BosDolu}"/>
+                                    <TextBlock>
+                                        <TextBlock.Text>
+                                            <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                                <Binding Path="BosDolu"/>
+                                                <Binding Path="Aciklama"/>
+                                            </MultiBinding>
+                                        </TextBlock.Text>
+                                    </TextBlock>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                             <DataGridTemplateColumn.CellEditingTemplate>
@@ -250,15 +300,36 @@
                             </DataGridTemplateColumn.CellEditingTemplate>
                         </DataGridTemplateColumn>
 
-                        <DataGridTextColumn Header="Tarih" Binding="{Binding Tarih, Mode=TwoWay, StringFormat=dd.MM.yyyy}"/>
-                        <DataGridTextColumn Header="Saat" Binding="{Binding Saat, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        <DataGridTextColumn Header="Tarih">
+                            <DataGridTextColumn.Binding>
+                                <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                    <Binding Path="Tarih"/>
+                                    <Binding Path="Aciklama"/>
+                                </MultiBinding>
+                            </DataGridTextColumn.Binding>
+                        </DataGridTextColumn>
+                        <DataGridTextColumn Header="Saat">
+                            <DataGridTextColumn.Binding>
+                                <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                    <Binding Path="Saat"/>
+                                    <Binding Path="Aciklama"/>
+                                </MultiBinding>
+                            </DataGridTextColumn.Binding>
+                        </DataGridTextColumn>
                         <DataGridTextColumn Header="Fiyat" Binding="{Binding Fiyat, StringFormat={}{0:N2}}" IsReadOnly="True" Width="SizeToCells"/>
                         <DataGridTextColumn Header="KDV" Binding="{Binding Kdv, StringFormat={}{0:N2}}" IsReadOnly="True" Width="SizeToCells"/>
                         <DataGridTextColumn Header="Tevkifat" Binding="{Binding Tevkifat, StringFormat={}{0:N2}}" IsReadOnly="True" Width="SizeToCells"/>
                         <DataGridTextColumn Header="KDV Dahil Tutar" Binding="{Binding KdvDahilTutar, StringFormat={}{0:N2}}" IsReadOnly="True" Width="SizeToCells"/>
                         <DataGridTextColumn Header="Açıklama" Binding="{Binding Aciklama, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                         <DataGridTextColumn Header="Çekici ID" Binding="{Binding CekiciId}" Visibility="Collapsed" IsReadOnly="True"/>
-                        <DataGridTextColumn Header="Çekici Plaka" Binding="{Binding CekiciPlaka, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                        <DataGridTextColumn Header="Çekici Plaka">
+                            <DataGridTextColumn.Binding>
+                                <MultiBinding Converter="{StaticResource HideOnToplamConverter}">
+                                    <Binding Path="CekiciPlaka"/>
+                                    <Binding Path="Aciklama"/>
+                                </MultiBinding>
+                            </DataGridTextColumn.Binding>
+                        </DataGridTextColumn>
                         <DataGridTextColumn Header="Dorse ID" Binding="{Binding DorseId}" Visibility="Collapsed" IsReadOnly="True"/>
                         <DataGridTextColumn Header="Şoför ID" Binding="{Binding SoforId}" Visibility="Collapsed" IsReadOnly="True"/>
                         <DataGridTextColumn Header="Şoför Adı" Binding="{Binding SoforAdi, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
