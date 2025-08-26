@@ -112,7 +112,7 @@ namespace TirSeferleriModernApp.Services
                 // Yeni isim için güncelle
                 using (var cmd = conn.CreateCommand())
                 {
-                    cmd.CommandText = "UPDATE Seferler SET \"Emanet/Soda\"=' ' WHERE UPPER(TRIM(IFNULL(\"Emanet/Soda\",'')))='EKSTRA YOK'";
+                    cmd.CommandText = "UPDATE Seferler SET \"Emanet/Soda\"=' ' WHERE UPPER(TRIM(IFNULL(\"Emanet/Soda'', 'EKSTRA YOK'";
                     cmd.ExecuteNonQuery();
                 }
                 // Eski isim varsa (taşınmamış eski DB) onu da güncelle
@@ -621,6 +621,7 @@ namespace TirSeferleriModernApp.Services
                         Fiyat REAL,
                         Kdv REAL,
                         Tevkifat REAL,
+                        KdvDahilTutar REAL,
                         Aciklama TEXT,
                         CekiciId INTEGER,
                         CekiciPlaka TEXT,
@@ -633,6 +634,7 @@ namespace TirSeferleriModernApp.Services
                     "BosDolu TEXT",
                     "Kdv REAL",
                     "Tevkifat REAL",
+                    "KdvDahilTutar REAL",
                     "CekiciId INTEGER",
                     "CekiciPlaka TEXT",
                     "DorseId INTEGER",
@@ -784,8 +786,8 @@ namespace TirSeferleriModernApp.Services
             using var connection = new SqliteConnection(ConnectionString);
             connection.Open();
             using var cmd = connection.CreateCommand();
-            cmd.CommandText = @"INSERT INTO Seferler (KonteynerNo, KonteynerBoyutu, YuklemeYeri, BosaltmaYeri, Ekstra, BosDolu, Tarih, Saat, Fiyat, Kdv, Tevkifat, Aciklama, CekiciId, CekiciPlaka, DorseId, SoforId, SoforAdi)
-                               VALUES (@KonteynerNo, @KonteynerBoyutu, @YuklemeYeri, @BosaltmaYeri, @Ekstra, @BosDolu, @Tarih, @Saat, @Fiyat, @Kdv, @Tevkifat, @Aciklama, @CekiciId, @CekiciPlaka, @DorseId, @SoforId, @SoforAdi);
+            cmd.CommandText = @"INSERT INTO Seferler (KonteynerNo, KonteynerBoyutu, YuklemeYeri, BosaltmaYeri, Ekstra, BosDolu, Tarih, Saat, Fiyat, Kdv, Tevkifat, KdvDahilTutar, Aciklama, CekiciId, CekiciPlaka, DorseId, SoforId, SoforAdi)
+                               VALUES (@KonteynerNo, @KonteynerBoyutu, @YuklemeYeri, @BosaltmaYeri, @Ekstra, @BosDolu, @Tarih, @Saat, @Fiyat, @Kdv, @Tevkifat, @KdvDahilTutar, @Aciklama, @CekiciId, @CekiciPlaka, @DorseId, @SoforId, @SoforAdi);
                                SELECT last_insert_rowid();";
             BindSeferParams(cmd, s);
             var id = (long)cmd.ExecuteScalar()!;
@@ -810,6 +812,7 @@ namespace TirSeferleriModernApp.Services
                                 Fiyat=@Fiyat,
                                 Kdv=@Kdv,
                                 Tevkifat=@Tevkifat,
+                                KdvDahilTutar=@KdvDahilTutar,
                                 Aciklama=@Aciklama,
                                 CekiciId=@CekiciId,
                                 CekiciPlaka=@CekiciPlaka,
@@ -835,6 +838,7 @@ namespace TirSeferleriModernApp.Services
             cmd.Parameters.AddWithValue("@Fiyat", Convert.ToDouble(s.Fiyat));
             cmd.Parameters.AddWithValue("@Kdv", Convert.ToDouble(s.Kdv));
             cmd.Parameters.AddWithValue("@Tevkifat", Convert.ToDouble(s.Tevkifat));
+            cmd.Parameters.AddWithValue("@KdvDahilTutar", Convert.ToDouble(s.KdvDahilTutar));
             cmd.Parameters.AddWithValue("@Aciklama", (object?)s.Aciklama ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@CekiciId", (object?)s.CekiciId ?? DBNull.Value);
             cmd.Parameters.AddWithValue("@CekiciPlaka", (object?)s.CekiciPlaka ?? DBNull.Value);
@@ -849,7 +853,7 @@ namespace TirSeferleriModernApp.Services
             using var connection = new SqliteConnection(ConnectionString);
             connection.Open();
             using var cmd = connection.CreateCommand();
-            cmd.CommandText = "SELECT SeferId, KonteynerNo, KonteynerBoyutu, YuklemeYeri, BosaltmaYeri, Ekstra, BosDolu, Tarih, Saat, Fiyat, Kdv, Tevkifat, Aciklama, CekiciId, CekiciPlaka, DorseId, SoforId, SoforAdi FROM Seferler ORDER BY SeferId DESC";
+            cmd.CommandText = "SELECT SeferId, KonteynerNo, KonteynerBoyutu, YuklemeYeri, BosaltmaYeri, Ekstra, BosDolu, Tarih, Saat, Fiyat, Kdv, Tevkifat, KdvDahilTutar, Aciklama, CekiciId, CekiciPlaka, DorseId, SoforId, SoforAdi FROM Seferler ORDER BY SeferId DESC";
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
             {
@@ -867,12 +871,13 @@ namespace TirSeferleriModernApp.Services
                     Fiyat = reader.IsDBNull(9) ? 0 : Convert.ToDecimal(reader.GetDouble(9)),
                     Kdv = reader.IsDBNull(10) ? 0 : Convert.ToDecimal(reader.GetDouble(10)),
                     Tevkifat = reader.IsDBNull(11) ? 0 : Convert.ToDecimal(reader.GetDouble(11)),
-                    Aciklama = reader.IsDBNull(12) ? null : reader.GetString(12),
-                    CekiciId = reader.IsDBNull(13) ? null : reader.GetInt32(13),
-                    CekiciPlaka = reader.IsDBNull(14) ? null : reader.GetString(14),
-                    DorseId = reader.IsDBNull(15) ? null : reader.GetInt32(15),
-                    SoforId = reader.IsDBNull(16) ? null : reader.GetInt32(16),
-                    SoforAdi = reader.IsDBNull(17) ? null : reader.GetString(17)
+                    KdvDahilTutar = reader.IsDBNull(12) ? 0 : Convert.ToDecimal(reader.GetDouble(12)),
+                    Aciklama = reader.IsDBNull(13) ? null : reader.GetString(13),
+                    CekiciId = reader.IsDBNull(14) ? null : reader.GetInt32(14),
+                    CekiciPlaka = reader.IsDBNull(15) ? null : reader.GetString(15),
+                    DorseId = reader.IsDBNull(16) ? null : reader.GetInt32(16),
+                    SoforId = reader.IsDBNull(17) ? null : reader.GetInt32(17),
+                    SoforAdi = reader.IsDBNull(18) ? null : reader.GetString(18)
                 };
                 result.Add(s);
             }
@@ -885,7 +890,7 @@ namespace TirSeferleriModernApp.Services
             using var connection = new SqliteConnection(ConnectionString);
             connection.Open();
             using var cmd = connection.CreateCommand();
-            cmd.CommandText = "SELECT SeferId, KonteynerNo, KonteynerBoyutu, YuklemeYeri, BosaltmaYeri, Ekstra, BosDolu, Tarih, Saat, Fiyat, Kdv, Tevkifat, Aciklama, CekiciId, CekiciPlaka, DorseId, SoforId, SoforAdi FROM Seferler WHERE CekiciPlaka = @p ORDER BY SeferId DESC";
+            cmd.CommandText = "SELECT SeferId, KonteynerNo, KonteynerBoyutu, YuklemeYeri, BosaltmaYeri, Ekstra, BosDolu, Tarih, Saat, Fiyat, Kdv, Tevkifat, KdvDahilTutar, Aciklama, CekiciId, CekiciPlaka, DorseId, SoforId, SoforAdi FROM Seferler WHERE CekiciPlaka = @p ORDER BY SeferId DESC";
             cmd.Parameters.AddWithValue("@p", cekiciPlaka);
             using var reader = cmd.ExecuteReader();
             while (reader.Read())
@@ -904,12 +909,13 @@ namespace TirSeferleriModernApp.Services
                     Fiyat = reader.IsDBNull(9) ? 0 : Convert.ToDecimal(reader.GetDouble(9)),
                     Kdv = reader.IsDBNull(10) ? 0 : Convert.ToDecimal(reader.GetDouble(10)),
                     Tevkifat = reader.IsDBNull(11) ? 0 : Convert.ToDecimal(reader.GetDouble(11)),
-                    Aciklama = reader.IsDBNull(12) ? null : reader.GetString(12),
-                    CekiciId = reader.IsDBNull(13) ? null : reader.GetInt32(13),
-                    CekiciPlaka = reader.IsDBNull(14) ? null : reader.GetString(14),
-                    DorseId = reader.IsDBNull(15) ? null : reader.GetInt32(15),
-                    SoforId = reader.IsDBNull(16) ? null : reader.GetInt32(16),
-                    SoforAdi = reader.IsDBNull(17) ? null : reader.GetString(17)
+                    KdvDahilTutar = reader.IsDBNull(12) ? 0 : Convert.ToDecimal(reader.GetDouble(12)),
+                    Aciklama = reader.IsDBNull(13) ? null : reader.GetString(13),
+                    CekiciId = reader.IsDBNull(14) ? null : reader.GetInt32(14),
+                    CekiciPlaka = reader.IsDBNull(15) ? null : reader.GetString(15),
+                    DorseId = reader.IsDBNull(16) ? null : reader.GetInt32(16),
+                    SoforId = reader.IsDBNull(17) ? null : reader.GetInt32(17),
+                    SoforAdi = reader.IsDBNull(18) ? null : reader.GetString(18)
                 };
                 result.Add(s);
             }

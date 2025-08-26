@@ -236,6 +236,7 @@ namespace TirSeferleriModernApp.ViewModels
                 SeciliSefer.Fiyat = 1000m;
                 SeciliSefer.Kdv = Math.Round(SeciliSefer.Fiyat > 0 ? SeciliSefer.Fiyat * 0.20m : 0m, 2);
                 SeciliSefer.Tevkifat = Math.Round(SeciliSefer.Kdv > 0 ? SeciliSefer.Kdv * 0.20m : 0m, 2);
+                SeciliSefer.KdvDahilTutar = Math.Round((SeciliSefer.Fiyat + SeciliSefer.Kdv) - SeciliSefer.Tevkifat, 2);
                 return;
             }
 
@@ -264,6 +265,7 @@ namespace TirSeferleriModernApp.ViewModels
             SeciliSefer.Fiyat = result < 0 ? 0 : result;
             SeciliSefer.Kdv = Math.Round(SeciliSefer.Fiyat > 0 ? SeciliSefer.Fiyat * 0.20m : 0m, 2);
             SeciliSefer.Tevkifat = Math.Round(SeciliSefer.Kdv > 0 ? SeciliSefer.Kdv * 0.20m : 0m, 2);
+            SeciliSefer.KdvDahilTutar = Math.Round((SeciliSefer.Fiyat + SeciliSefer.Kdv) - SeciliSefer.Tevkifat, 2);
         }
 
         private void SeciliSefer_PropertyChanged(object? sender, PropertyChangedEventArgs e)

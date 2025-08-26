@@ -73,6 +73,14 @@ namespace TirSeferleriModernApp.Models
             set => SetProperty(ref _tevkifat, value);
         }
 
+        // KDV Dahil Tutar: (Fiyat + KDV) - Tevkifat
+        private decimal _kdvDahilTutar;
+        public decimal KdvDahilTutar
+        {
+            get => _kdvDahilTutar;
+            set => SetProperty(ref _kdvDahilTutar, value);
+        }
+
         public string? Aciklama { get; set; }
         public int? CekiciId { get; set; }
         public string? CekiciPlaka { get; set; }
