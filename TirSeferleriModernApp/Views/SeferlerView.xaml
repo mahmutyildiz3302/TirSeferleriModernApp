@@ -12,6 +12,7 @@
 
     <UserControl.Resources>
         <conv:RowIndexToNumberConverter x:Key="RowIndexToNumber"/>
+        <conv:EkstraDisplayConverter x:Key="EkstraDisplayConverter"/>
     </UserControl.Resources>
 
     <Grid Margin="20">
@@ -62,12 +63,19 @@
                           IsEditable="False"
                           MinWidth="200" Margin="0,5,0,10"/>
 
-                <TextBlock Text="Ekstra:" Foreground="#F5F9FF"/>
+                <TextBlock Text="Emanet/Soda:" Foreground="#F5F9FF"/>
                 <ComboBox Background="White"
                           ItemsSource="{Binding EkstraAdlari}"
                           SelectedItem="{Binding SeciliSefer.Ekstra, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"
                           IsEditable="False"
-                          MinWidth="200" Margin="0,5,0,10"/>
+                          MinWidth="200" Margin="0,5,0,10">
+                    <!-- Görünümde EKSTRA YOK -> boşluk gösterimi -->
+                    <ComboBox.ItemTemplate>
+                        <DataTemplate>
+                            <TextBlock Text="{Binding Converter={StaticResource EkstraDisplayConverter}}"/>
+                        </DataTemplate>
+                    </ComboBox.ItemTemplate>
+                </ComboBox>
 
                 <TextBlock Text="Açıklama:" Foreground="#F5F9FF"/>
                 <TextBox Background="White" Text="{Binding SeciliSefer.Aciklama, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" MinWidth="200" Margin="0,5,0,20"/>
@@ -208,16 +216,22 @@
                         </DataGridTemplateColumn>
 
                         <!-- Ekstra: görüntüde metin, düzenlemede ComboBox -->
-                        <DataGridTemplateColumn Header="Ekstra">
+                        <DataGridTemplateColumn Header="Emanet/Soda">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
-                                    <TextBlock Text="{Binding Ekstra}"/>
+                                    <TextBlock Text="{Binding Ekstra, Converter={StaticResource EkstraDisplayConverter}}"/>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellTemplate>
                             <DataGridTemplateColumn.CellEditingTemplate>
                                 <DataTemplate>
                                     <ComboBox ItemsSource="{Binding DataContext.EkstraAdlari, ElementName=RootSeferlerView}"
-                                              SelectedItem="{Binding Ekstra, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                              SelectedItem="{Binding Ekstra, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}">
+                                        <ComboBox.ItemTemplate>
+                                            <DataTemplate>
+                                                <TextBlock Text="{Binding Converter={StaticResource EkstraDisplayConverter}}"/>
+                                            </DataTemplate>
+                                        </ComboBox.ItemTemplate>
+                                    </ComboBox>
                                 </DataTemplate>
                             </DataGridTemplateColumn.CellEditingTemplate>
                         </DataGridTemplateColumn>
