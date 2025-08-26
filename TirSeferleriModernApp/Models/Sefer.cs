@@ -57,6 +57,14 @@ namespace TirSeferleriModernApp.Models
             set => SetProperty(ref _fiyat, value);
         }
 
+        // KDV: Fiyat * %20 (0 ise 0). DB'ye de yazılır.
+        private decimal _kdv;
+        public decimal Kdv
+        {
+            get => _kdv;
+            set => SetProperty(ref _kdv, value);
+        }
+
         public string? Aciklama { get; set; }
         public int? CekiciId { get; set; }
         public string? CekiciPlaka { get; set; }

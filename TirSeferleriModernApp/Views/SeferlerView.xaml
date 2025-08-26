@@ -253,6 +253,7 @@
                         <DataGridTextColumn Header="Tarih" Binding="{Binding Tarih, Mode=TwoWay, StringFormat=dd.MM.yyyy}"/>
                         <DataGridTextColumn Header="Saat" Binding="{Binding Saat, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                         <DataGridTextColumn Header="Fiyat" Binding="{Binding Fiyat}" IsReadOnly="True"/>
+                        <DataGridTextColumn Header="KDV" Binding="{Binding Kdv}" IsReadOnly="True"/>
                         <DataGridTextColumn Header="Açıklama" Binding="{Binding Aciklama, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                         <DataGridTextColumn Header="Çekici ID" Binding="{Binding CekiciId}" Visibility="Collapsed" IsReadOnly="True"/>
                         <DataGridTextColumn Header="Çekici Plaka" Binding="{Binding CekiciPlaka, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>

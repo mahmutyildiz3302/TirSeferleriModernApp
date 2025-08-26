@@ -234,6 +234,7 @@ namespace TirSeferleriModernApp.ViewModels
             {
                 // Boş/Dolu ve boyuttan bağımsız sabit fiyat
                 SeciliSefer.Fiyat = 1000m;
+                SeciliSefer.Kdv = Math.Round(SeciliSefer.Fiyat > 0 ? SeciliSefer.Fiyat * 0.20m : 0m, 2);
                 return;
             }
 
@@ -260,6 +261,7 @@ namespace TirSeferleriModernApp.ViewModels
             }
 
             SeciliSefer.Fiyat = result < 0 ? 0 : result;
+            SeciliSefer.Kdv = Math.Round(SeciliSefer.Fiyat > 0 ? SeciliSefer.Fiyat * 0.20m : 0m, 2);
         }
 
         private void SeciliSefer_PropertyChanged(object? sender, PropertyChangedEventArgs e)
@@ -283,7 +285,8 @@ namespace TirSeferleriModernApp.ViewModels
                 e.PropertyName == nameof(Sefer.BosaltmaYeri) ||
                 e.PropertyName == nameof(Sefer.Ekstra) ||
                 e.PropertyName == nameof(Sefer.BosDolu) ||
-                e.PropertyName == nameof(Sefer.KonteynerBoyutu))
+                e.PropertyName == nameof(Sefer.KonteynerBoyutu) ||
+                e.PropertyName == nameof(Sefer.Fiyat))
             {
                 RecalcFiyat();
             }
