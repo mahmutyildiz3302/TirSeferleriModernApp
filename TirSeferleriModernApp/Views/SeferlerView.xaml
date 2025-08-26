@@ -176,10 +176,67 @@
                         <DataGridTextColumn Header="Sefer ID" Binding="{Binding SeferId}" Visibility="Collapsed" IsReadOnly="True"/>
                         <DataGridTextColumn Header="Konteyner No" Binding="{Binding KonteynerNo, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                         <DataGridTextColumn Header="Boyut" Binding="{Binding KonteynerBoyutu, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
-                        <DataGridComboBoxColumn Header="Yükleme" SelectedItemBinding="{Binding YuklemeYeri, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ItemsSource="{Binding DataContext.DepoAdlari, ElementName=RootSeferlerView}"/>
-                        <DataGridComboBoxColumn Header="Boşaltma" SelectedItemBinding="{Binding BosaltmaYeri, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ItemsSource="{Binding DataContext.DepoAdlari, ElementName=RootSeferlerView}"/>
-                        <DataGridComboBoxColumn Header="Ekstra" SelectedItemBinding="{Binding Ekstra, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ItemsSource="{Binding DataContext.EkstraAdlari, ElementName=RootSeferlerView}"/>
-                        <DataGridComboBoxColumn Header="Boş/Dolu" SelectedItemBinding="{Binding BosDolu, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}" ItemsSource="{Binding DataContext.BosDoluSecenekleri, ElementName=RootSeferlerView}"/>
+
+                        <!-- Yükleme: görüntüde metin, düzenlemede ComboBox -->
+                        <DataGridTemplateColumn Header="Yükleme">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding YuklemeYeri}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                            <DataGridTemplateColumn.CellEditingTemplate>
+                                <DataTemplate>
+                                    <ComboBox ItemsSource="{Binding DataContext.DepoAdlari, ElementName=RootSeferlerView}"
+                                              SelectedItem="{Binding YuklemeYeri, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellEditingTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Boşaltma: görüntüde metin, düzenlemede ComboBox -->
+                        <DataGridTemplateColumn Header="Boşaltma">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding BosaltmaYeri}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                            <DataGridTemplateColumn.CellEditingTemplate>
+                                <DataTemplate>
+                                    <ComboBox ItemsSource="{Binding DataContext.DepoAdlari, ElementName=RootSeferlerView}"
+                                              SelectedItem="{Binding BosaltmaYeri, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellEditingTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Ekstra: görüntüde metin, düzenlemede ComboBox -->
+                        <DataGridTemplateColumn Header="Ekstra">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding Ekstra}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                            <DataGridTemplateColumn.CellEditingTemplate>
+                                <DataTemplate>
+                                    <ComboBox ItemsSource="{Binding DataContext.EkstraAdlari, ElementName=RootSeferlerView}"
+                                              SelectedItem="{Binding Ekstra, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellEditingTemplate>
+                        </DataGridTemplateColumn>
+
+                        <!-- Boş/Dolu: görüntüde metin, düzenlemede ComboBox -->
+                        <DataGridTemplateColumn Header="Boş/Dolu">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <TextBlock Text="{Binding BosDolu}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                            <DataGridTemplateColumn.CellEditingTemplate>
+                                <DataTemplate>
+                                    <ComboBox ItemsSource="{Binding DataContext.BosDoluSecenekleri, ElementName=RootSeferlerView}"
+                                              SelectedItem="{Binding BosDolu, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellEditingTemplate>
+                        </DataGridTemplateColumn>
+
                         <DataGridTextColumn Header="Tarih" Binding="{Binding Tarih, Mode=TwoWay, StringFormat=dd.MM.yyyy}"/>
                         <DataGridTextColumn Header="Saat" Binding="{Binding Saat, Mode=TwoWay, UpdateSourceTrigger=PropertyChanged}"/>
                         <DataGridTextColumn Header="Fiyat" Binding="{Binding Fiyat}" IsReadOnly="True"/>
