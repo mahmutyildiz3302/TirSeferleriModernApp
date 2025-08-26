@@ -27,6 +27,10 @@ namespace TirSeferleriModernApp.Services
         public void Initialize()
         {
             EnsureDatabaseFile();
+
+            // Önce varsa kolon adını değiştir (eski -> yeni) ki devam eden CREATE/ALTER adımları çakışmasın
+            TryRenameSeferlerEkstraToEmanetSoda();
+
             CheckAndCreateOrUpdateSeferlerTablosu();
             CheckAndCreateOrUpdateGiderlerTablosu();
             CheckAndCreateOrUpdateKarHesapTablosu();
@@ -50,7 +54,7 @@ namespace TirSeferleriModernApp.Services
                 GenerateAllGuzergahlar();
                 SeedGivenGuzergahlar();
 
-                // Yeni: Seferler.Ekstra alanında 'EKSTRA YOK' olanları tek boşlukla değiştir
+                // 'EKSTRA YOK' metnini tek boşluk yap
                 NormalizeEkstraBosluk();
             }
             catch (Exception ex)
@@ -59,15 +63,64 @@ namespace TirSeferleriModernApp.Services
             }
         }
 
+        // Seferler tablosunda Ekstra -> "Emanet/Soda" sütun adını taşı
+        private static void TryRenameSeferlerEkstraToEmanetSoda()
+        {
+            try
+            {
+                EnsureDatabaseFileStatic();
+                using var conn = new SqliteConnection(ConnectionString); conn.Open();
+
+                bool hasSeferler = false;
+                using (var chkTbl = conn.CreateCommand())
+                {
+                    chkTbl.CommandText = "SELECT name FROM sqlite_master WHERE type='table' AND name='Seferler'";
+                    hasSeferler = chkTbl.ExecuteScalar() != null;
+                }
+                if (!hasSeferler) return;
+
+                bool hasOld = false, hasNew = false;
+                using (var info = conn.CreateCommand())
+                {
+                    info.CommandText = "PRAGMA table_info(Seferler);";
+                    using var rdr = info.ExecuteReader();
+                    while (rdr.Read())
+                    {
+                        var col = rdr.IsDBNull(1) ? string.Empty : rdr.GetString(1);
+                        if (string.Equals(col, "Ekstra", StringComparison.OrdinalIgnoreCase)) hasOld = true;
+                        if (string.Equals(col, "Emanet/Soda", StringComparison.OrdinalIgnoreCase)) hasNew = true;
+                    }
+                }
+
+                if (hasOld && !hasNew)
+                {
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = "ALTER TABLE Seferler RENAME COLUMN Ekstra TO \"Emanet/Soda\"";
+                    cmd.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex) { Debug.WriteLine("[TryRenameSeferlerEkstraToEmanetSoda] " + ex.Message); }
+        }
+
         private static void NormalizeEkstraBosluk()
         {
             try
             {
                 EnsureDatabaseFileStatic();
                 using var conn = new SqliteConnection(ConnectionString); conn.Open();
-                using var cmd = conn.CreateCommand();
-                cmd.CommandText = "UPDATE Seferler SET Ekstra=' ' WHERE UPPER(TRIM(IFNULL(Ekstra,'')))='EKSTRA YOK'";
-                cmd.ExecuteNonQuery();
+
+                // Yeni isim için güncelle
+                using (var cmd = conn.CreateCommand())
+                {
+                    cmd.CommandText = "UPDATE Seferler SET \"Emanet/Soda\"=' ' WHERE UPPER(TRIM(IFNULL(\"Emanet/Soda\",'')))='EKSTRA YOK'";
+                    cmd.ExecuteNonQuery();
+                }
+                // Eski isim varsa (taşınmamış eski DB) onu da güncelle
+                using (var cmd2 = conn.CreateCommand())
+                {
+                    cmd2.CommandText = "UPDATE Seferler SET Ekstra=' ' WHERE UPPER(TRIM(IFNULL(Ekstra,'')))='EKSTRA YOK'";
+                    cmd2.ExecuteNonQuery();
+                }
             }
             catch (Exception ex) { Debug.WriteLine(ex.Message); }
         }
