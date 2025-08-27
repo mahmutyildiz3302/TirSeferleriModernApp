@@ -145,8 +145,15 @@ namespace TirSeferleriModernApp.ViewModels
         }
 
         [RelayCommand]
-        private void SelectMonth(int? month)
+        private void SelectMonth(object? parameter)
         {
+            int? month = null;
+            if (parameter != null)
+            {
+                var s = parameter.ToString();
+                if (!string.IsNullOrWhiteSpace(s) && int.TryParse(s, out var m) && m >= 1 && m <= 12)
+                    month = m;
+            }
             SeciliAy = month;
         }
 
