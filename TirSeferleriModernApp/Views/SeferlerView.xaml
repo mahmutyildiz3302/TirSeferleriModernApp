@@ -125,6 +125,29 @@
                         <TextBlock Text="{Binding SeciliCekiciPlaka, TargetNullValue=-}" Margin="6,0,0,0"/>
                         <TextBlock Text=" | Dorse: " FontWeight="Bold" Margin="10,0,0,0"/>
                         <TextBlock Text="{Binding SeciliDorsePlaka, TargetNullValue=-}" Margin="6,0,0,0"/>
+
+                        <!-- Ay filtreleme: Tümü + 12 ay butonu -->
+                        <StackPanel Orientation="Horizontal" Margin="20,0,0,0">
+                            <Button Content="Tümü" Margin="4,0" Padding="8,2" Command="{Binding SelectMonthCommand}" CommandParameter="{x:Null}"/>
+                            <Button Content="Ocak" Margin="4,0" Padding="8,2" Command="{Binding SelectMonthCommand}" CommandParameter="1"/>
+                            <Button Content="Şubat" Margin="4,0" Padding="8,2" Command="{Binding SelectMonthCommand}" CommandParameter="2"/>
+                            <Button Content="Mart" Margin="4,0" Padding="8,2" Command="{Binding SelectMonthCommand}" CommandParameter="3"/>
+                            <Button Content="Nisan" Margin="4,0" Padding="8,2" Command="{Binding SelectMonthCommand}" CommandParameter="4"/>
+                            <Button Content="Mayıs" Margin="4,0" Padding="8,2" Command="{Binding SelectMonthCommand}" CommandParameter="5"/>
+                            <Button Content="Haziran" Margin="4,0" Padding="8,2" Command="{Binding SelectMonthCommand}" CommandParameter="6"/>
+                            <Button Content="Temmuz" Margin="4,0" Padding="8,2" Command="{Binding SelectMonthCommand}" CommandParameter="7"/>
+                            <Button Content="Ağustos" Margin="4,0" Padding="8,2" Command="{Binding SelectMonthCommand}" CommandParameter="8"/>
+                            <Button Content="Eylül" Margin="4,0" Padding="8,2" Command="{Binding SelectMonthCommand}" CommandParameter="9"/>
+                            <Button Content="Ekim" Margin="4,0" Padding="8,2" Command="{Binding SelectMonthCommand}" CommandParameter="10"/>
+                            <Button Content="Kasım" Margin="4,0" Padding="8,2" Command="{Binding SelectMonthCommand}" CommandParameter="11"/>
+                            <Button Content="Aralık" Margin="4,0" Padding="8,2" Command="{Binding SelectMonthCommand}" CommandParameter="12"/>
+                        </StackPanel>
+
+                        <!-- Yıl seçimi -->
+                        <StackPanel Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Center">
+                            <TextBlock Text="Yıl:" Margin="0,0,6,0" VerticalAlignment="Center"/>
+                            <ComboBox Width="80" ItemsSource="{Binding YilSecenekleri}" SelectedItem="{Binding SeciliYil, Mode=TwoWay}"/>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
 

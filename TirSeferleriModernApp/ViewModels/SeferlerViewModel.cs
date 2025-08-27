@@ -19,6 +19,46 @@ namespace TirSeferleriModernApp.ViewModels
         private bool _hadBothEndpointsAtStart;       // sefer seçildiğinde her iki nokta zaten dolu miydi?
         private bool _haveBothEndpoints;             // mevcut durumda iki uç da dolu mu? (ilk kez dolu olduğunda tetiklemek için)
 
+        // Tüm verilerin önbelleği (seçilen plaka filtresine göre)
+        private List<Sefer> _allSeferlerCache = new();
+
+        // Yıl/ay filtreleme
+        public ObservableCollection<int> YilSecenekleri { get; } = new();
+
+        private int _seciliYil = DateTime.Today.Year;
+        public int SeciliYil
+        {
+            get => _seciliYil;
+            set
+            {
+                if (SetProperty(ref _seciliYil, value))
+                {
+                    ApplyDateFilterAndUpdate();
+                }
+            }
+        }
+
+        // 0 veya null => tüm aylar; 1..12 seçili ay
+        private int? _seciliAy = 0;
+        public int? SeciliAy
+        {
+            get => _seciliAy;
+            set
+            {
+                if (SetProperty(ref _seciliAy, value))
+                {
+                    ApplyDateFilterAndUpdate();
+                }
+            }
+        }
+
+        partial void OnSeciliAyChanged(int? value);
+
+        // Depo/ekstra/bos-dolu seçim listeleri
+        public ObservableCollection<string> DepoAdlari { get; } = [];
+        public ObservableCollection<string> EkstraAdlari { get; } = [" ", "SODA", "EMANET"]; // "EKSTRA YOK" -> tek boşluk
+        public ObservableCollection<string> BosDoluSecenekleri { get; } = ["Boş", "Dolu"];
+
         public Sefer? SeciliSefer
         {
             get
@@ -57,46 +97,6 @@ namespace TirSeferleriModernApp.ViewModels
                     RecalcFiyat();
                 }
             }
-        }
-
-        // Depo/ekstra/bos-dolu seçim listeleri
-        public ObservableCollection<string> DepoAdlari { get; } = [];
-        public ObservableCollection<string> EkstraAdlari { get; } = [" ", "SODA", "EMANET"]; // "EKSTRA YOK" -> tek boşluk
-        public ObservableCollection<string> BosDoluSecenekleri { get; } = ["Boş", "Dolu"];
-
-        // Soldaki menüden gelen bilgiler (bildirimli özellikler)
-        private string? _seciliCekiciPlaka;
-        public string? SeciliCekiciPlaka
-        {
-            get => _seciliCekiciPlaka;
-            set => SetProperty(ref _seciliCekiciPlaka, value);
-        }
-
-        private string? _seciliSoforAdi;
-        public string? SeciliSoforAdi
-        {
-            get => _seciliSoforAdi;
-            set => SetProperty(ref _seciliSoforAdi, value);
-        }
-
-        private string? _seciliDorsePlaka;
-        public string? SeciliDorsePlaka
-        {
-            get => _seciliDorsePlaka;
-            set => SetProperty(ref _seciliDorsePlaka, value);
-        }
-
-        public void UpdateSelection(string? cekiciPlaka, string? soforAdi)
-        {
-            SeciliCekiciPlaka = cekiciPlaka;
-            SeciliSoforAdi = soforAdi;
-            SeciliDorsePlaka = string.IsNullOrWhiteSpace(cekiciPlaka) ? null : DatabaseService.GetDorsePlakaByCekiciPlaka(cekiciPlaka);
-
-            // Seçilen çekici plakasına göre listeyi filtrele
-            if (!string.IsNullOrWhiteSpace(SeciliCekiciPlaka))
-                LoadSeferler(SeciliCekiciPlaka);
-            else
-                LoadSeferler();
         }
 
         public string KaydetButonMetni => SeciliSefer?.SeferId > 0 ? "Seçimi Güncelle" : "Yeni Sefer Kaydet";
@@ -139,9 +139,51 @@ namespace TirSeferleriModernApp.ViewModels
             }
             // Listeyi, filtre korunarak yenile
             if (!string.IsNullOrWhiteSpace(SeciliCekiciPlaka))
-                SetSeferListWithTotals(DatabaseService.GetSeferlerByCekiciPlaka(SeciliCekiciPlaka));
+                RefreshFromDatabaseByPlaka(SeciliCekiciPlaka);
             else
-                SetSeferListWithTotals(DatabaseService.GetSeferler());
+                RefreshFromDatabaseAll();
+        }
+
+        [RelayCommand]
+        private void SelectMonth(int? month)
+        {
+            SeciliAy = month;
+        }
+
+        private void EnsureYilSecenekleri()
+        {
+            if (YilSecenekleri.Count == 0)
+            {
+                var y = DateTime.Today.Year;
+                for (int i = y - 5; i <= y + 1; i++) YilSecenekleri.Add(i);
+                _seciliYil = y;
+                _seciliAy = 0;
+            }
+        }
+
+        private void RefreshFromDatabaseAll()
+        {
+            EnsureYilSecenekleri();
+            _allSeferlerCache = DatabaseService.GetSeferler();
+            ApplyDateFilterAndUpdate();
+        }
+
+        private void RefreshFromDatabaseByPlaka(string plaka)
+        {
+            EnsureYilSecenekleri();
+            _allSeferlerCache = DatabaseService.GetSeferlerByCekiciPlaka(plaka);
+            ApplyDateFilterAndUpdate();
+        }
+
+        private void ApplyDateFilterAndUpdate()
+        {
+            IEnumerable<Sefer> filtered = _allSeferlerCache;
+            if (SeciliYil > 0)
+                filtered = filtered.Where(s => s.Tarih.Year == SeciliYil);
+            if (SeciliAy.HasValue && SeciliAy.Value >= 1 && SeciliAy.Value <= 12)
+                filtered = filtered.Where(s => s.Tarih.Month == SeciliAy.Value);
+
+            SetSeferListWithTotals(filtered);
         }
 
         private void SeferGuncelle(Sefer guncellenecekSefer)
@@ -171,50 +213,51 @@ namespace TirSeferleriModernApp.ViewModels
             SeciliSefer = new Sefer { Tarih = DateTime.Today };
         }
 
-        private bool ValidateSefer(Sefer sefer)
+        // Soldaki menüden gelen bilgiler (bildirimli özellikler)
+        private string? _seciliCekiciPlaka;
+        public string? SeciliCekiciPlaka
         {
-            var eksikAlanlar = new List<string>();
-            if (string.IsNullOrWhiteSpace(sefer.KonteynerNo)) eksikAlanlar.Add("Konteyner No");
-            if (string.IsNullOrWhiteSpace(sefer.KonteynerBoyutu)) eksikAlanlar.Add("Konteyner Boyutu");
-            if (string.IsNullOrWhiteSpace(sefer.YuklemeYeri)) eksikAlanlar.Add("Yükleme Yeri");
-            if (string.IsNullOrWhiteSpace(sefer.BosaltmaYeri)) eksikAlanlar.Add("Boşaltma Yeri");
-            if (sefer.Tarih == DateTime.MinValue) eksikAlanlar.Add("Tarih");
-
-            if (eksikAlanlar.Count != 0)
-            {
-                MessageQueue.Enqueue($"Lütfen tüm zorunlu alanları doldurun: {string.Join(", ", eksikAlanlar)}");
-                return false;
-            }
-
-            if (sefer.KonteynerBoyutu != "20" && sefer.KonteynerBoyutu != "40")
-            {
-                MessageQueue.Enqueue("Konteyner boyutu yalnızca '20' veya '40' olabilir.");
-                return false;
-            }
-
-            return true;
+            get => _seciliCekiciPlaka;
+            set => SetProperty(ref _seciliCekiciPlaka, value);
         }
 
-        [RelayCommand]
-        private void SecimiTemizle()
+        private string? _seciliSoforAdi;
+        public string? SeciliSoforAdi
         {
-            // Formu gerçekten temizlemek için yeni boş bir Sefer atıyoruz
-            SeciliSefer = new Sefer { Tarih = DateTime.Today };
-            MessageQueue.Enqueue("Form temizlendi.");
+            get => _seciliSoforAdi;
+            set => SetProperty(ref _seciliSoforAdi, value);
         }
 
-        public int? SelectedVehicleId { get; set; }
+        private string? _seciliDorsePlaka;
+        public string? SeciliDorsePlaka
+        {
+            get => _seciliDorsePlaka;
+            set => SetProperty(ref _seciliDorsePlaka, value);
+        }
+
+        public void UpdateSelection(string? cekiciPlaka, string? soforAdi)
+        {
+            SeciliCekiciPlaka = cekiciPlaka;
+            SeciliSoforAdi = soforAdi;
+            SeciliDorsePlaka = string.IsNullOrWhiteSpace(cekiciPlaka) ? null : DatabaseService.GetDorsePlakaByCekiciPlaka(cekiciPlaka);
+
+            // Seçilen çekici plakasına göre listeyi filtrele
+            if (!string.IsNullOrWhiteSpace(SeciliCekiciPlaka))
+                RefreshFromDatabaseByPlaka(SeciliCekiciPlaka);
+            else
+                RefreshFromDatabaseAll();
+        }
 
         public void LoadSeferler()
         {
-            SetSeferListWithTotals(DatabaseService.GetSeferler());
+            RefreshFromDatabaseAll();
             DepoAdlari.ReplaceAll(DatabaseService.GetDepoAdlari());
             // EkstraAdlari sabit; DB'den doldurulmayacak
         }
 
         public void LoadSeferler(string cekiciPlaka)
         {
-            SetSeferListWithTotals(DatabaseService.GetSeferlerByCekiciPlaka(cekiciPlaka));
+            RefreshFromDatabaseByPlaka(cekiciPlaka);
             DepoAdlari.ReplaceAll(DatabaseService.GetDepoAdlari());
             // EkstraAdlari sabit; DB'den doldurulmayacak
         }
@@ -332,6 +375,30 @@ namespace TirSeferleriModernApp.ViewModels
             if (string.Equals(bd, "Boş", StringComparison.OrdinalIgnoreCase) || string.Equals(bd, "BOS", StringComparison.OrdinalIgnoreCase) || string.Equals(bd, "Bos", StringComparison.OrdinalIgnoreCase)) return "Bos";
             if (string.Equals(bd, "Dolu", StringComparison.OrdinalIgnoreCase)) return "Dolu";
             return bd;
+        }
+
+        private bool ValidateSefer(Sefer sefer)
+        {
+            var eksikAlanlar = new List<string>();
+            if (string.IsNullOrWhiteSpace(sefer.KonteynerNo)) eksikAlanlar.Add("Konteyner No");
+            if (string.IsNullOrWhiteSpace(sefer.KonteynerBoyutu)) eksikAlanlar.Add("Konteyner Boyutu");
+            if (string.IsNullOrWhiteSpace(sefer.YuklemeYeri)) eksikAlanlar.Add("Yükleme Yeri");
+            if (string.IsNullOrWhiteSpace(sefer.BosaltmaYeri)) eksikAlanlar.Add("Boşaltma Yeri");
+            if (sefer.Tarih == DateTime.MinValue) eksikAlanlar.Add("Tarih");
+
+            if (eksikAlanlar.Count != 0)
+            {
+                MessageQueue.Enqueue($"Lütfen tüm zorunlu alanları doldurun: {string.Join(", ", eksikAlanlar)}");
+                return false;
+            }
+
+            if (sefer.KonteynerBoyutu != "20" && sefer.KonteynerBoyutu != "40")
+            {
+                MessageQueue.Enqueue("Konteyner boyutu yalnızca '20' veya '40' olabilir.");
+                return false;
+            }
+
+            return true;
         }
     }
 }
