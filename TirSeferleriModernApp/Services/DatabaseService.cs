@@ -115,6 +115,29 @@ namespace TirSeferleriModernApp.Services
             }
         }
 
+        // Records meta bilgilerini getir (remote_id, createdAt). Yoksa (null,0) döner
+        public static (string? remoteId, long createdAt) TryGetRecordMeta(int localId)
+        {
+            try
+            {
+                EnsureDatabaseFileStatic();
+                using var conn = new SqliteConnection(ConnectionString);
+                conn.Open();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT remote_id, IFNULL(createdAt,0) FROM Records WHERE id=@id LIMIT 1";
+                cmd.Parameters.AddWithValue("@id", localId);
+                using var rdr = cmd.ExecuteReader();
+                if (rdr.Read())
+                {
+                    var rid = rdr.IsDBNull(0) ? null : rdr.GetString(0);
+                    var createdAt = rdr.IsDBNull(1) ? 0 : rdr.GetInt64(1);
+                    return (rid, createdAt);
+                }
+            }
+            catch (Exception ex) { Debug.WriteLine($"[TryGetRecordMeta] {ex.Message}"); }
+            return (null, 0);
+        }
+
         // Seferler tablosunda Ekstra -> "Emanet/Soda" sütun adını taşı
         private static void TryRenameSeferlerEkstraToEmanetSoda()
         {

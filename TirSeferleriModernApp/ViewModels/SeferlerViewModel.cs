@@ -9,6 +9,7 @@ using MaterialDesignThemes.Wpf;
 using System.ComponentModel;
 using System.Linq;
 using System.Collections.Generic;
+using System.Threading.Tasks;
 
 namespace TirSeferleriModernApp.ViewModels
 {
@@ -21,6 +22,14 @@ namespace TirSeferleriModernApp.ViewModels
 
         // Tüm verilerin önbelleği (seçilen plaka filtresine göre)
         private List<Sefer> _allSeferlerCache = new();
+
+        // Senkron durum metni (opsiyonel gösterim için)
+        private string? _senkronDurumu;
+        public string? SenkronDurumu
+        {
+            get => _senkronDurumu;
+            set => SetProperty(ref _senkronDurumu, value);
+        }
 
         // Yıl/ay filtreleme
         public ObservableCollection<int> YilSecenekleri { get; } = new();
@@ -109,7 +118,7 @@ namespace TirSeferleriModernApp.ViewModels
         private readonly DatabaseService _databaseService = databaseService;
 
         [RelayCommand]
-        private void KaydetVeyaGuncelle()
+        private async Task KaydetVeyaGuncelle()
         {
             SeciliSefer ??= new Sefer { Tarih = DateTime.Today };
 
@@ -129,6 +138,9 @@ namespace TirSeferleriModernApp.ViewModels
             // Her kaydet/güncelle öncesi fiyatı otomatik hesapla
             RecalcFiyat();
 
+            // Kopyayı al: Seferler SQLite kaydından sonra Record eşlemesi için kullanılacak
+            var seferToPersist = SeciliSefer;
+
             if (SeciliSefer.SeferId <= 0)
             {
                 SeferEkle(SeciliSefer);
@@ -137,7 +149,39 @@ namespace TirSeferleriModernApp.ViewModels
             {
                 SeferGuncelle(SeciliSefer);
             }
-            // Listeyi, filtre korunarak yenile
+
+            // 1) Yerelde Record olarak kaydet (is_dirty=1, updated_at=now). Senkron ajanı zaten arka planda çalışacak.
+            try
+            {
+                if (seferToPersist != null)
+                {
+                    var (remoteId, createdAt) = DatabaseService.TryGetRecordMeta(seferToPersist.SeferId);
+                    var rec = new Record
+                    {
+                        id = seferToPersist.SeferId,
+                        remote_id = remoteId,
+                        deleted = false,
+                        containerNo = seferToPersist.KonteynerNo,
+                        loadLocation = seferToPersist.YuklemeYeri,
+                        unloadLocation = seferToPersist.BosaltmaYeri,
+                        size = seferToPersist.KonteynerBoyutu,
+                        status = seferToPersist.BosDolu,
+                        nightOrDay = null,
+                        truckPlate = seferToPersist.CekiciPlaka,
+                        notes = seferToPersist.Aciklama,
+                        createdByUserId = null,
+                        createdAt = createdAt > 0 ? createdAt : DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                    };
+                    await DatabaseService.RecordKaydetAsync(rec);
+                    SenkronDurumu = "Senkron: Bekliyor";
+                }
+            }
+            catch (Exception ex)
+            {
+                SenkronDurumu = $"Senkron: Yerel kayıt hatası ({ex.Message})";
+            }
+
+            // Listeyi, filtre korunarak yenile (SQLite'tan okunur)
             if (!string.IsNullOrWhiteSpace(SeciliCekiciPlaka))
                 RefreshFromDatabaseByPlaka(SeciliCekiciPlaka);
             else
