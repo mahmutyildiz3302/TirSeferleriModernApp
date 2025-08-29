@@ -13,6 +13,7 @@
     <PackageReference Include="MaterialDesignColors" Version="5.2.1" />
     <PackageReference Include="MaterialDesignThemes" Version="5.2.1" />
     <PackageReference Include="Microsoft.Data.Sqlite" Version="9.0.7" />
+    <PackageReference Include="Google.Cloud.Firestore" Version="3.10.0" />
   </ItemGroup>
 
 </Project>
