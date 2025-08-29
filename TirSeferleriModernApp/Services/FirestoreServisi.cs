@@ -3,6 +3,8 @@ using System.IO;
 using System.Threading.Tasks;
 using Google.Cloud.Firestore;
 using TirSeferleriModernApp.Models;
+using Microsoft.Data.Sqlite;
+using System.Diagnostics;
 
 namespace TirSeferleriModernApp.Services
 {
@@ -10,6 +12,7 @@ namespace TirSeferleriModernApp.Services
     {
         private FirestoreDb? _db;
         public FirestoreDb? Db => _db;
+        private FirestoreChangeListener? _recordsListener;
 
         // AppSettings.json'dan proje kimliði ve kimlik bilgisi yolu okunur ve Firestore'a baðlanýlýr.
         // Baðlantý kurulamazsa anlaþýlýr bir hata mesajý ile istisna fýrlatýlýr.
@@ -106,9 +109,123 @@ namespace TirSeferleriModernApp.Services
             return Task.CompletedTask;
         }
 
-        // Ýleride tüm verileri dinleme/subscribe iþlemleri yapýlacak.
+        // records koleksiyonunu dinler. Deðiþiklik geldiðinde ilgili yerel kaydý
+        // remote_id ile bulur, uzaktaki updated_at daha yeni ise yerelde günceller.
+        // Ýþlemler arka planda yapýlýr, UI kilitlenmez.
         public void HepsiniDinle(Action<object?>? onChanged = null)
         {
+            if (_recordsListener != null) return; // zaten dinleniyor
+
+            _ = Task.Run(async () =>
+            {
+                try
+                {
+                    if (_db == null)
+                    {
+                        await Baglan().ConfigureAwait(false);
+                    }
+                    if (_db == null) return;
+
+                    var col = _db.Collection("records");
+                    _recordsListener = col.Listen(snapshot =>
+                    {
+                        _ = Task.Run(async () =>
+                        {
+                            try
+                            {
+                                foreach (var change in snapshot.Changes)
+                                {
+                                    var doc = change.Document;
+                                    if (doc == null || !doc.Exists) continue;
+
+                                    var rid = doc.Id;
+                                    long remoteUpdated = 0;
+                                    if (!doc.TryGetValue("updated_at", out remoteUpdated))
+                                        remoteUpdated = 0;
+
+                                    // Yereldeki updated_at oku
+                                    int localId = 0;
+                                    long localUpdated = 0;
+                                    await using (var conn = new SqliteConnection(DatabaseService.ConnectionString))
+                                    {
+                                        await conn.OpenAsync().ConfigureAwait(false);
+                                        await using (var cmd = conn.CreateCommand())
+                                        {
+                                            cmd.CommandText = "SELECT id, IFNULL(updated_at,0) FROM Records WHERE remote_id=@rid LIMIT 1";
+                                            cmd.Parameters.AddWithValue("@rid", rid);
+                                            await using var rdr = await cmd.ExecuteReaderAsync().ConfigureAwait(false);
+                                            if (await rdr.ReadAsync().ConfigureAwait(false))
+                                            {
+                                                localId = rdr.IsDBNull(0) ? 0 : rdr.GetInt32(0);
+                                                localUpdated = rdr.IsDBNull(1) ? 0 : rdr.GetInt64(1);
+                                            }
+                                        }
+
+                                        if (localId != 0 && remoteUpdated > localUpdated)
+                                        {
+                                            // Uzak alanlarý oku
+                                            string? containerNo = doc.ContainsField("containerNo") ? doc.GetValue<string>("containerNo") : null;
+                                            string? loadLocation = doc.ContainsField("loadLocation") ? doc.GetValue<string>("loadLocation") : null;
+                                            string? unloadLocation = doc.ContainsField("unloadLocation") ? doc.GetValue<string>("unloadLocation") : null;
+                                            string? size = doc.ContainsField("size") ? doc.GetValue<string>("size") : null;
+                                            string? status = doc.ContainsField("status") ? doc.GetValue<string>("status") : null;
+                                            string? nightOrDay = doc.ContainsField("nightOrDay") ? doc.GetValue<string>("nightOrDay") : null;
+                                            string? truckPlate = doc.ContainsField("truckPlate") ? doc.GetValue<string>("truckPlate") : null;
+                                            string? notes = doc.ContainsField("notes") ? doc.GetValue<string>("notes") : null;
+                                            string? createdByUserId = doc.ContainsField("createdByUserId") ? doc.GetValue<string>("createdByUserId") : null;
+                                            long createdAt = doc.ContainsField("createdAt") ? doc.GetValue<long>("createdAt") : 0;
+                                            bool deleted = doc.ContainsField("deleted") && doc.GetValue<bool>("deleted");
+
+                                            await using var upd = conn.CreateCommand();
+                                            upd.CommandText = @"UPDATE Records SET
+                                                                updated_at=@updated_at,
+                                                                is_dirty=0,
+                                                                deleted=@deleted,
+                                                                containerNo=@containerNo,
+                                                                loadLocation=@loadLocation,
+                                                                unloadLocation=@unloadLocation,
+                                                                size=@size,
+                                                                status=@status,
+                                                                nightOrDay=@nightOrDay,
+                                                                truckPlate=@truckPlate,
+                                                                notes=@notes,
+                                                                createdByUserId=@createdByUserId,
+                                                                createdAt=@createdAt
+                                                              WHERE id=@id";
+                                            upd.Parameters.AddWithValue("@updated_at", remoteUpdated);
+                                            upd.Parameters.AddWithValue("@deleted", deleted ? 1 : 0);
+                                            upd.Parameters.AddWithValue("@containerNo", (object?)containerNo ?? DBNull.Value);
+                                            upd.Parameters.AddWithValue("@loadLocation", (object?)loadLocation ?? DBNull.Value);
+                                            upd.Parameters.AddWithValue("@unloadLocation", (object?)unloadLocation ?? DBNull.Value);
+                                            upd.Parameters.AddWithValue("@size", (object?)size ?? DBNull.Value);
+                                            upd.Parameters.AddWithValue("@status", (object?)status ?? DBNull.Value);
+                                            upd.Parameters.AddWithValue("@nightOrDay", (object?)nightOrDay ?? DBNull.Value);
+                                            upd.Parameters.AddWithValue("@truckPlate", (object?)truckPlate ?? DBNull.Value);
+                                            upd.Parameters.AddWithValue("@notes", (object?)notes ?? DBNull.Value);
+                                            upd.Parameters.AddWithValue("@createdByUserId", (object?)createdByUserId ?? DBNull.Value);
+                                            upd.Parameters.AddWithValue("@createdAt", createdAt);
+                                            upd.Parameters.AddWithValue("@id", localId);
+                                            await upd.ExecuteNonQueryAsync().ConfigureAwait(false);
+                                        }
+                                    }
+                                }
+                            }
+                            catch (Exception ex)
+                            {
+                                Debug.WriteLine($"[HepsiniDinle] Snapshot iþleme hatasý: {ex.Message}");
+                            }
+                            finally
+                            {
+                                try { onChanged?.Invoke(null); } catch { }
+                            }
+                        });
+                    });
+                }
+                catch (Exception ex)
+                {
+                    Debug.WriteLine($"[HepsiniDinle] Dinleme baþlatýlamadý: {ex.Message}");
+                }
+            });
         }
     }
 }
