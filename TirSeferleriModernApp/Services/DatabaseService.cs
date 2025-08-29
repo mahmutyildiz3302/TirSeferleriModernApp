@@ -5,6 +5,7 @@ using System.Diagnostics;
 using System.IO;
 using System.Linq;
 using System.Text.RegularExpressions;
+using System.Threading.Tasks;
 using TirSeferleriModernApp.Models;
 using static TirSeferleriModernApp.Views.VergilerAracView;
 
@@ -61,6 +62,56 @@ namespace TirSeferleriModernApp.Services
             catch (Exception ex)
             {
                 Debug.WriteLine("[Initialize] Migration/Seed error: " + ex.Message);
+            }
+        }
+
+        // -------------------- Records: Local save --------------------
+        public static async Task<int> RecordKaydetAsync(Record r)
+        {
+            if (r == null) return 0;
+
+            // updated_at ve is_dirty ayarla
+            r.updated_at = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+            r.is_dirty = true;
+
+            EnsureDatabaseFileStatic();
+            await using var conn = new SqliteConnection(ConnectionString);
+            await conn.OpenAsync();
+            await using var cmd = conn.CreateCommand();
+            cmd.CommandText = @"INSERT OR REPLACE INTO Records (
+                                    id, remote_id, updated_at, is_dirty, deleted,
+                                    containerNo, loadLocation, unloadLocation, size, status,
+                                    nightOrDay, truckPlate, notes, createdByUserId, createdAt)
+                                VALUES (
+                                    @id, @remote_id, @updated_at, @is_dirty, @deleted,
+                                    @containerNo, @loadLocation, @unloadLocation, @size, @status,
+                                    @nightOrDay, @truckPlate, @notes, @createdByUserId, @createdAt
+                                );";
+
+            cmd.Parameters.AddWithValue("@id", r.id);
+            cmd.Parameters.AddWithValue("@remote_id", (object?)r.remote_id ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@updated_at", r.updated_at);
+            cmd.Parameters.AddWithValue("@is_dirty", r.is_dirty ? 1 : 0);
+            cmd.Parameters.AddWithValue("@deleted", r.deleted ? 1 : 0);
+            cmd.Parameters.AddWithValue("@containerNo", (object?)r.containerNo ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@loadLocation", (object?)r.loadLocation ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@unloadLocation", (object?)r.unloadLocation ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@size", (object?)r.size ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@status", (object?)r.status ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@nightOrDay", (object?)r.nightOrDay ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@truckPlate", (object?)r.truckPlate ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@notes", (object?)r.notes ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@createdByUserId", (object?)r.createdByUserId ?? DBNull.Value);
+            cmd.Parameters.AddWithValue("@createdAt", r.createdAt);
+
+            try
+            {
+                return await cmd.ExecuteNonQueryAsync();
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[RecordKaydetAsync] Hata: {ex.Message}");
+                throw;
             }
         }
 
