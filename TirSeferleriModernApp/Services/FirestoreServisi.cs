@@ -227,5 +227,23 @@ namespace TirSeferleriModernApp.Services
                 }
             });
         }
+
+        // Dinlemeyi durdur (uygulama kapanýþýnda)
+        public async Task DinlemeyiDurdurAsync()
+        {
+            try
+            {
+                if (_recordsListener != null)
+                {
+                    _recordsListener.StopAsync().GetAwaiter().GetResult();
+                    _recordsListener = null;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[Firestore] Dinleme durdurma hatasý: {ex.Message}");
+            }
+            await Task.CompletedTask;
+        }
     }
 }
