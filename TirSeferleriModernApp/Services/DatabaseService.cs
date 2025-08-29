@@ -44,6 +44,10 @@ namespace TirSeferleriModernApp.Services
             CheckAndCreateOrUpdateDepoTablosu();
             CheckAndCreateOrUpdateGuzergahTablosu();
             CheckAndCreateOrUpdateYakitGiderTablosu();
+
+            // Records tablosu: oluştur ve eksik kolonları tamamla
+            CheckAndCreateOrUpdateRecordsTable();
+            // Records için ek kolonlar ve indeksler
             EnsureRecordsSyncColumnsAndIndexes();
 
             // Seed only first time
@@ -62,6 +66,58 @@ namespace TirSeferleriModernApp.Services
             catch (Exception ex)
             {
                 Debug.WriteLine("[Initialize] Migration/Seed error: " + ex.Message);
+            }
+        }
+
+        // -------------------- Records: CREATE/ALTER --------------------
+        public static void CheckAndCreateOrUpdateRecordsTable()
+        {
+            try
+            {
+                EnsureDatabaseFileStatic();
+
+                string createScript = @"CREATE TABLE IF NOT EXISTS Records (
+                    id INTEGER PRIMARY KEY AUTOINCREMENT,
+                    remote_id TEXT,
+                    updated_at INTEGER NOT NULL DEFAULT 0,
+                    is_dirty INTEGER NOT NULL DEFAULT 0,
+                    deleted INTEGER NOT NULL DEFAULT 0,
+                    containerNo TEXT,
+                    loadLocation TEXT,
+                    unloadLocation TEXT,
+                    size TEXT,
+                    status TEXT,
+                    nightOrDay TEXT,
+                    truckPlate TEXT,
+                    notes TEXT,
+                    createdByUserId TEXT,
+                    createdAt INTEGER NOT NULL DEFAULT 0
+                );";
+
+                string[] requiredColumns = [
+                    "remote_id TEXT",
+                    "updated_at INTEGER NOT NULL DEFAULT 0",
+                    "is_dirty INTEGER NOT NULL DEFAULT 0",
+                    "deleted INTEGER NOT NULL DEFAULT 0",
+                    "containerNo TEXT",
+                    "loadLocation TEXT",
+                    "unloadLocation TEXT",
+                    "size TEXT",
+                    "status TEXT",
+                    "nightOrDay TEXT",
+                    "truckPlate TEXT",
+                    "notes TEXT",
+                    "createdByUserId TEXT",
+                    "createdAt INTEGER NOT NULL DEFAULT 0"
+                ];
+
+                // CREATE + eksik kolonları tamamla
+                EnsureTable("Records", createScript, requiredColumns);
+                Debug.WriteLine("[Records] CheckAndCreateOrUpdateRecordsTable: OK");
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine($"[Records] CheckAndCreateOrUpdateRecordsTable error: {ex.Message}");
             }
         }
 
@@ -106,12 +162,14 @@ namespace TirSeferleriModernApp.Services
 
             try
             {
-                return await cmd.ExecuteNonQueryAsync();
+                var affected = await cmd.ExecuteNonQueryAsync();
+                Debug.WriteLine($"[Records] RecordKaydetAsync: id={r.id}, affected={affected}");
+                return affected;
             }
             catch (Exception ex)
             {
                 Debug.WriteLine($"[RecordKaydetAsync] Hata: {ex.Message}");
-                throw;
+                return 0;
             }
         }
 
