@@ -43,6 +43,7 @@ namespace TirSeferleriModernApp.Services
             CheckAndCreateOrUpdateDepoTablosu();
             CheckAndCreateOrUpdateGuzergahTablosu();
             CheckAndCreateOrUpdateYakitGiderTablosu();
+            EnsureRecordsSyncColumnsAndIndexes();
 
             // Seed only first time
             EnsureDefaultDepolar();
@@ -708,6 +709,67 @@ namespace TirSeferleriModernApp.Services
                     addColumnCommand.CommandText = $"ALTER TABLE {tableName} ADD COLUMN {column};";
                     addColumnCommand.ExecuteNonQuery();
                 }
+            }
+        }
+
+        // -------------------- Records migration --------------------
+        public static void EnsureRecordsSyncColumnsAndIndexes()
+        {
+            try
+            {
+                EnsureDatabaseFileStatic();
+                using var conn = new SqliteConnection(ConnectionString); conn.Open();
+
+                // Tablo mevcut mu?
+                bool hasTable;
+                using (var chk = conn.CreateCommand())
+                {
+                    chk.CommandText = "SELECT 1 FROM sqlite_master WHERE type='table' AND name='Records' LIMIT 1";
+                    hasTable = chk.ExecuteScalar() != null;
+                }
+                if (!hasTable) return; // Records tablosu yoksa sessizce geç
+
+                // Sütun eklemeleri (güvenli)
+                if (!ColumnExists(conn, "Records", "remote_id"))
+                {
+                    using var alter1 = conn.CreateCommand();
+                    alter1.CommandText = "ALTER TABLE Records ADD COLUMN remote_id TEXT;";
+                    alter1.ExecuteNonQuery();
+                }
+                if (!ColumnExists(conn, "Records", "updated_at"))
+                {
+                    using var alter2 = conn.CreateCommand();
+                    alter2.CommandText = "ALTER TABLE Records ADD COLUMN updated_at INTEGER NOT NULL DEFAULT 0;";
+                    alter2.ExecuteNonQuery();
+                }
+                if (!ColumnExists(conn, "Records", "is_dirty"))
+                {
+                    using var alter3 = conn.CreateCommand();
+                    alter3.CommandText = "ALTER TABLE Records ADD COLUMN is_dirty INTEGER NOT NULL DEFAULT 0;";
+                    alter3.ExecuteNonQuery();
+                }
+                if (!ColumnExists(conn, "Records", "deleted"))
+                {
+                    using var alter4 = conn.CreateCommand();
+                    alter4.CommandText = "ALTER TABLE Records ADD COLUMN deleted INTEGER NOT NULL DEFAULT 0;";
+                    alter4.ExecuteNonQuery();
+                }
+
+                // İndeksler
+                using (var idx1 = conn.CreateCommand())
+                {
+                    idx1.CommandText = "CREATE INDEX IF NOT EXISTS idx_records_remote_id ON Records(remote_id);";
+                    idx1.ExecuteNonQuery();
+                }
+                using (var idx2 = conn.CreateCommand())
+                {
+                    idx2.CommandText = "CREATE INDEX IF NOT EXISTS idx_records_updated_at ON Records(updated_at);";
+                    idx2.ExecuteNonQuery();
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[EnsureRecordsSyncColumnsAndIndexes] " + ex.Message);
             }
         }
 
