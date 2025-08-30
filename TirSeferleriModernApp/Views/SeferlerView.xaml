@@ -27,6 +27,13 @@
             <StackPanel Margin="20">
                 <TextBlock Text="Yeni Sefer Girişi" FontSize="20" FontWeight="Bold" Foreground="#F5F9FF" Margin="0,0,0,20"/>
 
+                <!-- Senkron durumu -->
+                <StackPanel Orientation="Horizontal" Margin="0,0,0,10">
+                    <materialDesign:PackIcon Kind="Cloud" Foreground="#F5F9FF" VerticalAlignment="Center"/>
+                    <TextBlock Text="  Senkron: " Foreground="#F5F9FF" Margin="6,0,0,0"/>
+                    <TextBlock Text="{Binding SenkronDurumu}" Foreground="#F5F9FF" FontWeight="SemiBold"/>
+                </StackPanel>
+
                 <!-- Fiyat (otomatik) EN ÜSTE ALINDI -->
                 <TextBlock Text="Fiyat (otomatik):" Foreground="#F5F9FF"/>
                 <TextBlock Background="#F5F9FF" Foreground="#22335A" Padding="8,4" Margin="0,5,0,10"

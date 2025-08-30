@@ -40,9 +40,11 @@ namespace TirSeferleriModernApp.Services
             try
             {
                 _db = await FirestoreDb.CreateAsync(projectId);
+                SyncStatusHub.Set("Bulut: Baðlandý");
             }
             catch (Exception ex)
             {
+                SyncStatusHub.Set("Bulut: Hata");
                 throw new InvalidOperationException(
                     $"Firestore'a baðlanýlamadý. Lütfen proje kimliði ve kimlik bilgisi dosyasýný kontrol edin. Ayrýntý: {ex.Message}", ex);
             }
@@ -99,6 +101,7 @@ namespace TirSeferleriModernApp.Services
             }
             catch (Exception ex)
             {
+                SyncStatusHub.Set($"Bulut: Hata ({ex.Message})");
                 return $"Hata: {ex.Message}";
             }
         }
@@ -129,6 +132,7 @@ namespace TirSeferleriModernApp.Services
                     var col = _db.Collection("records");
                     _recordsListener = col.Listen(snapshot =>
                     {
+                        SyncStatusHub.Set("Bulut: Dinleniyor");
                         _ = Task.Run(async () =>
                         {
                             try
@@ -213,6 +217,7 @@ namespace TirSeferleriModernApp.Services
                             catch (Exception ex)
                             {
                                 Debug.WriteLine($"[HepsiniDinle] Snapshot iþleme hatasý: {ex.Message}");
+                                SyncStatusHub.Set($"Bulut: Hata ({ex.Message})");
                             }
                             finally
                             {
@@ -224,6 +229,7 @@ namespace TirSeferleriModernApp.Services
                 catch (Exception ex)
                 {
                     Debug.WriteLine($"[HepsiniDinle] Dinleme baþlatýlamadý: {ex.Message}");
+                    SyncStatusHub.Set($"Bulut: Hata ({ex.Message})");
                 }
             });
         }
@@ -243,6 +249,7 @@ namespace TirSeferleriModernApp.Services
             {
                 Debug.WriteLine($"[Firestore] Dinleme durdurma hatasý: {ex.Message}");
             }
+            SyncStatusHub.Set("Kapalý");
             await Task.CompletedTask;
         }
     }

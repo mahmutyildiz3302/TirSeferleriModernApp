@@ -24,7 +24,7 @@ namespace TirSeferleriModernApp.ViewModels
         private List<Sefer> _allSeferlerCache = new();
 
         // Senkron durum metni (opsiyonel gösterim için)
-        private string? _senkronDurumu;
+        private string? _senkronDurumu = "Kapalı";
         public string? SenkronDurumu
         {
             get => _senkronDurumu;
@@ -116,6 +116,15 @@ namespace TirSeferleriModernApp.ViewModels
         public ISnackbarMessageQueue MessageQueue { get; } = messageQueue;
 
         private readonly DatabaseService _databaseService = databaseService;
+
+        public SeferlerViewModel(SnackbarMessageQueue mq, DatabaseService databaseService, bool subscribeStatus = true) : this(mq, databaseService)
+        {
+            if (subscribeStatus)
+            {
+                // Global senkron durum değişimlerini dinle ve ekrana yansıt
+                _ = SyncStatusHub.Subscribe(status => SenkronDurumu = status);
+            }
+        }
 
         [RelayCommand]
         private async Task KaydetVeyaGuncelle()

@@ -18,6 +18,9 @@ namespace TirSeferleriModernApp
         {
             base.OnStartup(e);
 
+            // Varsayılan durum
+            SyncStatusHub.Set("Kapalı");
+
             // Log servisinin başlatılması (Debug ve Trace yakalanır)
             LogService.Initialize();
 
@@ -52,20 +55,24 @@ namespace TirSeferleriModernApp
             {
                 _syncAgent.Start();
                 Debug.WriteLine("[App] SyncAgent başlatıldı.");
+                SyncStatusHub.Set("Senkron: Çalışıyor");
             }
             catch (System.Exception ex)
             {
                 Debug.WriteLine($"[App] SyncAgent başlatılamadı: {ex.Message}");
+                SyncStatusHub.Set("Senkron: Hata");
             }
 
             try
             {
                 _firestore.HepsiniDinle();
                 Debug.WriteLine("[App] Firestore dinleyici başlatıldı.");
+                SyncStatusHub.Set("Bulut: Dinleniyor");
             }
             catch (System.Exception ex)
             {
                 Debug.WriteLine($"[App] Firestore dinleyici hatası: {ex.Message}");
+                SyncStatusHub.Set("Bulut: Hata");
             }
         }
 
@@ -95,6 +102,8 @@ namespace TirSeferleriModernApp
             {
                 Debug.WriteLine($"[App] Firestore dinleyici durdurma hatası: {ex.Message}");
             }
+
+            SyncStatusHub.Set("Kapalı");
         }
     }
 }

@@ -23,6 +23,7 @@ namespace TirSeferleriModernApp.Sync
             if (IsRunning) return;
             _cts = new CancellationTokenSource();
             _loopTask = Task.Run(() => RunLoopAsync(_cts.Token));
+            SyncStatusHub.Set("Senkron: Çalýþýyor");
         }
 
         public async Task StopAsync()
@@ -32,6 +33,7 @@ namespace TirSeferleriModernApp.Sync
             try { if (_loopTask != null) await _loopTask.ConfigureAwait(false); }
             catch { /* ignore */ }
             finally { _loopTask = null; _cts.Dispose(); _cts = null; }
+            SyncStatusHub.Set("Kapalý");
         }
 
         private async Task RunLoopAsync(CancellationToken token)
@@ -46,6 +48,7 @@ namespace TirSeferleriModernApp.Sync
                 catch (Exception ex)
                 {
                     Debug.WriteLine($"[SyncAgent] Hata: {ex.Message}");
+                    SyncStatusHub.Set($"Senkron: Hata ({ex.Message})");
                 }
                 try
                 {
@@ -64,6 +67,7 @@ namespace TirSeferleriModernApp.Sync
                 catch (Exception ex)
                 {
                     Debug.WriteLine($"[SyncAgent] Firestore baðlantý hatasý: {ex.Message}");
+                    SyncStatusHub.Set($"Bulut: Hata ({ex.Message})");
                     return; // Baðlantý yoksa bu turu pas geç
                 }
             }
@@ -79,10 +83,12 @@ namespace TirSeferleriModernApp.Sync
                 {
                     // Baþarýlý - yerelde remote_id'yi yaz ve is_dirty=0 yap
                     await MarkRecordSyncedAsync(rec.id, result, token).ConfigureAwait(false);
+                    SyncStatusHub.Set("Senkron: Güncel");
                 }
                 else
                 {
                     Debug.WriteLine($"[SyncAgent] Senkronizasyon baþarýsýz (id={rec.id}): {result}");
+                    SyncStatusHub.Set($"Senkron: Hata ({result})");
                 }
             }
         }
@@ -128,6 +134,7 @@ namespace TirSeferleriModernApp.Sync
             catch (Exception ex)
             {
                 Debug.WriteLine($"[SyncAgent] Dirty kayýt okunamadý: {ex.Message}");
+                SyncStatusHub.Set($"Senkron: Hata ({ex.Message})");
             }
             return list;
         }
@@ -150,6 +157,7 @@ namespace TirSeferleriModernApp.Sync
             catch (Exception ex)
             {
                 Debug.WriteLine($"[SyncAgent] Yerel kayýt güncellenemedi (id={id}): {ex.Message}");
+                SyncStatusHub.Set($"Senkron: Hata ({ex.Message})");
             }
         }
 
