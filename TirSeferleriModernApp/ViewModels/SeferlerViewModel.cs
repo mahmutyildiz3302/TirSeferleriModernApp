@@ -28,6 +28,35 @@ namespace TirSeferleriModernApp.ViewModels
             set => SetProperty(ref _kaynakGoster, value);
         }
 
+        // Durum çubuğu özetleri
+        private int _sqliteSayisi;
+        public int SQLiteSayisi
+        {
+            get => _sqliteSayisi;
+            set => SetProperty(ref _sqliteSayisi, value);
+        }
+
+        private int _firestoreSayisi;
+        public int FirestoreSayisi
+        {
+            get => _firestoreSayisi;
+            set => SetProperty(ref _firestoreSayisi, value);
+        }
+
+        private DateTime? _sonYerelOkumaZamani;
+        public DateTime? SonYerelOkumaZamani
+        {
+            get => _sonYerelOkumaZamani;
+            set => SetProperty(ref _sonYerelOkumaZamani, value);
+        }
+
+        private DateTime? _sonUzakGuncellemeZamani;
+        public DateTime? SonUzakGuncellemeZamani
+        {
+            get => _sonUzakGuncellemeZamani;
+            set => SetProperty(ref _sonUzakGuncellemeZamani, value);
+        }
+
         // Tüm verilerin önbelleği (seçilen plaka filtresine göre)
         private List<Sefer> _allSeferlerCache = new();
 
@@ -132,19 +161,21 @@ namespace TirSeferleriModernApp.ViewModels
                 // Global senkron durum değişimlerini dinle ve ekrana yansıt
                 _ = SyncStatusHub.Subscribe(status => SenkronDurumu = status);
 
-                // Firestore’dan gelen güncellemeleri dinle: ilgili satırın DataKaynak bilgisini Firestore olarak işaretle
+                // Firestore’dan gelen güncellemeleri dinle: ilgili satırın DataKaynak bilgisini Firestore olarak işaretle ve özetleri güncelle
                 FirestoreServisi.RecordChangedFromFirestore += OnRecordChangedFromFirestore;
             }
         }
 
         private void OnRecordChangedFromFirestore(int localId)
         {
-            // Hem cache’de hem de ekranda bulunan satırı Firestore olarak işaretle
             var inCache = _allSeferlerCache.FirstOrDefault(x => x.SeferId == localId);
             if (inCache != null) inCache.DataKaynak = DataKaynakTuru.Firestore;
 
             var inUi = SeferListesi.FirstOrDefault(x => x.SeferId == localId);
             if (inUi != null) inUi.DataKaynak = DataKaynakTuru.Firestore;
+
+            SonUzakGuncellemeZamani = DateTime.Now;
+            UpdateSummaryUsingDisplayed();
         }
 
         [RelayCommand]
@@ -246,6 +277,7 @@ namespace TirSeferleriModernApp.ViewModels
         {
             EnsureYilSecenekleri();
             _allSeferlerCache = DatabaseService.GetSeferler();
+            SonYerelOkumaZamani = DateTime.Now;
             ApplyDateFilterAndUpdate();
         }
 
@@ -253,6 +285,7 @@ namespace TirSeferleriModernApp.ViewModels
         {
             EnsureYilSecenekleri();
             _allSeferlerCache = DatabaseService.GetSeferlerByCekiciPlaka(plaka);
+            SonYerelOkumaZamani = DateTime.Now;
             ApplyDateFilterAndUpdate();
         }
 
@@ -267,91 +300,34 @@ namespace TirSeferleriModernApp.ViewModels
             SetSeferListWithTotals(filtered);
         }
 
-        private void SeferGuncelle(Sefer guncellenecekSefer)
-        {
-            if (!ValidateSefer(guncellenecekSefer)) return;
-
-            DatabaseService.SeferGuncelle(guncellenecekSefer);
-
-            MessageQueue.Enqueue($"{guncellenecekSefer.KonteynerNo} numaralı konteyner seferi başarıyla güncellendi!");
-            SeciliSefer = new Sefer { Tarih = DateTime.Today };
-        }
-
-        private void SeferEkle(Sefer yeniSefer)
-        {
-            if (!ValidateSefer(yeniSefer)) return;
-
-            var newId = DatabaseService.SeferEkle(yeniSefer);
-            if (newId > 0)
-            {
-                yeniSefer.SeferId = newId;
-                MessageQueue.Enqueue($"{yeniSefer.KonteynerNo} numaralı konteyner seferi başarıyla eklendi!");
-            }
-            else
-            {
-                MessageQueue.Enqueue("Sefer kaydedilemedi.");
-            }
-            SeciliSefer = new Sefer { Tarih = DateTime.Today };
-        }
-
-        // Soldaki menüden gelen bilgiler (bildirimli özellikler)
-        private string? _seciliCekiciPlaka;
-        public string? SeciliCekiciPlaka
-        {
-            get => _seciliCekiciPlaka;
-            set => SetProperty(ref _seciliCekiciPlaka, value);
-        }
-
-        private string? _seciliSoforAdi;
-        public string? SeciliSoforAdi
-        {
-            get => _seciliSoforAdi;
-            set => SetProperty(ref _seciliSoforAdi, value);
-        }
-
-        private string? _seciliDorsePlaka;
-        public string? SeciliDorsePlaka
-        {
-            get => _seciliDorsePlaka;
-            set => SetProperty(ref _seciliDorsePlaka, value);
-        }
-
-        public void UpdateSelection(string? cekiciPlaka, string? soforAdi)
-        {
-            SeciliCekiciPlaka = cekiciPlaka;
-            SeciliSoforAdi = soforAdi;
-            SeciliDorsePlaka = string.IsNullOrWhiteSpace(cekiciPlaka) ? null : DatabaseService.GetDorsePlakaByCekiciPlaka(cekiciPlaka);
-
-            // Seçilen çekici plakasına göre listeyi filtrele
-            if (!string.IsNullOrWhiteSpace(SeciliCekiciPlaka))
-                RefreshFromDatabaseByPlaka(SeciliCekiciPlaka);
-            else
-                RefreshFromDatabaseAll();
-        }
-
-        public void LoadSeferler()
-        {
-            RefreshFromDatabaseAll();
-            DepoAdlari.ReplaceAll(DatabaseService.GetDepoAdlari());
-            // EkstraAdlari sabit; DB'den doldurulmayacak
-        }
-
-        public void LoadSeferler(string cekiciPlaka)
-        {
-            RefreshFromDatabaseByPlaka(cekiciPlaka);
-            DepoAdlari.ReplaceAll(DatabaseService.GetDepoAdlari());
-            // EkstraAdlari sabit; DB'den doldurulmayacak
-        }
-
         private void SetSeferListWithTotals(IEnumerable<Sefer> data)
         {
             var list = data?.ToList() ?? new List<Sefer>();
+
+            // Özet güncelle
+            UpdateSummary(list);
+
             var header = BuildToplamSatir(list);
             var footer = BuildToplamSatir(list);
             var withTotals = new List<Sefer>(list.Count + 2) { header };
             withTotals.AddRange(list);
             withTotals.Add(footer);
             SeferListesi.ReplaceAll(withTotals);
+        }
+
+        private void UpdateSummary(IEnumerable<Sefer> list)
+        {
+            var real = list?.Where(x => x != null) ?? Enumerable.Empty<Sefer>();
+            SQLiteSayisi = real.Count(x => x.DataKaynak == DataKaynakTuru.SQLite);
+            FirestoreSayisi = real.Count(x => x.DataKaynak == DataKaynakTuru.Firestore);
+        }
+
+        private void UpdateSummaryUsingDisplayed()
+        {
+            var real = SeferListesi?.Where(x => x != null && !string.Equals(x.Aciklama, "Toplam", System.StringComparison.OrdinalIgnoreCase))
+                                    ?? Enumerable.Empty<Sefer>();
+            SQLiteSayisi = real.Count(x => x.DataKaynak == DataKaynakTuru.SQLite);
+            FirestoreSayisi = real.Count(x => x.DataKaynak == DataKaynakTuru.Firestore);
         }
 
         private static Sefer BuildToplamSatir(IEnumerable<Sefer> list)
@@ -480,6 +456,82 @@ namespace TirSeferleriModernApp.ViewModels
             }
 
             return true;
+        }
+
+        // Soldaki menüden gelen bilgiler (bildirimli özellikler)
+        private string? _seciliCekiciPlaka;
+        public string? SeciliCekiciPlaka
+        {
+            get => _seciliCekiciPlaka;
+            set => SetProperty(ref _seciliCekiciPlaka, value);
+        }
+
+        private string? _seciliSoforAdi;
+        public string? SeciliSoforAdi
+        {
+            get => _seciliSoforAdi;
+            set => SetProperty(ref _seciliSoforAdi, value);
+        }
+
+        private string? _seciliDorsePlaka;
+        public string? SeciliDorsePlaka
+        {
+            get => _seciliDorsePlaka;
+            set => SetProperty(ref _seciliDorsePlaka, value);
+        }
+
+        public void UpdateSelection(string? cekiciPlaka, string? soforAdi)
+        {
+            SeciliCekiciPlaka = cekiciPlaka;
+            SeciliSoforAdi = soforAdi;
+            SeciliDorsePlaka = string.IsNullOrWhiteSpace(cekiciPlaka) ? null : DatabaseService.GetDorsePlakaByCekiciPlaka(cekiciPlaka);
+
+            // Seçilen çekici plakasına göre listeyi filtrele
+            if (!string.IsNullOrWhiteSpace(SeciliCekiciPlaka))
+                RefreshFromDatabaseByPlaka(SeciliCekiciPlaka);
+            else
+                RefreshFromDatabaseAll();
+        }
+
+        public void LoadSeferler()
+        {
+            RefreshFromDatabaseAll();
+            DepoAdlari.ReplaceAll(DatabaseService.GetDepoAdlari());
+            // EkstraAdlari sabit; DB'den doldurulmayacak
+        }
+
+        public void LoadSeferler(string cekiciPlaka)
+        {
+            RefreshFromDatabaseByPlaka(cekiciPlaka);
+            DepoAdlari.ReplaceAll(DatabaseService.GetDepoAdlari());
+            // EkstraAdlari sabit; DB'den doldurulmayacak
+        }
+
+        private void SeferGuncelle(Sefer guncellenecekSefer)
+        {
+            if (!ValidateSefer(guncellenecekSefer)) return;
+
+            DatabaseService.SeferGuncelle(guncellenecekSefer);
+
+            MessageQueue.Enqueue($"{guncellenecekSefer.KonteynerNo} numaralı konteyner seferi başarıyla güncellendi!");
+            SeciliSefer = new Sefer { Tarih = DateTime.Today };
+        }
+
+        private void SeferEkle(Sefer yeniSefer)
+        {
+            if (!ValidateSefer(yeniSefer)) return;
+
+            var newId = DatabaseService.SeferEkle(yeniSefer);
+            if (newId > 0)
+            {
+                yeniSefer.SeferId = newId;
+                MessageQueue.Enqueue($"{yeniSefer.KonteynerNo} numaralı konteyner seferi başarıyla eklendi!");
+            }
+            else
+            {
+                MessageQueue.Enqueue("Sefer kaydedilemedi.");
+            }
+            SeciliSefer = new Sefer { Tarih = DateTime.Today };
         }
     }
 }

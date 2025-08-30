@@ -124,8 +124,14 @@
         Margin="10,0,0,0"
         Background="White">
             <Grid>
+                <Grid.RowDefinitions>
+                    <RowDefinition Height="38"/>
+                    <RowDefinition Height="*"/>
+                    <RowDefinition Height="Auto"/>
+                </Grid.RowDefinitions>
+
                 <!-- Üst bilgi şeridi -->
-                <Border Background="#F0F4FF" BorderBrush="#D0D7F2" BorderThickness="0 0 0 1" Padding="8" VerticalAlignment="Top" Height="38">
+                <Border Grid.Row="0" Background="#F0F4FF" BorderBrush="#D0D7F2" BorderThickness="0 0 0 1" Padding="8" VerticalAlignment="Top">
                     <StackPanel Orientation="Horizontal">
                         <TextBlock Text="Şoför: " FontWeight="Bold"/>
                         <TextBlock Text="{Binding SeciliSoforAdi, TargetNullValue=-}" Margin="6,0,0,0"/>
@@ -164,7 +170,7 @@
                     </StackPanel>
                 </Border>
 
-                <DataGrid x:Name="dgSeferler" Margin="0,40,0,0"
+                <DataGrid Grid.Row="1" x:Name="dgSeferler" Margin="0"
                           ItemsSource="{Binding SeferListesi}"
                           AutoGenerateColumns="False"
                           SelectedItem="{Binding SeciliSefer, Mode=TwoWay}"
@@ -433,7 +439,7 @@
                 </DataGrid>
 
                 <!-- Boş veri mesajı -->
-                <TextBlock Text="Kayıtlı sefer yok" Foreground="Gray" FontStyle="Italic" HorizontalAlignment="Center" VerticalAlignment="Center">
+                <TextBlock Grid.Row="1" Text="Kayıtlı sefer yok" Foreground="Gray" FontStyle="Italic" HorizontalAlignment="Center" VerticalAlignment="Center">
                     <TextBlock.Style>
                         <Style TargetType="TextBlock">
                             <Setter Property="Visibility" Value="Collapsed"/>
@@ -448,6 +454,28 @@
                         </Style>
                     </TextBlock.Style>
                 </TextBlock>
+
+                <!-- Durum çubuğu -->
+                <Border Grid.Row="2" Background="#F7F7F9" BorderBrush="#D0D0D0" BorderThickness="1,1,1,0" Padding="6">
+                    <DockPanel LastChildFill="False">
+                        <StackPanel Orientation="Horizontal" DockPanel.Dock="Left">
+                            <TextBlock Text="Senkron: " FontWeight="Bold"/>
+                            <TextBlock Text="{Binding SenkronDurumu}"/>
+                            <TextBlock Text="  |  "/>
+                            <TextBlock Text="SQLite: " FontWeight="Bold"/>
+                            <TextBlock Text="{Binding SQLiteSayisi}"/>
+                            <TextBlock Text="  |  "/>
+                            <TextBlock Text="Firestore: " FontWeight="Bold"/>
+                            <TextBlock Text="{Binding FirestoreSayisi}"/>
+                            <TextBlock Text="  |  "/>
+                            <TextBlock Text="Yerel: " FontWeight="Bold"/>
+                            <TextBlock Text="{Binding SonYerelOkumaZamani, StringFormat={}{0:HH:mm}, TargetNullValue=-}"/>
+                            <TextBlock Text="  |  "/>
+                            <TextBlock Text="Uzak: " FontWeight="Bold"/>
+                            <TextBlock Text="{Binding SonUzakGuncellemeZamani, StringFormat={}{0:HH:mm}, TargetNullValue=-}"/>
+                        </StackPanel>
+                    </DockPanel>
+                </Border>
             </Grid>
         </Border>
 
