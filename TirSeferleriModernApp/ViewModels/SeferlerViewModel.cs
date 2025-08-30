@@ -105,6 +105,28 @@ namespace TirSeferleriModernApp.ViewModels
         public ObservableCollection<string> EkstraAdlari { get; } = [" ", "SODA", "EMANET"]; // "EKSTRA YOK" -> tek boşluk
         public ObservableCollection<string> BosDoluSecenekleri { get; } = ["Boş", "Dolu"];
 
+        // Üst bilgi alanları (seçilen araç/şoför)
+        private string? _seciliCekiciPlaka;
+        public string? SeciliCekiciPlaka
+        {
+            get => _seciliCekiciPlaka;
+            set => SetProperty(ref _seciliCekiciPlaka, value);
+        }
+
+        private string? _seciliSoforAdi;
+        public string? SeciliSoforAdi
+        {
+            get => _seciliSoforAdi;
+            set => SetProperty(ref _seciliSoforAdi, value);
+        }
+
+        private string? _seciliDorsePlaka;
+        public string? SeciliDorsePlaka
+        {
+            get => _seciliDorsePlaka;
+            set => SetProperty(ref _seciliDorsePlaka, value);
+        }
+
         public Sefer? SeciliSefer
         {
             get
@@ -166,6 +188,14 @@ namespace TirSeferleriModernApp.ViewModels
             }
         }
 
+#if DEBUG
+        // Mini debug senaryosu izleme alanları
+        private int _dbgPrevSqlite;
+        private int _dbgPrevFs;
+        private bool _dbgInitLogged;
+        private DateTime? _dbgLastFsEvent;
+#endif
+
         private void OnRecordChangedFromFirestore(int localId)
         {
             var inCache = _allSeferlerCache.FirstOrDefault(x => x.SeferId == localId);
@@ -175,91 +205,34 @@ namespace TirSeferleriModernApp.ViewModels
             if (inUi != null) inUi.DataKaynak = DataKaynakTuru.Firestore;
 
             SonUzakGuncellemeZamani = DateTime.Now;
+#if DEBUG
+            _dbgLastFsEvent = SonUzakGuncellemeZamani;
+#endif
             UpdateSummaryUsingDisplayed();
         }
 
-        [RelayCommand]
-        private async Task KaydetVeyaGuncelle()
+        public void UpdateSelection(string? cekiciPlaka, string? soforAdi)
         {
-            SeciliSefer ??= new Sefer { Tarih = DateTime.Today };
+            SeciliCekiciPlaka = cekiciPlaka;
+            SeciliSoforAdi = soforAdi;
+            SeciliDorsePlaka = string.IsNullOrWhiteSpace(cekiciPlaka) ? null : DatabaseService.GetDorsePlakaByCekiciPlaka(cekiciPlaka);
 
-            // Seçimden gelen bilgileri (ID'ler dahil) tamamla
-            if (!string.IsNullOrWhiteSpace(SeciliCekiciPlaka))
-            {
-                var info = DatabaseService.GetVehicleInfoByCekiciPlaka(SeciliCekiciPlaka);
-                SeciliSefer.CekiciId = info.cekiciId;
-                SeciliSefer.DorseId = info.dorseId;
-                SeciliSefer.SoforId = info.soforId;
-                SeciliSefer.SoforAdi = info.soforAdi;
-                SeciliSefer.CekiciPlaka = SeciliCekiciPlaka;
-                SeciliDorsePlaka = info.dorsePlaka; // üst şerit güncellensin
-                SeciliSoforAdi = info.soforAdi;      // üst şerit güncellensin
-            }
-
-            // Her kaydet/güncelle öncesi fiyatı otomatik hesapla
-            RecalcFiyat();
-
-            // Kopyayı al: Seferler SQLite kaydından sonra Record eşlemesi için kullanılacak
-            var seferToPersist = SeciliSefer;
-
-            if (SeciliSefer.SeferId <= 0)
-            {
-                SeferEkle(SeciliSefer);
-            }
-            else
-            {
-                SeferGuncelle(SeciliSefer);
-            }
-
-            // 1) Yerelde Record olarak kaydet (is_dirty=1, updated_at=now). Senkron ajanı zaten arka planda çalışacak.
-            try
-            {
-                if (seferToPersist != null)
-                {
-                    var (remoteId, createdAt) = DatabaseService.TryGetRecordMeta(seferToPersist.SeferId);
-                    var rec = new Record
-                    {
-                        id = seferToPersist.SeferId,
-                        remote_id = remoteId,
-                        deleted = false,
-                        containerNo = seferToPersist.KonteynerNo,
-                        loadLocation = seferToPersist.YuklemeYeri,
-                        unloadLocation = seferToPersist.BosaltmaYeri,
-                        size = seferToPersist.KonteynerBoyutu,
-                        status = seferToPersist.BosDolu,
-                        nightOrDay = null,
-                        truckPlate = seferToPersist.CekiciPlaka,
-                        notes = seferToPersist.Aciklama,
-                        createdByUserId = null,
-                        createdAt = createdAt > 0 ? createdAt : DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-                    };
-                    await DatabaseService.RecordKaydetAsync(rec);
-                    SenkronDurumu = "Senkron: Bekliyor";
-                }
-            }
-            catch (Exception ex)
-            {
-                SenkronDurumu = $"Senkron: Yerel kayıt hatası ({ex.Message})";
-            }
-
-            // Listeyi, filtre korunarak yenile (SQLite'tan okunur)
             if (!string.IsNullOrWhiteSpace(SeciliCekiciPlaka))
                 RefreshFromDatabaseByPlaka(SeciliCekiciPlaka);
             else
                 RefreshFromDatabaseAll();
         }
 
-        [RelayCommand]
-        private void SelectMonth(object? parameter)
+        public void LoadSeferler()
         {
-            int? month = null;
-            if (parameter != null)
-            {
-                var s = parameter.ToString();
-                if (!string.IsNullOrWhiteSpace(s) && int.TryParse(s, out var m) && m >= 1 && m <= 12)
-                    month = m;
-            }
-            SeciliAy = month;
+            RefreshFromDatabaseAll();
+            DepoAdlari.ReplaceAll(DatabaseService.GetDepoAdlari());
+        }
+
+        public void LoadSeferler(string cekiciPlaka)
+        {
+            RefreshFromDatabaseByPlaka(cekiciPlaka);
+            DepoAdlari.ReplaceAll(DatabaseService.GetDepoAdlari());
         }
 
         private void EnsureYilSecenekleri()
@@ -318,6 +291,10 @@ namespace TirSeferleriModernApp.ViewModels
 
                 // Log: tek satırlık özet (başarılı)
                 LogService.Info($"Sefer listesi güncellendi — SQLite={SQLiteSayisi}, Firestore={FirestoreSayisi}");
+
+#if DEBUG
+                DebugScenarioCheck();
+#endif
             }
             catch (System.Exception ex)
             {
@@ -469,55 +446,6 @@ namespace TirSeferleriModernApp.ViewModels
             return true;
         }
 
-        // Soldaki menüden gelen bilgiler (bildirimli özellikler)
-        private string? _seciliCekiciPlaka;
-        public string? SeciliCekiciPlaka
-        {
-            get => _seciliCekiciPlaka;
-            set => SetProperty(ref _seciliCekiciPlaka, value);
-        }
-
-        private string? _seciliSoforAdi;
-        public string? SeciliSoforAdi
-        {
-            get => _seciliSoforAdi;
-            set => SetProperty(ref _seciliSoforAdi, value);
-        }
-
-        private string? _seciliDorsePlaka;
-        public string? SeciliDorsePlaka
-        {
-            get => _seciliDorsePlaka;
-            set => SetProperty(ref _seciliDorsePlaka, value);
-        }
-
-        public void UpdateSelection(string? cekiciPlaka, string? soforAdi)
-        {
-            SeciliCekiciPlaka = cekiciPlaka;
-            SeciliSoforAdi = soforAdi;
-            SeciliDorsePlaka = string.IsNullOrWhiteSpace(cekiciPlaka) ? null : DatabaseService.GetDorsePlakaByCekiciPlaka(cekiciPlaka);
-
-            // Seçilen çekici plakasına göre listeyi filtrele
-            if (!string.IsNullOrWhiteSpace(SeciliCekiciPlaka))
-                RefreshFromDatabaseByPlaka(SeciliCekiciPlaka);
-            else
-                RefreshFromDatabaseAll();
-        }
-
-        public void LoadSeferler()
-        {
-            RefreshFromDatabaseAll();
-            DepoAdlari.ReplaceAll(DatabaseService.GetDepoAdlari());
-            // EkstraAdlari sabit; DB'den doldurulmayacak
-        }
-
-        public void LoadSeferler(string cekiciPlaka)
-        {
-            RefreshFromDatabaseByPlaka(cekiciPlaka);
-            DepoAdlari.ReplaceAll(DatabaseService.GetDepoAdlari());
-            // EkstraAdlari sabit; DB'den doldurulmayacak
-        }
-
         private void SeferGuncelle(Sefer guncellenecekSefer)
         {
             if (!ValidateSefer(guncellenecekSefer)) return;
@@ -544,5 +472,48 @@ namespace TirSeferleriModernApp.ViewModels
             }
             SeciliSefer = new Sefer { Tarih = DateTime.Today };
         }
+
+#if DEBUG
+        private void DebugScenarioCheck()
+        {
+            // 1) Uygulama açılışı — ilk yüklemede başlangıç sayıları logla
+            if (!_dbgInitLogged)
+            {
+                LogService.Info($"MiniTest: Başlangıç — SQLite={SQLiteSayisi}, Firestore={FirestoreSayisi}");
+                _dbgPrevSqlite = SQLiteSayisi;
+                _dbgPrevFs = FirestoreSayisi;
+                _dbgInitLogged = true;
+                return;
+            }
+
+            // 2) Değişim analizi
+            var sqliteDiff = SQLiteSayisi - _dbgPrevSqlite;
+            var fsDiff = FirestoreSayisi - _dbgPrevFs;
+
+            if (sqliteDiff > 0 && fsDiff == 0)
+            {
+                // İnternet kapalıyken sadece yerel artış beklenir
+                LogService.Info($"MiniTest: Yerel artış — SQLite={SQLiteSayisi}, Firestore={FirestoreSayisi}");
+            }
+            else if (fsDiff > 0)
+            {
+                // İnternet açılınca dinleyici tetiklenmeli ve Firestore sayısı artmalı
+                var recentFs = _dbgLastFsEvent.HasValue && (DateTime.Now - _dbgLastFsEvent.Value).TotalSeconds <= 10;
+                if (recentFs)
+                    LogService.Info($"MiniTest: Firestore tetiklendi — SQLite={SQLiteSayisi}, Firestore={FirestoreSayisi}");
+                else
+                    LogService.Warn($"MiniTest: Firestore artışı görüldü ancak tetikleyici doğrulanamadı — SQLite={SQLiteSayisi}, Firestore={FirestoreSayisi}");
+            }
+            else if (sqliteDiff < 0 || fsDiff < 0)
+            {
+                // Beklenmeyen azalışlar
+                LogService.Warn($"MiniTest: Beklenmeyen azalış — SQLiteΔ={sqliteDiff}, FirestoreΔ={fsDiff}");
+            }
+
+            // 3) Değerleri güncelle
+            _dbgPrevSqlite = SQLiteSayisi;
+            _dbgPrevFs = FirestoreSayisi;
+        }
+#endif
     }
 }
