@@ -14,6 +14,7 @@
         <conv:RowIndexToNumberConverter x:Key="RowIndexToNumber"/>
         <conv:EkstraDisplayConverter x:Key="EkstraDisplayConverter"/>
         <conv:HideOnToplamConverter x:Key="HideOnToplamConverter"/>
+        <BooleanToVisibilityConverter x:Key="BoolToVisibilityConverter"/>
     </UserControl.Resources>
 
     <Grid Margin="20">
@@ -155,6 +156,11 @@
                             <TextBlock Text="Yıl:" Margin="0,0,6,0" VerticalAlignment="Center"/>
                             <ComboBox Width="80" ItemsSource="{Binding YilSecenekleri}" SelectedItem="{Binding SeciliYil, Mode=TwoWay}"/>
                         </StackPanel>
+
+                        <!-- Kaynak Göster toggle -->
+                        <StackPanel Orientation="Horizontal" Margin="20,0,0,0" VerticalAlignment="Center">
+                            <CheckBox Content="Kaynak Göster" IsChecked="{Binding KaynakGoster, Mode=TwoWay}"/>
+                        </StackPanel>
                     </StackPanel>
                 </Border>
 
@@ -202,6 +208,66 @@
                     </DataGrid.Resources>
 
                     <DataGrid.Columns>
+                        <!-- Kaynak sütunu (gizlenebilir) -->
+                        <DataGridTemplateColumn Header="Kaynak" Width="65"
+                                                Visibility="{Binding DataContext.KaynakGoster, ElementName=RootSeferlerView, Converter={StaticResource BoolToVisibilityConverter}}">
+                            <DataGridTemplateColumn.CellTemplate>
+                                <DataTemplate>
+                                    <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
+                                        <!-- DB rozeti -->
+                                        <Border CornerRadius="10" Padding="6,2" Margin="0,0,2,0" Background="#E0E0E0">
+                                            <TextBlock Text="DB" Foreground="#333" FontWeight="Bold"/>
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <MultiDataTrigger>
+                                                            <MultiDataTrigger.Conditions>
+                                                                <Condition Binding="{Binding DataKaynak}" Value="SQLite"/>
+                                                                <Condition Binding="{Binding Aciklama}" Value="Toplam"/>
+                                                            </MultiDataTrigger.Conditions>
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </MultiDataTrigger>
+                                                        <MultiDataTrigger>
+                                                            <MultiDataTrigger.Conditions>
+                                                                <Condition Binding="{Binding DataKaynak}" Value="SQLite"/>
+                                                                <Condition Binding="{Binding Aciklama}" Value="Toplam"/>
+                                                            </MultiDataTrigger.Conditions>
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </MultiDataTrigger>
+                                                        <DataTrigger Binding="{Binding DataKaynak}" Value="SQLite">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Aciklama}" Value="Toplam">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                        </Border>
+
+                                        <!-- FS rozeti -->
+                                        <Border CornerRadius="10" Padding="6,2" Margin="2,0,0,0" Background="#FFE6C7">
+                                            <TextBlock Text="FS" Foreground="#8A4B00" FontWeight="Bold"/>
+                                            <Border.Style>
+                                                <Style TargetType="Border">
+                                                    <Setter Property="Visibility" Value="Collapsed"/>
+                                                    <Style.Triggers>
+                                                        <DataTrigger Binding="{Binding DataKaynak}" Value="Firestore">
+                                                            <Setter Property="Visibility" Value="Visible"/>
+                                                        </DataTrigger>
+                                                        <DataTrigger Binding="{Binding Aciklama}" Value="Toplam">
+                                                            <Setter Property="Visibility" Value="Collapsed"/>
+                                                        </DataTrigger>
+                                                    </Style.Triggers>
+                                                </Style>
+                                            </Border.Style>
+                                        </Border>
+                                    </StackPanel>
+                                </DataTemplate>
+                            </DataGridTemplateColumn.CellTemplate>
+                        </DataGridTemplateColumn>
+
                         <!-- Sıra numarası sütunu -->
                         <DataGridTemplateColumn Header="#" Width="50">
                             <DataGridTemplateColumn.CellTemplate>

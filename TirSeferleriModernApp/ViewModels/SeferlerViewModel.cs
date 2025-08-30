@@ -20,6 +20,14 @@ namespace TirSeferleriModernApp.ViewModels
         private bool _hadBothEndpointsAtStart;       // sefer seçildiğinde her iki nokta zaten dolu miydi?
         private bool _haveBothEndpoints;             // mevcut durumda iki uç da dolu mu? (ilk kez dolu olduğunda tetiklemek için)
 
+        // UI: Kaynak göster/gizle
+        private bool _kaynakGoster;
+        public bool KaynakGoster
+        {
+            get => _kaynakGoster;
+            set => SetProperty(ref _kaynakGoster, value);
+        }
+
         // Tüm verilerin önbelleği (seçilen plaka filtresine göre)
         private List<Sefer> _allSeferlerCache = new();
 
