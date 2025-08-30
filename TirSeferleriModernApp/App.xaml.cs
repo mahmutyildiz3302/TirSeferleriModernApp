@@ -2,6 +2,7 @@
 using System.Data;
 using System.Diagnostics;
 using System.IO;
+using System.Linq;
 using System.Threading.Tasks;
 using System.Windows;
 using TirSeferleriModernApp.Services;
@@ -18,17 +19,15 @@ namespace TirSeferleriModernApp
         {
             base.OnStartup(e);
 
-            // Varsayılan durum
             SyncStatusHub.Set("Kapalı");
 
-            // Log servisinin başlatılması (Debug ve Trace yakalanır)
             LogService.Initialize(alsoWriteToFile: true);
             LogService.Info("Uygulama başlıyor...");
 
-            // AppSettings'i erken yükle ve doğrula
+            // AppSettings'i erken yükle ve doğrula (bu aynı zamanda log'a yazar)
             var settings = AppSettingsHelper.Current;
 
-            // Veritabanı ve tablolar uygulama açılışında kontrol edilir/oluşturulur
+            // DB tabloları
             try
             {
                 LogService.Info("Records tablosu kontrol/oluşturma başlıyor...");
@@ -43,7 +42,7 @@ namespace TirSeferleriModernApp
                 LogService.Error("DB init hata", ex);
             }
 
-            // Senkron ajanını ve Firestore dinleyicisini başlat (hata toleranslı)
+            // Senkron ve dinleyici
             try
             {
                 _syncAgent.Start();
@@ -67,13 +66,73 @@ namespace TirSeferleriModernApp
                 LogService.Error("Firestore dinleyici hatası", ex);
                 SyncStatusHub.Set("Bulut: Hata");
             }
+
+            // DEBUG mini doğrulama (hızlı test)
+#if DEBUG
+            _ = Task.Run(async () =>
+            {
+                // 1) Records tablosu var mı?
+                var hasRecords = DatabaseService.RecordsTableExists();
+                if (!hasRecords)
+                {
+                    LogService.Warn("MiniTest: Records tablosu yoktu, oluşturma çağrılıyor...");
+                    DatabaseService.CheckAndCreateOrUpdateRecordsTable();
+                    hasRecords = DatabaseService.RecordsTableExists();
+                }
+                LogService.Info($"MiniTest: Records tablosu mevcut mu? {(hasRecords ? "Evet" : "Hayır")}");
+
+                // 2) SenkronDurumu 5 sn içinde ‘Dinleniyor/Bağlandı’ benzeri oldu mu?
+                string[] okStates = ["Dinleniyor", "Bağlandı", "Çalışıyor", "Güncel"]; // içeriyorsa geçerli say
+                var start = System.DateTime.UtcNow;
+                bool stateOk = false;
+                while ((System.DateTime.UtcNow - start).TotalSeconds < 5)
+                {
+                    var s = SyncStatusHub.Current ?? string.Empty;
+                    if (okStates.Any(x => s.Contains(x))) { stateOk = true; break; }
+                    await Task.Delay(300);
+                }
+                LogService.Info($"MiniTest: SenkronDurumu uygun mu? {(stateOk ? "Evet" : "Hayır")} | Durum='{SyncStatusHub.Current}'");
+
+                // 3) AppSettings loglarında değerler yazıldı mı? (dolaylı kontrol)
+                // Burada sadece mevcutluğunu ve yolun varlığını tekrar kontrol edip maskeleyerek bildiriyoruz
+                var pid = settings.FirebaseProjectId;
+                var cred = settings.GoogleApplicationCredentialsPath;
+                var pidShown = string.IsNullOrWhiteSpace(pid) ? "(boş)" : pid;
+                var credShown = string.IsNullOrWhiteSpace(cred) ? "(boş)" : MaskPath(cred);
+                LogService.Info($"MiniTest: AppSettings -> ProjectId={pidShown}, CredPath={credShown}");
+
+                // Uyarı: üç koşuldan herhangi biri başarısızsa
+                if (!hasRecords || !stateOk || string.IsNullOrWhiteSpace(pid) || string.IsNullOrWhiteSpace(cred))
+                {
+                    LogService.Warn("MiniTest: Başarısız kontrol(ler) var. İpucu: FIRESTORE_SETUP.md ve AppSettings.json’u doğrulayın.");
+                }
+            });
+#endif
+        }
+
+        private static string MaskPath(string path)
+        {
+            if (string.IsNullOrWhiteSpace(path)) return "";
+            try
+            {
+                var file = System.IO.Path.GetFileName(path);
+                var dir = System.IO.Path.GetDirectoryName(path);
+                if (string.IsNullOrEmpty(dir)) return file;
+                var parts = dir.Split(System.IO.Path.DirectorySeparatorChar, System.IO.Path.AltDirectorySeparatorChar);
+                for (int i = 0; i < parts.Length; i++)
+                {
+                    if (i < parts.Length - 2) parts[i] = new string('*', parts[i].Length);
+                }
+                var maskedDir = string.Join(System.IO.Path.DirectorySeparatorChar, parts);
+                return System.IO.Path.Combine(maskedDir, file);
+            }
+            catch { return "***"; }
         }
 
         protected override void OnExit(ExitEventArgs e)
         {
             base.OnExit(e);
 
-            // Arka plan ajanlarını güvenle durdur
             try
             {
                 LogService.Info("SyncAgent durduruluyor...");

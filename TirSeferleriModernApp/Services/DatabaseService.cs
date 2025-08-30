@@ -17,6 +17,7 @@ namespace TirSeferleriModernApp.Services
         public static readonly string ConnectionString = $"Data Source={DbFile}";
         private readonly string _dbFile;
         private readonly string _instanceConnectionString;
+        private readonly HashSet<string> _tableCreationErrors = new HashSet<string>();
 
         public DatabaseService(string dbFile)
         {
@@ -66,6 +67,25 @@ namespace TirSeferleriModernApp.Services
             catch (Exception ex)
             {
                 Debug.WriteLine("[Initialize] Migration/Seed error: " + ex.Message);
+            }
+        }
+
+        // -------------------- Mini doğrulama yardımcıları --------------------
+        public static bool RecordsTableExists()
+        {
+            try
+            {
+                EnsureDatabaseFileStatic();
+                using var conn = new SqliteConnection(ConnectionString); conn.Open();
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = "SELECT 1 FROM sqlite_master WHERE type='table' AND name='Records' LIMIT 1";
+                var result = cmd.ExecuteScalar();
+                return result != null && result != DBNull.Value;
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[RecordsTableExists] " + ex.Message);
+                return false;
             }
         }
 
