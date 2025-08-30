@@ -190,7 +190,8 @@ namespace TirSeferleriModernApp.ViewModels
                 return;
             }
             AktifAltMenu = "📋 Seferler";
-            _aktifSeferlerVm = new SeferlerViewModel(MessageQueue, _databaseService);
+            // Senkron durumuna abone olan ctor kullanılsın
+            _aktifSeferlerVm = new SeferlerViewModel(MessageQueue, _databaseService, subscribeStatus: true);
             _aktifSeferlerVm.LoadSeferler();
             // Mevcut seçili plaka varsa VM'ye aktar
             if (!string.IsNullOrWhiteSpace(SelectedPlaka))
