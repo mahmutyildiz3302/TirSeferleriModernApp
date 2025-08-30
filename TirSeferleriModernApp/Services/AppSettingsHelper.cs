@@ -23,38 +23,39 @@ namespace TirSeferleriModernApp.Services
                 var localPath = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "AppSettings.json");
                 if (File.Exists(localPath))
                 {
+                    LogService.Info("AppSettings.json okunuyor...");
                     var json = File.ReadAllText(localPath);
                     var settings = JsonSerializer.Deserialize<AppSettings>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new AppSettings();
 
                     // Doðrulama ve loglama
                     if (string.IsNullOrWhiteSpace(settings.FirebaseProjectId))
-                        Trace.WriteLine("[AppSettings] Uyarý: FirebaseProjectId boþ. Firestore eriþimi yapýlamaz.");
+                        LogService.Warn("FirebaseProjectId boþ. Firestore eriþimi yapýlamaz.");
                     else
-                        Trace.WriteLine($"[AppSettings] FirebaseProjectId okundu: {settings.FirebaseProjectId}");
+                        LogService.Info($"FirebaseProjectId okundu: {settings.FirebaseProjectId}");
 
                     if (string.IsNullOrWhiteSpace(settings.GoogleApplicationCredentialsPath))
                     {
-                        Trace.WriteLine("[AppSettings] Uyarý: GoogleApplicationCredentialsPath boþ. Hizmet hesabý anahtar yolu gerekli.");
+                        LogService.Warn("GoogleApplicationCredentialsPath boþ. Hizmet hesabý anahtar yolu gerekli.");
                     }
                     else if (!File.Exists(settings.GoogleApplicationCredentialsPath))
                     {
-                        Trace.WriteLine($"[AppSettings] Uyarý: Hizmet hesabý JSON dosyasý bulunamadý: {settings.GoogleApplicationCredentialsPath}");
+                        LogService.Warn($"Hizmet hesabý JSON dosyasý bulunamadý: {settings.GoogleApplicationCredentialsPath}");
                     }
                     else
                     {
                         // Firestore için kimlik bilgisi yolu ortam deðiþkenine aktarýlýr
                         Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", settings.GoogleApplicationCredentialsPath);
-                        Trace.WriteLine("[AppSettings] Google kimlik bilgisi dosyasý bulundu ve ortam deðiþkeni ayarlandý.");
+                        LogService.Info("Google kimlik bilgisi dosyasý bulundu ve ortam deðiþkeni ayarlandý.");
                     }
 
                     return settings;
                 }
 
-                Trace.WriteLine("[AppSettingsHelper] AppSettings.json bulunamadý.");
+                LogService.Warn("AppSettings.json bulunamadý.");
             }
             catch (Exception ex)
             {
-                Trace.WriteLine($"[AppSettingsHelper] Okuma hatasý: {ex.Message}");
+                LogService.Error("AppSettings okunamadý", ex);
             }
 
             return new AppSettings();

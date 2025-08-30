@@ -44,7 +44,15 @@ namespace TirSeferleriModernApp.Services
             Trace.Listeners.Add(listener);
             Trace.AutoFlush = true;
 
-            Trace.WriteLine("[LogService] Baþlatýldý ve Trace dinleyicisi eklendi.");
+            Trace.WriteLine("[INFO] [LogService] Baþlatýldý ve Trace dinleyicisi eklendi.");
+        }
+
+        public static void Info(string message) => Trace.WriteLine($"[INFO] {message}");
+        public static void Warn(string message) => Trace.WriteLine($"[WARN] {message}");
+        public static void Error(string message, Exception? ex = null)
+        {
+            if (ex != null) Trace.WriteLine($"[ERROR] {message} | {ex.Message}");
+            else Trace.WriteLine($"[ERROR] {message}");
         }
 
         private class UiTraceListener(bool writeFile, string? filePath) : TraceListener

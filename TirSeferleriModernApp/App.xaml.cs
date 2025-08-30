@@ -22,56 +22,61 @@ namespace TirSeferleriModernApp
             SyncStatusHub.Set("Kapalı");
 
             // Log servisinin başlatılması (Debug ve Trace yakalanır)
-            LogService.Initialize();
+            LogService.Initialize(alsoWriteToFile: true);
+
+            LogService.Info("Uygulama başlıyor...");
 
             // AppSettings'i erken yükle ve doğrula
             var settings = AppSettingsHelper.Current;
             if (string.IsNullOrWhiteSpace(settings.FirebaseProjectId))
-                Debug.WriteLine("[App] Uyarı: FirebaseProjectId yapılandırması boş.");
+                LogService.Warn("FirebaseProjectId yapılandırması boş.");
             else
-                Debug.WriteLine($"[App] FirebaseProjectId: {settings.FirebaseProjectId}");
+                LogService.Info($"FirebaseProjectId: {settings.FirebaseProjectId}");
 
             if (string.IsNullOrWhiteSpace(settings.GoogleApplicationCredentialsPath))
-                Debug.WriteLine("[App] Uyarı: GoogleApplicationCredentialsPath yapılandırması boş.");
+                LogService.Warn("GoogleApplicationCredentialsPath yapılandırması boş.");
             else if (!File.Exists(settings.GoogleApplicationCredentialsPath))
-                Debug.WriteLine($"[App] Uyarı: Hizmet hesabı JSON yolu geçersiz: {settings.GoogleApplicationCredentialsPath}");
+                LogService.Warn($"Hizmet hesabı JSON yolu geçersiz: {settings.GoogleApplicationCredentialsPath}");
             else
-                Debug.WriteLine("[App] Hizmet hesabı JSON dosyası bulundu.");
+                LogService.Info("Hizmet hesabı JSON dosyası bulundu.");
 
             // Veritabanı ve tablolar uygulama açılışında kontrol edilir/oluşturulur
             try
             {
-                DatabaseService.CheckAndCreateOrUpdateSeferlerTablosu();
+                LogService.Info("Records tablosu kontrol/oluşturma başlıyor...");
                 DatabaseService.CheckAndCreateOrUpdateRecordsTable();
-                Debug.WriteLine("[App] DB tabloları kontrol edildi.");
+                LogService.Info("Records tablosu kontrol/oluşturma tamamlandı.");
+
+                DatabaseService.CheckAndCreateOrUpdateSeferlerTablosu();
+                LogService.Info("Seferler tablosu kontrol/oluşturma tamamlandı.");
             }
             catch (System.Exception ex)
             {
-                Debug.WriteLine($"[App] DB init hata: {ex.Message}");
+                LogService.Error("DB init hata", ex);
             }
 
             // Senkron ajanını ve Firestore dinleyicisini başlat
             try
             {
                 _syncAgent.Start();
-                Debug.WriteLine("[App] SyncAgent başlatıldı.");
+                LogService.Info("SyncAgent başlatıldı.");
                 SyncStatusHub.Set("Senkron: Çalışıyor");
             }
             catch (System.Exception ex)
             {
-                Debug.WriteLine($"[App] SyncAgent başlatılamadı: {ex.Message}");
+                LogService.Error("SyncAgent başlatılamadı", ex);
                 SyncStatusHub.Set("Senkron: Hata");
             }
 
             try
             {
                 _firestore.HepsiniDinle();
-                Debug.WriteLine("[App] Firestore dinleyici başlatıldı.");
+                LogService.Info("Firestore dinleyici başlatıldı.");
                 SyncStatusHub.Set("Bulut: Dinleniyor");
             }
             catch (System.Exception ex)
             {
-                Debug.WriteLine($"[App] Firestore dinleyici hatası: {ex.Message}");
+                LogService.Error("Firestore dinleyici hatası", ex);
                 SyncStatusHub.Set("Bulut: Hata");
             }
         }
@@ -83,27 +88,28 @@ namespace TirSeferleriModernApp
             // Arka plan ajanlarını güvenle durdur
             try
             {
-                Debug.WriteLine("[App] SyncAgent durduruluyor...");
+                LogService.Info("SyncAgent durduruluyor...");
                 _syncAgent.StopAsync().GetAwaiter().GetResult();
-                Debug.WriteLine("[App] SyncAgent durduruldu.");
+                LogService.Info("SyncAgent durduruldu.");
             }
             catch (System.Exception ex)
             {
-                Debug.WriteLine($"[App] SyncAgent durdurma hatası: {ex.Message}");
+                LogService.Error("SyncAgent durdurma hatası", ex);
             }
 
             try
             {
-                Debug.WriteLine("[App] Firestore dinleyici durduruluyor...");
+                LogService.Info("Firestore dinleyici durduruluyor...");
                 _firestore.DinlemeyiDurdurAsync().GetAwaiter().GetResult();
-                Debug.WriteLine("[App] Firestore dinleyici durduruldu.");
+                LogService.Info("Firestore dinleyici durduruldu.");
             }
             catch (System.Exception ex)
             {
-                Debug.WriteLine($"[App] Firestore dinleyici durdurma hatası: {ex.Message}");
+                LogService.Error("Firestore dinleyici durdurma hatası", ex);
             }
 
             SyncStatusHub.Set("Kapalı");
+            LogService.Info("Uygulama kapanıyor.");
         }
     }
 }

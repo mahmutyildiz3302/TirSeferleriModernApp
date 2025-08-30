@@ -74,6 +74,7 @@ namespace TirSeferleriModernApp.Services
         {
             try
             {
+                LogService.Info("Records tablosu kontrol/oluşturma başlıyor...");
                 EnsureDatabaseFileStatic();
 
                 string createScript = @"CREATE TABLE IF NOT EXISTS Records (
@@ -113,11 +114,11 @@ namespace TirSeferleriModernApp.Services
 
                 // CREATE + eksik kolonları tamamla
                 EnsureTable("Records", createScript, requiredColumns);
-                Debug.WriteLine("[Records] CheckAndCreateOrUpdateRecordsTable: OK");
+                LogService.Info("Records tablosu kontrol/oluşturma tamamlandı.");
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[Records] CheckAndCreateOrUpdateRecordsTable error: {ex.Message}");
+                LogService.Error("Records tablosu oluşturma/güncelleme hatası", ex);
             }
         }
 
@@ -163,12 +164,12 @@ namespace TirSeferleriModernApp.Services
             try
             {
                 var affected = await cmd.ExecuteNonQueryAsync();
-                Debug.WriteLine($"[Records] RecordKaydetAsync: id={r.id}, affected={affected}");
+                LogService.Info($"Records: kaydedildi (id={r.id}, affected={affected})");
                 return affected;
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[RecordKaydetAsync] Hata: {ex.Message}");
+                LogService.Error("RecordKaydetAsync hatası", ex);
                 return 0;
             }
         }

@@ -24,6 +24,7 @@ namespace TirSeferleriModernApp.Sync
             _cts = new CancellationTokenSource();
             _loopTask = Task.Run(() => RunLoopAsync(_cts.Token));
             SyncStatusHub.Set("Senkron: Çalýþýyor");
+            LogService.Info("SyncAgent baþlatýldý.");
         }
 
         public async Task StopAsync()
@@ -34,6 +35,7 @@ namespace TirSeferleriModernApp.Sync
             catch { /* ignore */ }
             finally { _loopTask = null; _cts.Dispose(); _cts = null; }
             SyncStatusHub.Set("Kapalý");
+            LogService.Info("SyncAgent durduruldu.");
         }
 
         private async Task RunLoopAsync(CancellationToken token)
@@ -47,7 +49,7 @@ namespace TirSeferleriModernApp.Sync
                 catch (OperationCanceledException) when (token.IsCancellationRequested) { }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[SyncAgent] Hata: {ex.Message}");
+                    LogService.Error("SyncAgent döngü hatasý", ex);
                     SyncStatusHub.Set($"Senkron: Hata ({ex.Message})");
                 }
                 try
@@ -66,13 +68,14 @@ namespace TirSeferleriModernApp.Sync
                 try { await _firestore.Baglan().ConfigureAwait(false); }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[SyncAgent] Firestore baðlantý hatasý: {ex.Message}");
+                    LogService.Error("Firestore baðlantý hatasý", ex);
                     SyncStatusHub.Set($"Bulut: Hata ({ex.Message})");
                     return; // Baðlantý yoksa bu turu pas geç
                 }
             }
 
             var dirtyList = await GetDirtyRecordsAsync(token).ConfigureAwait(false);
+            LogService.Info($"SyncAgent: {dirtyList.Count} kirli kayýt bulundu.");
             foreach (var rec in dirtyList)
             {
                 if (token.IsCancellationRequested) break;
@@ -84,10 +87,11 @@ namespace TirSeferleriModernApp.Sync
                     // Baþarýlý - yerelde remote_id'yi yaz ve is_dirty=0 yap
                     await MarkRecordSyncedAsync(rec.id, result, token).ConfigureAwait(false);
                     SyncStatusHub.Set("Senkron: Güncel");
+                    LogService.Info($"SyncAgent: local_id={rec.id} senkron edildi, remote_id={result}");
                 }
                 else
                 {
-                    Debug.WriteLine($"[SyncAgent] Senkronizasyon baþarýsýz (id={rec.id}): {result}");
+                    LogService.Error($"Senkronizasyon baþarýsýz (id={rec.id}) - {result}");
                     SyncStatusHub.Set($"Senkron: Hata ({result})");
                 }
             }
@@ -133,7 +137,7 @@ namespace TirSeferleriModernApp.Sync
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[SyncAgent] Dirty kayýt okunamadý: {ex.Message}");
+                LogService.Error("Kirli kayýtlar okunamadý", ex);
                 SyncStatusHub.Set($"Senkron: Hata ({ex.Message})");
             }
             return list;
@@ -156,7 +160,7 @@ namespace TirSeferleriModernApp.Sync
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[SyncAgent] Yerel kayýt güncellenemedi (id={id}): {ex.Message}");
+                LogService.Error($"Yerel kayýt güncellenemedi (id={id})", ex);
                 SyncStatusHub.Set($"Senkron: Hata ({ex.Message})");
             }
         }

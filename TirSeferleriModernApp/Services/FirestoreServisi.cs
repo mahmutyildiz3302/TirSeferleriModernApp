@@ -39,12 +39,15 @@ namespace TirSeferleriModernApp.Services
 
             try
             {
+                LogService.Info("Firestore baðlantýsý kuruluyor...");
                 _db = await FirestoreDb.CreateAsync(projectId);
                 SyncStatusHub.Set("Bulut: Baðlandý");
+                LogService.Info("Firestore baðlantýsý kuruldu.");
             }
             catch (Exception ex)
             {
                 SyncStatusHub.Set("Bulut: Hata");
+                LogService.Error("Firestore'a baðlanýlamadý", ex);
                 throw new InvalidOperationException(
                     $"Firestore'a baðlanýlamadý. Lütfen proje kimliði ve kimlik bilgisi dosyasýný kontrol edin. Ayrýntý: {ex.Message}", ex);
             }
@@ -90,18 +93,21 @@ namespace TirSeferleriModernApp.Services
                     var added = await collection.AddAsync(data);
                     var newId = added.Id;
                     r.remote_id = newId; // geri setlemek faydalý olur
+                    LogService.Info($"Firestore'a yeni belge yazýldý. remote_id={newId}, local_id={r.id}");
                     return newId;
                 }
                 else
                 {
                     var doc = collection.Document(r.remote_id);
                     await doc.SetAsync(data, SetOptions.MergeAll);
+                    LogService.Info($"Firestore belgesi güncellendi. remote_id={r.remote_id}, local_id={r.id}");
                     return r.remote_id;
                 }
             }
             catch (Exception ex)
             {
                 SyncStatusHub.Set($"Bulut: Hata ({ex.Message})");
+                LogService.Error("Buluta yazma/güncelleme hatasý", ex);
                 return $"Hata: {ex.Message}";
             }
         }
@@ -133,6 +139,7 @@ namespace TirSeferleriModernApp.Services
                     _recordsListener = col.Listen(snapshot =>
                     {
                         SyncStatusHub.Set("Bulut: Dinleniyor");
+                        LogService.Info("Firestore dinleyici snapshot aldý.");
                         _ = Task.Run(async () =>
                         {
                             try
@@ -210,13 +217,15 @@ namespace TirSeferleriModernApp.Services
                                             upd.Parameters.AddWithValue("@createdAt", createdAt);
                                             upd.Parameters.AddWithValue("@id", localId);
                                             await upd.ExecuteNonQueryAsync().ConfigureAwait(false);
+
+                                            LogService.Info($"Yerel kayýt güncellendi. local_id={localId}, remote_id={rid}");
                                         }
                                     }
                                 }
                             }
                             catch (Exception ex)
                             {
-                                Debug.WriteLine($"[HepsiniDinle] Snapshot iþleme hatasý: {ex.Message}");
+                                LogService.Error("Snapshot iþleme hatasý", ex);
                                 SyncStatusHub.Set($"Bulut: Hata ({ex.Message})");
                             }
                             finally
@@ -225,10 +234,11 @@ namespace TirSeferleriModernApp.Services
                             }
                         });
                     });
+                    LogService.Info("Firestore dinleyici baþlatýldý.");
                 }
                 catch (Exception ex)
                 {
-                    Debug.WriteLine($"[HepsiniDinle] Dinleme baþlatýlamadý: {ex.Message}");
+                    LogService.Error("Dinleme baþlatýlamadý", ex);
                     SyncStatusHub.Set($"Bulut: Hata ({ex.Message})");
                 }
             });
@@ -241,13 +251,15 @@ namespace TirSeferleriModernApp.Services
             {
                 if (_recordsListener != null)
                 {
+                    LogService.Info("Firestore dinleyici durduruluyor...");
                     _recordsListener.StopAsync().GetAwaiter().GetResult();
                     _recordsListener = null;
+                    LogService.Info("Firestore dinleyici durduruldu.");
                 }
             }
             catch (Exception ex)
             {
-                Debug.WriteLine($"[Firestore] Dinleme durdurma hatasý: {ex.Message}");
+                LogService.Error("Dinleme durdurma hatasý", ex);
             }
             SyncStatusHub.Set("Kapalý");
             await Task.CompletedTask;
