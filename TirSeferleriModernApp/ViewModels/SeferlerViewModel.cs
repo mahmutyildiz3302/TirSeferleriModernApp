@@ -302,17 +302,28 @@ namespace TirSeferleriModernApp.ViewModels
 
         private void SetSeferListWithTotals(IEnumerable<Sefer> data)
         {
-            var list = data?.ToList() ?? new List<Sefer>();
+            try
+            {
+                var list = data?.ToList() ?? new List<Sefer>();
 
-            // Özet güncelle
-            UpdateSummary(list);
+                // Özet güncelle (sayım değerleri burada set edilir)
+                UpdateSummary(list);
 
-            var header = BuildToplamSatir(list);
-            var footer = BuildToplamSatir(list);
-            var withTotals = new List<Sefer>(list.Count + 2) { header };
-            withTotals.AddRange(list);
-            withTotals.Add(footer);
-            SeferListesi.ReplaceAll(withTotals);
+                var header = BuildToplamSatir(list);
+                var footer = BuildToplamSatir(list);
+                var withTotals = new List<Sefer>(list.Count + 2) { header };
+                withTotals.AddRange(list);
+                withTotals.Add(footer);
+                SeferListesi.ReplaceAll(withTotals);
+
+                // Log: tek satırlık özet (başarılı)
+                LogService.Info($"Sefer listesi güncellendi — SQLite={SQLiteSayisi}, Firestore={FirestoreSayisi}");
+            }
+            catch (System.Exception ex)
+            {
+                // Hata: ayrı Warning/Error
+                LogService.Error("Sefer listesi güncellenemedi", ex);
+            }
         }
 
         private void UpdateSummary(IEnumerable<Sefer> list)
