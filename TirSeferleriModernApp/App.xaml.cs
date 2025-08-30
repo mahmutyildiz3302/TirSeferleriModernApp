@@ -23,22 +23,10 @@ namespace TirSeferleriModernApp
 
             // Log servisinin başlatılması (Debug ve Trace yakalanır)
             LogService.Initialize(alsoWriteToFile: true);
-
             LogService.Info("Uygulama başlıyor...");
 
             // AppSettings'i erken yükle ve doğrula
             var settings = AppSettingsHelper.Current;
-            if (string.IsNullOrWhiteSpace(settings.FirebaseProjectId))
-                LogService.Warn("FirebaseProjectId yapılandırması boş.");
-            else
-                LogService.Info($"FirebaseProjectId: {settings.FirebaseProjectId}");
-
-            if (string.IsNullOrWhiteSpace(settings.GoogleApplicationCredentialsPath))
-                LogService.Warn("GoogleApplicationCredentialsPath yapılandırması boş.");
-            else if (!File.Exists(settings.GoogleApplicationCredentialsPath))
-                LogService.Warn($"Hizmet hesabı JSON yolu geçersiz: {settings.GoogleApplicationCredentialsPath}");
-            else
-                LogService.Info("Hizmet hesabı JSON dosyası bulundu.");
 
             // Veritabanı ve tablolar uygulama açılışında kontrol edilir/oluşturulur
             try
@@ -55,7 +43,7 @@ namespace TirSeferleriModernApp
                 LogService.Error("DB init hata", ex);
             }
 
-            // Senkron ajanını ve Firestore dinleyicisini başlat
+            // Senkron ajanını ve Firestore dinleyicisini başlat (hata toleranslı)
             try
             {
                 _syncAgent.Start();

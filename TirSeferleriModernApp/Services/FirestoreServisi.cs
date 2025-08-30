@@ -47,9 +47,8 @@ namespace TirSeferleriModernApp.Services
             catch (Exception ex)
             {
                 SyncStatusHub.Set("Bulut: Hata");
-                LogService.Error("Firestore'a baðlanýlamadý", ex);
-                throw new InvalidOperationException(
-                    $"Firestore'a baðlanýlamadý. Lütfen proje kimliði ve kimlik bilgisi dosyasýný kontrol edin. Ayrýntý: {ex.Message}", ex);
+                LogService.Error("Firestore'a baðlanýlamadý. Ýpucu: FIRESTORE_SETUP.md'deki adýmlarý doðrulayýn (API etkin, rol, JSON yolu, ProjectId)", ex);
+                // Hata durumda uygulamayý çökertme; üst katmanlar durumu gösterir.
             }
         }
 
@@ -107,7 +106,7 @@ namespace TirSeferleriModernApp.Services
             catch (Exception ex)
             {
                 SyncStatusHub.Set($"Bulut: Hata ({ex.Message})");
-                LogService.Error("Buluta yazma/güncelleme hatasý", ex);
+                LogService.Error("Buluta yazma/güncelleme hatasý. Ýpucu: Að baðlantýsýný ve IAM rolünü kontrol edin.", ex);
                 return $"Hata: {ex.Message}";
             }
         }
@@ -225,7 +224,7 @@ namespace TirSeferleriModernApp.Services
                             }
                             catch (Exception ex)
                             {
-                                LogService.Error("Snapshot iþleme hatasý", ex);
+                                LogService.Error("Snapshot iþleme hatasý. Ýpucu: Þema alan adlarý uyumlu mu?", ex);
                                 SyncStatusHub.Set($"Bulut: Hata ({ex.Message})");
                             }
                             finally
@@ -238,7 +237,7 @@ namespace TirSeferleriModernApp.Services
                 }
                 catch (Exception ex)
                 {
-                    LogService.Error("Dinleme baþlatýlamadý", ex);
+                    LogService.Error("Dinleme baþlatýlamadý. Ýpucu: Firestore baðlantýsýný ve yetkileri kontrol edin.", ex);
                     SyncStatusHub.Set($"Bulut: Hata ({ex.Message})");
                 }
             });

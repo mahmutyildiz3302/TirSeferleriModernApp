@@ -49,7 +49,7 @@ namespace TirSeferleriModernApp.Sync
                 catch (OperationCanceledException) when (token.IsCancellationRequested) { }
                 catch (Exception ex)
                 {
-                    LogService.Error("SyncAgent döngü hatasý", ex);
+                    LogService.Error("SyncAgent döngü hatasý. Ýpucu: Að baðlantýsýný ve Firestore yapýlandýrmasýný kontrol edin.", ex);
                     SyncStatusHub.Set($"Senkron: Hata ({ex.Message})");
                 }
                 try
@@ -68,7 +68,7 @@ namespace TirSeferleriModernApp.Sync
                 try { await _firestore.Baglan().ConfigureAwait(false); }
                 catch (Exception ex)
                 {
-                    LogService.Error("Firestore baðlantý hatasý", ex);
+                    LogService.Error("Firestore baðlantý hatasý. Ýpucu: AppSettings.json ve FIRESTORE_SETUP.md adýmlarýný kontrol edin.", ex);
                     SyncStatusHub.Set($"Bulut: Hata ({ex.Message})");
                     return; // Baðlantý yoksa bu turu pas geç
                 }
@@ -137,7 +137,7 @@ namespace TirSeferleriModernApp.Sync
             }
             catch (Exception ex)
             {
-                LogService.Error("Kirli kayýtlar okunamadý", ex);
+                LogService.Error("Kirli kayýtlar okunamadý. Ýpucu: Records þemasýný kontrol edin.", ex);
                 SyncStatusHub.Set($"Senkron: Hata ({ex.Message})");
             }
             return list;
@@ -160,7 +160,7 @@ namespace TirSeferleriModernApp.Sync
             }
             catch (Exception ex)
             {
-                LogService.Error($"Yerel kayýt güncellenemedi (id={id})", ex);
+                LogService.Error($"Yerel kayýt güncellenemedi (id={id}). Ýpucu: DB dosyasý eriþimi veya þema.", ex);
                 SyncStatusHub.Set($"Senkron: Hata ({ex.Message})");
             }
         }

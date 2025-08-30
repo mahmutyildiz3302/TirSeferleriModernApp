@@ -27,19 +27,23 @@ namespace TirSeferleriModernApp.Services
                     var json = File.ReadAllText(localPath);
                     var settings = JsonSerializer.Deserialize<AppSettings>(json, new JsonSerializerOptions { PropertyNameCaseInsensitive = true }) ?? new AppSettings();
 
-                    // Doðrulama ve loglama
+                    // Doðrulama ve yönlendirici loglar
                     if (string.IsNullOrWhiteSpace(settings.FirebaseProjectId))
-                        LogService.Warn("FirebaseProjectId boþ. Firestore eriþimi yapýlamaz.");
+                    {
+                        LogService.Warn("FirebaseProjectId boþ. Ýpucu: AppSettings.json içine proje kimliðini yazýn (Firebase/GCP Project ID). FIRESTORE_SETUP.md'ye bakýn.");
+                    }
                     else
+                    {
                         LogService.Info($"FirebaseProjectId okundu: {settings.FirebaseProjectId}");
+                    }
 
                     if (string.IsNullOrWhiteSpace(settings.GoogleApplicationCredentialsPath))
                     {
-                        LogService.Warn("GoogleApplicationCredentialsPath boþ. Hizmet hesabý anahtar yolu gerekli.");
+                        LogService.Warn("GoogleApplicationCredentialsPath boþ. Ýpucu: Hizmet hesabý JSON anahtarýný indirin ve tam yolu AppSettings.json'a yazýn. FIRESTORE_SETUP.md'ye bakýn.");
                     }
                     else if (!File.Exists(settings.GoogleApplicationCredentialsPath))
                     {
-                        LogService.Warn($"Hizmet hesabý JSON dosyasý bulunamadý: {settings.GoogleApplicationCredentialsPath}");
+                        LogService.Warn($"Hizmet hesabý JSON dosyasý bulunamadý: {settings.GoogleApplicationCredentialsPath}. Ýpucu: Dosya yolunu doðrulayýn veya yeni JSON anahtar oluþturun (Service Accounts > Keys).");
                     }
                     else
                     {
@@ -51,7 +55,7 @@ namespace TirSeferleriModernApp.Services
                     return settings;
                 }
 
-                LogService.Warn("AppSettings.json bulunamadý.");
+                LogService.Warn("AppSettings.json bulunamadý. Ýpucu: Proje köküne AppSettings.json ekleyin. Örnek için FIRESTORE_SETUP.md'ye bakýn.");
             }
             catch (Exception ex)
             {
