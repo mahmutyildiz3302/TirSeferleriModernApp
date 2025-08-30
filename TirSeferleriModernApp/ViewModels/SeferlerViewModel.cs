@@ -123,7 +123,20 @@ namespace TirSeferleriModernApp.ViewModels
             {
                 // Global senkron durum değişimlerini dinle ve ekrana yansıt
                 _ = SyncStatusHub.Subscribe(status => SenkronDurumu = status);
+
+                // Firestore’dan gelen güncellemeleri dinle: ilgili satırın DataKaynak bilgisini Firestore olarak işaretle
+                FirestoreServisi.RecordChangedFromFirestore += OnRecordChangedFromFirestore;
             }
+        }
+
+        private void OnRecordChangedFromFirestore(int localId)
+        {
+            // Hem cache’de hem de ekranda bulunan satırı Firestore olarak işaretle
+            var inCache = _allSeferlerCache.FirstOrDefault(x => x.SeferId == localId);
+            if (inCache != null) inCache.DataKaynak = DataKaynakTuru.Firestore;
+
+            var inUi = SeferListesi.FirstOrDefault(x => x.SeferId == localId);
+            if (inUi != null) inUi.DataKaynak = DataKaynakTuru.Firestore;
         }
 
         [RelayCommand]

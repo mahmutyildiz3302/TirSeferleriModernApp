@@ -6,6 +6,12 @@ using CommunityToolkit.Mvvm.ComponentModel;
 
 namespace TirSeferleriModernApp.Models
 {
+    public enum DataKaynakTuru
+    {
+        SQLite = 0,
+        Firestore = 1
+    }
+
     public class Sefer : ObservableObject
     {
         public int SeferId { get; set; } // Id -> SeferId olarak değiştirildi
@@ -87,5 +93,12 @@ namespace TirSeferleriModernApp.Models
         public int? DorseId { get; set; }
         public int? SoforId { get; set; }
         public string? SoforAdi { get; set; }
+
+        private DataKaynakTuru _dataKaynak = DataKaynakTuru.SQLite;
+        public DataKaynakTuru DataKaynak
+        {
+            get => _dataKaynak;
+            set => SetProperty(ref _dataKaynak, value);
+        }
     }
 }

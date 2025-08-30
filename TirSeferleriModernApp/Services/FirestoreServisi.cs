@@ -14,6 +14,10 @@ namespace TirSeferleriModernApp.Services
         public FirestoreDb? Db => _db;
         private FirestoreChangeListener? _recordsListener;
 
+        // Firestore dinleyicisinden yerel veriye gelen yansýmalarý bildirmek için olay
+        // Parametre: etkilenen yerel Records.id (SeferId ile eþlenir)
+        public static event Action<int>? RecordChangedFromFirestore;
+
         // AppSettings.json'dan proje kimliði ve kimlik bilgisi yolu okunur ve Firestore'a baðlanýlýr.
         // Baðlantý kurulamazsa anlaþýlýr bir hata mesajý ile istisna fýrlatýlýr.
         public async Task Baglan()
@@ -218,6 +222,9 @@ namespace TirSeferleriModernApp.Services
                                             await upd.ExecuteNonQueryAsync().ConfigureAwait(false);
 
                                             LogService.Info($"Yerel kayýt güncellendi. local_id={localId}, remote_id={rid}");
+
+                                            // ViewModel'lere bilgi ver: Bu id'li sefer Firestore'dan güncellendi
+                                            try { RecordChangedFromFirestore?.Invoke(localId); } catch { }
                                         }
                                     }
                                 }

@@ -1092,7 +1092,8 @@ namespace TirSeferleriModernApp.Services
                     CekiciPlaka = reader.IsDBNull(15) ? null : reader.GetString(15),
                     DorseId = reader.IsDBNull(16) ? null : reader.GetInt32(16),
                     SoforId = reader.IsDBNull(17) ? null : reader.GetInt32(17),
-                    SoforAdi = reader.IsDBNull(18) ? null : reader.GetString(18)
+                    SoforAdi = reader.IsDBNull(18) ? null : reader.GetString(18),
+                    DataKaynak = DataKaynakTuru.SQLite
                 };
                 result.Add(s);
             }
@@ -1130,7 +1131,8 @@ namespace TirSeferleriModernApp.Services
                     CekiciPlaka = reader.IsDBNull(15) ? null : reader.GetString(15),
                     DorseId = reader.IsDBNull(16) ? null : reader.GetInt32(16),
                     SoforId = reader.IsDBNull(17) ? null : reader.GetInt32(17),
-                    SoforAdi = reader.IsDBNull(18) ? null : reader.GetString(18)
+                    SoforAdi = reader.IsDBNull(18) ? null : reader.GetString(18),
+                    DataKaynak = DataKaynakTuru.SQLite
                 };
                 result.Add(s);
             }
