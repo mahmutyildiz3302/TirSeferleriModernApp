@@ -190,6 +190,39 @@
                           ContextMenuOpening="dgSeferler_ContextMenuOpening"
                           CellEditEnding="dgSeferler_CellEditEnding"
                           PreviewKeyDown="dgSeferler_PreviewKeyDown">
+                    <DataGrid.RowStyle>
+                        <Style TargetType="DataGridRow">
+                            <!-- Varsayılan tooltip: Kaynak bilgisi (sadece açıkken) -->
+                            <Setter Property="ToolTip" Value="{Binding DataKaynak}"/>
+                            <Style.Triggers>
+                                <!-- KaynakGoster && SQLite -->
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding DataKaynak}" Value="SQLite"/>
+                                        <Condition Binding="{Binding DataContext.KaynakGoster, ElementName=RootSeferlerView}" Value="True"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Background" Value="#FFF5F5F5"/>
+                                </MultiDataTrigger>
+                                <!-- KaynakGoster && Firestore -->
+                                <MultiDataTrigger>
+                                    <MultiDataTrigger.Conditions>
+                                        <Condition Binding="{Binding DataKaynak}" Value="Firestore"/>
+                                        <Condition Binding="{Binding DataContext.KaynakGoster, ElementName=RootSeferlerView}" Value="True"/>
+                                    </MultiDataTrigger.Conditions>
+                                    <Setter Property="Background" Value="#FFFFF7E6"/>
+                                </MultiDataTrigger>
+                                <!-- Toplam satırını nötr yap -->
+                                <DataTrigger Binding="{Binding Aciklama}" Value="Toplam">
+                                    <Setter Property="Background" Value="White"/>
+                                </DataTrigger>
+                                <!-- Kaynak kapalıyken tooltip kaldır -->
+                                <DataTrigger Binding="{Binding DataContext.KaynakGoster, ElementName=RootSeferlerView}" Value="False">
+                                    <Setter Property="ToolTip" Value="{x:Null}"/>
+                                </DataTrigger>
+                            </Style.Triggers>
+                        </Style>
+                    </DataGrid.RowStyle>
+
                     <DataGrid.Resources>
                         <Style TargetType="DataGridColumnHeader">
                             <Setter Property="Background" Value="LightSkyBlue"/>
