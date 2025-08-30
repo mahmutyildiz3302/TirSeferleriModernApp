@@ -1,6 +1,7 @@
 ﻿using System.Configuration;
 using System.Data;
 using System.Diagnostics;
+using System.IO;
 using System.Threading.Tasks;
 using System.Windows;
 using TirSeferleriModernApp.Services;
@@ -19,6 +20,20 @@ namespace TirSeferleriModernApp
 
             // Log servisinin başlatılması (Debug ve Trace yakalanır)
             LogService.Initialize();
+
+            // AppSettings'i erken yükle ve doğrula
+            var settings = AppSettingsHelper.Current;
+            if (string.IsNullOrWhiteSpace(settings.FirebaseProjectId))
+                Debug.WriteLine("[App] Uyarı: FirebaseProjectId yapılandırması boş.");
+            else
+                Debug.WriteLine($"[App] FirebaseProjectId: {settings.FirebaseProjectId}");
+
+            if (string.IsNullOrWhiteSpace(settings.GoogleApplicationCredentialsPath))
+                Debug.WriteLine("[App] Uyarı: GoogleApplicationCredentialsPath yapılandırması boş.");
+            else if (!File.Exists(settings.GoogleApplicationCredentialsPath))
+                Debug.WriteLine($"[App] Uyarı: Hizmet hesabı JSON yolu geçersiz: {settings.GoogleApplicationCredentialsPath}");
+            else
+                Debug.WriteLine("[App] Hizmet hesabı JSON dosyası bulundu.");
 
             // Veritabanı ve tablolar uygulama açılışında kontrol edilir/oluşturulur
             try
