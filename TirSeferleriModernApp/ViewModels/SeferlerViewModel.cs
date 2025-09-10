@@ -414,6 +414,91 @@ namespace TirSeferleriModernApp.ViewModels
             }
         }
 
+        [RelayCommand]
+        private async Task KaydetVeyaGuncelle()
+        {
+            SeciliSefer ??= new Sefer { Tarih = DateTime.Today };
+
+            // Seçimden gelen bilgileri (ID'ler dahil) tamamla
+            if (!string.IsNullOrWhiteSpace(SeciliCekiciPlaka))
+            {
+                var info = DatabaseService.GetVehicleInfoByCekiciPlaka(SeciliCekiciPlaka);
+                SeciliSefer.CekiciId = info.cekiciId;
+                SeciliSefer.DorseId = info.dorseId;
+                SeciliSefer.SoforId = info.soforId;
+                SeciliSefer.SoforAdi = info.soforAdi;
+                SeciliSefer.CekiciPlaka = SeciliCekiciPlaka;
+                SeciliDorsePlaka = info.dorsePlaka; // üst şerit güncellensin
+                SeciliSoforAdi = info.soforAdi;      // üst şerit güncellensin
+            }
+
+            // Kaydetmeden önce fiyatı hesapla
+            RecalcFiyat();
+
+            var seferToPersist = SeciliSefer;
+
+            if (SeciliSefer.SeferId <= 0)
+                SeferEkle(SeciliSefer);
+            else
+                SeferGuncelle(SeciliSefer);
+
+            // Records tablosuna da yazarak senkronu tetikle
+            try
+            {
+                if (seferToPersist != null)
+                {
+                    var (remoteId, createdAt) = DatabaseService.TryGetRecordMeta(seferToPersist.SeferId);
+                    var rec = new Record
+                    {
+                        id = seferToPersist.SeferId,
+                        remote_id = remoteId,
+                        deleted = false,
+                        containerNo = seferToPersist.KonteynerNo,
+                        loadLocation = seferToPersist.YuklemeYeri,
+                        unloadLocation = seferToPersist.BosaltmaYeri,
+                        size = seferToPersist.KonteynerBoyutu,
+                        status = seferToPersist.BosDolu,
+                        nightOrDay = null,
+                        truckPlate = seferToPersist.CekiciPlaka,
+                        notes = seferToPersist.Aciklama,
+                        createdByUserId = null,
+                        createdAt = createdAt > 0 ? createdAt : DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                    };
+                    await DatabaseService.RecordKaydetAsync(rec);
+                    SenkronDurumu = "Senkron: Bekliyor";
+                }
+            }
+            catch (Exception ex)
+            {
+                SenkronDurumu = $"Senkron: Yerel kayıt hatası ({ex.Message})";
+            }
+
+            // Listeyi yenile (aynı plaka filtresi korunur)
+            if (!string.IsNullOrWhiteSpace(SeciliCekiciPlaka))
+                RefreshFromDatabaseByPlaka(SeciliCekiciPlaka);
+            else
+                RefreshFromDatabaseAll();
+        }
+
+        [RelayCommand]
+        private void SelectMonth(object? parameter)
+        {
+            int? month = null;
+            if (parameter != null)
+            {
+                var s = parameter.ToString();
+                if (!string.IsNullOrWhiteSpace(s) && int.TryParse(s, out var m) && m >= 1 && m <= 12)
+                    month = m;
+            }
+            SeciliAy = month;
+        }
+
+        [RelayCommand]
+        private void SecimiTemizle()
+        {
+            SeciliSefer = new Sefer { Tarih = DateTime.Today };
+        }
+
         private static string? NormalizeBosDoluForDb(string? bd)
         {
             if (string.IsNullOrWhiteSpace(bd)) return null;
