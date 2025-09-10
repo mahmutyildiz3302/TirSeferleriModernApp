@@ -5,6 +5,7 @@ using Google.Cloud.Firestore;
 using TirSeferleriModernApp.Models;
 using Microsoft.Data.Sqlite;
 using System.Diagnostics;
+using Grpc.Core; // RpcException ve StatusCode için
 
 namespace TirSeferleriModernApp.Services
 {
@@ -18,22 +19,52 @@ namespace TirSeferleriModernApp.Services
         // Parametre: etkilenen yerel Records.id (SeferId ile eþlenir)
         public static event Action<int>? RecordChangedFromFirestore;
 
+        private static bool LooksLikePlaceholder(string? projectId)
+        {
+            if (string.IsNullOrWhiteSpace(projectId)) return true;
+            var p = projectId.Trim().ToLowerInvariant();
+            return p.Contains("your-") || p.Contains("project") || p.Contains("<") || p.Contains(">");
+        }
+
+        // Basit transient kontrolü
+        private static bool IsTransient(StatusCode code)
+            => code == StatusCode.Unavailable || code == StatusCode.DeadlineExceeded;
+
         // AppSettings.json'dan proje kimliði ve kimlik bilgisi yolu okunur ve Firestore'a baðlanýlýr.
-        // Baðlantý kurulamazsa anlaþýlýr bir hata mesajý ile istisna fýrlatýlýr.
+        // Baðlantý kurulamazsa anlaþýlýr bir hata mesajý ile istisna fýrlatýlmaz; durum hub ve log ile bildirilir.
         public async Task Baglan()
         {
             var settings = AppSettingsHelper.Current;
             var projectId = settings.FirebaseProjectId?.Trim();
             var credPath = settings.GoogleApplicationCredentialsPath?.Trim();
 
+            if (LooksLikePlaceholder(projectId))
+            {
+                SyncStatusHub.Set("Bulut: Hata (Geçersiz ProjectId)");
+                LogService.Warn("FirebaseProjectId placeholder gibi görünüyor. AppSettings.json içinde gerçek proje ID'sini yazýn.");
+                return;
+            }
+
             if (string.IsNullOrWhiteSpace(projectId))
-                throw new InvalidOperationException("Firestore baðlantýsý için AppSettings.json içinde 'FirebaseProjectId' deðeri gereklidir.");
+            {
+                SyncStatusHub.Set("Bulut: Hata (ProjectId yok)");
+                LogService.Warn("Firestore baðlantýsý için AppSettings.json içinde 'FirebaseProjectId' deðeri gereklidir.");
+                return;
+            }
 
             if (string.IsNullOrWhiteSpace(credPath))
-                throw new InvalidOperationException("Firestore baðlantýsý için AppSettings.json içinde 'GoogleApplicationCredentialsPath' deðeri gereklidir.");
+            {
+                SyncStatusHub.Set("Bulut: Hata (Kimlik dosyasý yolu yok)");
+                LogService.Warn("Firestore baðlantýsý için AppSettingsHelper.Current içinde 'GoogleApplicationCredentialsPath' deðeri gereklidir.");
+                return;
+            }
 
             if (!File.Exists(credPath))
-                throw new FileNotFoundException($"Google kimlik bilgisi dosyasý bulunamadý: {credPath}");
+            {
+                SyncStatusHub.Set("Bulut: Hata (Kimlik dosyasý bulunamadý)");
+                LogService.Error($"Google kimlik bilgisi dosyasý bulunamadý: {credPath}");
+                return;
+            }
 
             var currentEnv = Environment.GetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS");
             if (string.IsNullOrWhiteSpace(currentEnv) || !string.Equals(currentEnv, credPath, StringComparison.OrdinalIgnoreCase))
@@ -41,18 +72,46 @@ namespace TirSeferleriModernApp.Services
                 Environment.SetEnvironmentVariable("GOOGLE_APPLICATION_CREDENTIALS", credPath);
             }
 
-            try
+            int attempt = 0;
+            var delays = new[] { 500, 1000, 2000 }; // ms
+
+            while (true)
             {
-                LogService.Info("Firestore baðlantýsý kuruluyor...");
-                _db = await FirestoreDb.CreateAsync(projectId);
-                SyncStatusHub.Set("Bulut: Baðlandý");
-                LogService.Info("Firestore baðlantýsý kuruldu.");
-            }
-            catch (Exception ex)
-            {
-                SyncStatusHub.Set("Bulut: Hata");
-                LogService.Error("Firestore'a baðlanýlamadý. Ýpucu: FIRESTORE_SETUP.md'deki adýmlarý doðrulayýn (API etkin, rol, JSON yolu, ProjectId)", ex);
-                // Hata durumda uygulamayý çökertme; üst katmanlar durumu gösterir.
+                try
+                {
+                    LogService.Info("Firestore baðlantýsý kuruluyor...");
+                    _db = await FirestoreDb.CreateAsync(projectId);
+                    SyncStatusHub.Set("Bulut: Baðlandý");
+                    LogService.Info("Firestore baðlantýsý kuruldu.");
+                    return;
+                }
+                catch (RpcException rex)
+                {
+                    if (rex.StatusCode == StatusCode.PermissionDenied)
+                    {
+                        SyncStatusHub.Set("Bulut: Hata (API etkin deðil veya izin yok)");
+                        LogService.Error("Firestore PermissionDenied: Cloud Firestore API etkin deðil veya servis hesabýnýn izni yok.");
+                        return; // tekrar deneme
+                    }
+
+                    if (IsTransient(rex.StatusCode) && attempt < delays.Length)
+                    {
+                        var wait = delays[attempt++];
+                        SyncStatusHub.Set($"Bulut: Geçici hata, tekrar denenecek ({rex.StatusCode})");
+                        await Task.Delay(wait).ConfigureAwait(false);
+                        continue;
+                    }
+
+                    SyncStatusHub.Set($"Bulut: Hata ({rex.Status.Detail ?? rex.StatusCode.ToString()})");
+                    LogService.Error("Firestore'a baðlanýlamadý (RpcException). Ýpucu: API, að ve rol yetkilerini kontrol edin.", rex);
+                    return;
+                }
+                catch (Exception ex)
+                {
+                    SyncStatusHub.Set("Bulut: Hata");
+                    LogService.Error("Firestore'a baðlanýlamadý. Ýpucu: FIRESTORE_SETUP.md adýmlarýný doðrulayýn (API etkin, rol, JSON yolu, ProjectId)", ex);
+                    return;
+                }
             }
         }
 
@@ -68,7 +127,7 @@ namespace TirSeferleriModernApp.Services
                 {
                     await Baglan();
                 }
-                if (_db == null) return "Firestore baðlantýsý kurulamadý";
+                if (_db == null) return "Hata: Firestore API etkin deðil veya izin yok (baðlantý kurulamadý)";
 
                 var collection = _db.Collection("records");
 
@@ -91,20 +150,49 @@ namespace TirSeferleriModernApp.Services
                     ["createdAt"] = r.createdAt
                 };
 
-                if (string.IsNullOrWhiteSpace(r.remote_id))
+                // basit retry sadece transient hatalarda
+                async Task<string> WriteAsync()
                 {
-                    var added = await collection.AddAsync(data);
-                    var newId = added.Id;
-                    r.remote_id = newId; // geri setlemek faydalý olur
-                    LogService.Info($"Firestore'a yeni belge yazýldý. remote_id={newId}, local_id={r.id}");
-                    return newId;
+                    if (string.IsNullOrWhiteSpace(r.remote_id))
+                    {
+                        var added = await collection.AddAsync(data);
+                        var newId = added.Id;
+                        r.remote_id = newId;
+                        LogService.Info($"Firestore'a yeni belge yazýldý. remote_id={newId}, local_id={r.id}");
+                        return newId;
+                    }
+                    else
+                    {
+                        var doc = collection.Document(r.remote_id);
+                        await doc.SetAsync(data, SetOptions.MergeAll);
+                        LogService.Info($"Firestore belgesi güncellendi. remote_id={r.remote_id}, local_id={r.id}");
+                        return r.remote_id;
+                    }
                 }
-                else
+
+                int attempt = 0; var delays = new[] { 500, 1000, 2000 };
+                while (true)
                 {
-                    var doc = collection.Document(r.remote_id);
-                    await doc.SetAsync(data, SetOptions.MergeAll);
-                    LogService.Info($"Firestore belgesi güncellendi. remote_id={r.remote_id}, local_id={r.id}");
-                    return r.remote_id;
+                    try { return await WriteAsync(); }
+                    catch (RpcException rex)
+                    {
+                        if (rex.StatusCode == StatusCode.PermissionDenied)
+                        {
+                            SyncStatusHub.Set("Bulut: Hata (API etkin deðil veya izin yok)");
+                            LogService.Error("Firestore yazma PermissionDenied. API etkin deðil veya yetki yok.", rex);
+                            return $"Hata: PermissionDenied ({rex.Status.Detail})";
+                        }
+                        if (IsTransient(rex.StatusCode) && attempt < delays.Length)
+                        {
+                            var wait = delays[attempt++];
+                            SyncStatusHub.Set($"Bulut: Geçici hata, tekrar denenecek ({rex.StatusCode})");
+                            await Task.Delay(wait).ConfigureAwait(false);
+                            continue;
+                        }
+                        SyncStatusHub.Set($"Bulut: Hata ({rex.Status.Detail ?? rex.StatusCode.ToString()})");
+                        LogService.Error("Buluta yazma/güncelleme hatasý (RpcException).", rex);
+                        return $"Hata: {rex.StatusCode}";
+                    }
                 }
             }
             catch (Exception ex)
@@ -241,6 +329,24 @@ namespace TirSeferleriModernApp.Services
                         });
                     });
                     LogService.Info("Firestore dinleyici baþlatýldý.");
+                }
+                catch (RpcException rex)
+                {
+                    if (rex.StatusCode == StatusCode.PermissionDenied)
+                    {
+                        SyncStatusHub.Set("Bulut: Hata (API etkin deðil veya izin yok)");
+                        LogService.Error("Dinleme baþlatýlamadý: PermissionDenied (API devre dýþý veya rol eksik)", rex);
+                        return;
+                    }
+                    if (IsTransient(rex.StatusCode))
+                    {
+                        SyncStatusHub.Set($"Bulut: Geçici hata ({rex.StatusCode})");
+                    }
+                    else
+                    {
+                        SyncStatusHub.Set($"Bulut: Hata ({rex.Status.Detail ?? rex.StatusCode.ToString()})");
+                    }
+                    LogService.Error("Dinleme baþlatýlamadý. Ýpucu: Firestore baðlantýsýný ve yetkileri kontrol edin.", rex);
                 }
                 catch (Exception ex)
                 {

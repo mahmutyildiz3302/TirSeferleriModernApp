@@ -10,6 +10,7 @@ using System.ComponentModel;
 using System.Linq;
 using System.Collections.Generic;
 using System.Threading.Tasks;
+using System.Diagnostics;
 
 namespace TirSeferleriModernApp.ViewModels
 {
@@ -273,11 +274,25 @@ namespace TirSeferleriModernApp.ViewModels
             SetSeferListWithTotals(filtered);
         }
 
+        // Son filtre anahtarı (yıl|ay|plaka) ve son gerçek öğe sayısı takip edilir
+        private string _lastFilterKey = string.Empty;
+        private int _lastRealCount = -1;
+
+        private string BuildFilterKey()
+        {
+            var plaka = SeciliCekiciPlaka ?? "*";
+            var yil = SeciliYil;
+            var ay = SeciliAy?.ToString() ?? "*";
+            return $"{plaka}|{yil}|{ay}";
+        }
+
         private void SetSeferListWithTotals(IEnumerable<Sefer> data)
         {
             try
             {
                 var list = data?.ToList() ?? new List<Sefer>();
+                var realCount = list.Count;
+                var currentKey = BuildFilterKey();
 
                 // Özet güncelle (sayım değerleri burada set edilir)
                 UpdateSummary(list);
@@ -293,6 +308,17 @@ namespace TirSeferleriModernApp.ViewModels
                 LogService.Info($"Sefer listesi güncellendi — SQLite={SQLiteSayisi}, Firestore={FirestoreSayisi}");
 
 #if DEBUG
+                // Beklenmeyen azalış uyarısını filtre değişimi veya ilk ölçümde verme
+                if (_dbgInitLogged)
+                {
+                    var realDiff = realCount - _lastRealCount;
+                    if (realDiff < 0 && string.Equals(currentKey, _lastFilterKey, StringComparison.Ordinal))
+                    {
+                        LogService.Warn($"MiniTest: Beklenmeyen azalış — GerçekΔ={realDiff}");
+                    }
+                }
+                _lastRealCount = realCount;
+                _lastFilterKey = currentKey;
                 DebugScenarioCheck();
 #endif
             }

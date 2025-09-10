@@ -244,7 +244,7 @@
                     <DataGrid.Columns>
                         <!-- Kaynak sütunu (gizlenebilir) -->
                         <DataGridTemplateColumn Header="Kaynak" Width="65"
-                                                Visibility="{Binding DataContext.KaynakGoster, ElementName=RootSeferlerView, Converter={StaticResource BoolToVisibilityConverter}}">
+                                                Visibility="{Binding DataContext.KaynakGoster, RelativeSource={RelativeSource AncestorType=DataGrid}, Converter={StaticResource BoolToVisibilityConverter}}">
                             <DataGridTemplateColumn.CellTemplate>
                                 <DataTemplate>
                                     <StackPanel Orientation="Horizontal" HorizontalAlignment="Center">
@@ -255,20 +255,6 @@
                                                 <Style TargetType="Border">
                                                     <Setter Property="Visibility" Value="Collapsed"/>
                                                     <Style.Triggers>
-                                                        <MultiDataTrigger>
-                                                            <MultiDataTrigger.Conditions>
-                                                                <Condition Binding="{Binding DataKaynak}" Value="SQLite"/>
-                                                                <Condition Binding="{Binding Aciklama}" Value="Toplam"/>
-                                                            </MultiDataTrigger.Conditions>
-                                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                                        </MultiDataTrigger>
-                                                        <MultiDataTrigger>
-                                                            <MultiDataTrigger.Conditions>
-                                                                <Condition Binding="{Binding DataKaynak}" Value="SQLite"/>
-                                                                <Condition Binding="{Binding Aciklama}" Value="Toplam"/>
-                                                            </MultiDataTrigger.Conditions>
-                                                            <Setter Property="Visibility" Value="Collapsed"/>
-                                                        </MultiDataTrigger>
                                                         <DataTrigger Binding="{Binding DataKaynak}" Value="SQLite">
                                                             <Setter Property="Visibility" Value="Visible"/>
                                                         </DataTrigger>
