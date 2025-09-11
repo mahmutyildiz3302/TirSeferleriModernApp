@@ -310,8 +310,11 @@ namespace TirSeferleriModernApp.Services
                                             await upd.ExecuteNonQueryAsync().ConfigureAwait(false);
 
                                             LogService.Info($"Yerel kayýt güncellendi. local_id={localId}, remote_id={rid}");
+                                        }
 
-                                            // ViewModel'lere bilgi ver: Bu id'li sefer Firestore'dan güncellendi
+                                        // UI sayacýný doðru göstermek için, belge bu makinede de oluþturulmuþ olsa bile bildir.
+                                        if (localId != 0)
+                                        {
                                             try { RecordChangedFromFirestore?.Invoke(localId); } catch { }
                                         }
                                     }
