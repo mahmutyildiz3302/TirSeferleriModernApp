@@ -245,12 +245,14 @@ namespace TirSeferleriModernApp.Services
                                     if (!doc.TryGetValue("updated_at", out remoteUpdated))
                                         remoteUpdated = 0;
 
-                                    // Yereldeki updated_at oku
+                                    // Önce remote_id -> local eþleþmeyi dene
                                     int localId = 0;
                                     long localUpdated = 0;
                                     await using (var conn = new SqliteConnection(DatabaseService.ConnectionString))
                                     {
                                         await conn.OpenAsync().ConfigureAwait(false);
+
+                                        // 1) remote_id ile eþleþen localId var mý?
                                         await using (var cmd = conn.CreateCommand())
                                         {
                                             cmd.CommandText = "SELECT id, IFNULL(updated_at,0) FROM Records WHERE remote_id=@rid LIMIT 1";
@@ -263,9 +265,45 @@ namespace TirSeferleriModernApp.Services
                                             }
                                         }
 
+                                        // 2) Bulunamadýysa, dokümandaki 'id' alanýna göre eþle ve remote_id'yi yerelde yaz
+                                        if (localId == 0)
+                                        {
+                                            int docLocalId = 0;
+                                            try
+                                            {
+                                                // 'id' field number -> int
+                                                if (doc.ContainsField("id"))
+                                                {
+                                                    var boxed = doc.GetValue<object>("id");
+                                                    if (boxed is long l) docLocalId = (int)l;
+                                                    else if (boxed is int i) docLocalId = i;
+                                                }
+                                            }
+                                            catch { /* ignore conversion issues */ }
+
+                                            if (docLocalId > 0)
+                                            {
+                                                await using var map = conn.CreateCommand();
+                                                map.CommandText = "UPDATE Records SET remote_id=@rid WHERE id=@id AND IFNULL(remote_id,'')=''";
+                                                map.Parameters.AddWithValue("@rid", rid);
+                                                map.Parameters.AddWithValue("@id", docLocalId);
+                                                var affected = await map.ExecuteNonQueryAsync().ConfigureAwait(false);
+                                                if (affected > 0)
+                                                {
+                                                    localId = docLocalId; // eþleþtirme saðlandý
+                                                    // updated_at mevcut ise oku
+                                                    await using var readUpd = conn.CreateCommand();
+                                                    readUpd.CommandText = "SELECT IFNULL(updated_at,0) FROM Records WHERE id=@id";
+                                                    readUpd.Parameters.AddWithValue("@id", docLocalId);
+                                                    var val = await readUpd.ExecuteScalarAsync().ConfigureAwait(false);
+                                                    localUpdated = val == null || val == DBNull.Value ? 0 : Convert.ToInt64(val);
+                                                }
+                                            }
+                                        }
+
+                                        // 3) Uzak daha yeni ise veriyi çekip yereli güncelle
                                         if (localId != 0 && remoteUpdated > localUpdated)
                                         {
-                                            // Uzak alanlarý oku
                                             string? containerNo = doc.ContainsField("containerNo") ? doc.GetValue<string>("containerNo") : null;
                                             string? loadLocation = doc.ContainsField("loadLocation") ? doc.GetValue<string>("loadLocation") : null;
                                             string? unloadLocation = doc.ContainsField("unloadLocation") ? doc.GetValue<string>("unloadLocation") : null;
@@ -312,7 +350,7 @@ namespace TirSeferleriModernApp.Services
                                             LogService.Info($"Yerel kayýt güncellendi. local_id={localId}, remote_id={rid}");
                                         }
 
-                                        // UI sayacýný doðru göstermek için, belge bu makinede de oluþturulmuþ olsa bile bildir.
+                                        // 4) UI tarafý: localId eþleþtiyse bildir (remote==local olsa bile)
                                         if (localId != 0)
                                         {
                                             try { RecordChangedFromFirestore?.Invoke(localId); } catch { }
