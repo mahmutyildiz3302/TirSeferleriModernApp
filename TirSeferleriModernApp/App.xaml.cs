@@ -36,6 +36,11 @@ namespace TirSeferleriModernApp
 
                 DatabaseService.CheckAndCreateOrUpdateSeferlerTablosu();
                 LogService.Info("Seferler tablosu kontrol/oluşturma tamamlandı.");
+
+                // Yeni: Eski Seferler'den Records'a eksik olanları taşı (is_dirty=1)
+                var moved = DatabaseService.SeedRecordsFromSeferlerIfMissing();
+                if (moved > 0)
+                    LogService.Info($"Startup: {moved} kayıt senkron için işaretlendi.");
             }
             catch (System.Exception ex)
             {

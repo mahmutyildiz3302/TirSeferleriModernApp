@@ -142,6 +142,80 @@ namespace TirSeferleriModernApp.Services
             }
         }
 
+        // -------------------- Records: Seed missing from Seferler --------------------
+        public static int SeedRecordsFromSeferlerIfMissing()
+        {
+            try
+            {
+                EnsureDatabaseFileStatic();
+                using var conn = new SqliteConnection(ConnectionString); conn.Open();
+
+                // Seferler'de olup Records'ta olmayanları çek
+                using var cmd = conn.CreateCommand();
+                cmd.CommandText = @"SELECT s.SeferId, s.KonteynerNo, s.YuklemeYeri, s.BosaltmaYeri, s.KonteynerBoyutu, s.BosDolu,
+                                              s.CekiciPlaka, s.Aciklama, s.Tarih
+                                       FROM Seferler s
+                                       LEFT JOIN Records r ON r.id = s.SeferId
+                                       WHERE r.id IS NULL";
+                using var rdr = cmd.ExecuteReader();
+
+                int inserted = 0;
+                using var tx = conn.BeginTransaction();
+                while (rdr.Read())
+                {
+                    int id = rdr.IsDBNull(0) ? 0 : rdr.GetInt32(0);
+                    string? containerNo = rdr.IsDBNull(1) ? null : rdr.GetString(1);
+                    string? loadLocation = rdr.IsDBNull(2) ? null : rdr.GetString(2);
+                    string? unloadLocation = rdr.IsDBNull(3) ? null : rdr.GetString(3);
+                    string? size = rdr.IsDBNull(4) ? null : rdr.GetString(4);
+                    string? status = rdr.IsDBNull(5) ? null : rdr.GetString(5);
+                    string? truckPlate = rdr.IsDBNull(6) ? null : rdr.GetString(6);
+                    string? notes = rdr.IsDBNull(7) ? null : rdr.GetString(7);
+                    string? tarihStr = rdr.IsDBNull(8) ? null : rdr.GetString(8);
+
+                    long createdAt = 0;
+                    if (DateTime.TryParse(tarihStr, out var dt))
+                        createdAt = new DateTimeOffset(dt.Date).ToUnixTimeMilliseconds();
+                    else
+                        createdAt = DateTimeOffset.UtcNow.ToUnixTimeMilliseconds();
+
+                    using var ins = conn.CreateCommand();
+                    ins.Transaction = tx;
+                    ins.CommandText = @"INSERT OR IGNORE INTO Records
+                                         (id, remote_id, updated_at, is_dirty, deleted,
+                                          containerNo, loadLocation, unloadLocation, size, status,
+                                          nightOrDay, truckPlate, notes, createdByUserId, createdAt)
+                                         VALUES
+                                         (@id, NULL, @updated_at, 1, 0,
+                                          @containerNo, @loadLocation, @unloadLocation, @size, @status,
+                                          NULL, @truckPlate, @notes, NULL, @createdAt)";
+                    ins.Parameters.AddWithValue("@id", id);
+                    ins.Parameters.AddWithValue("@updated_at", DateTimeOffset.UtcNow.ToUnixTimeMilliseconds());
+                    ins.Parameters.AddWithValue("@containerNo", (object?)containerNo ?? DBNull.Value);
+                    ins.Parameters.AddWithValue("@loadLocation", (object?)loadLocation ?? DBNull.Value);
+                    ins.Parameters.AddWithValue("@unloadLocation", (object?)unloadLocation ?? DBNull.Value);
+                    ins.Parameters.AddWithValue("@size", (object?)size ?? DBNull.Value);
+                    ins.Parameters.AddWithValue("@status", (object?)status ?? DBNull.Value);
+                    ins.Parameters.AddWithValue("@truckPlate", (object?)truckPlate ?? DBNull.Value);
+                    ins.Parameters.AddWithValue("@notes", (object?)notes ?? DBNull.Value);
+                    ins.Parameters.AddWithValue("@createdAt", createdAt);
+
+                    inserted += ins.ExecuteNonQuery();
+                }
+                tx.Commit();
+                if (inserted > 0)
+                    LogService.Info($"SeedRecordsFromSeferlerIfMissing: {inserted} kayıt Records'a taşındı (is_dirty=1).");
+                else
+                    LogService.Info("SeedRecordsFromSeferlerIfMissing: Taşınacak kayıt yok.");
+                return inserted;
+            }
+            catch (Exception ex)
+            {
+                LogService.Error("SeedRecordsFromSeferlerIfMissing hatası", ex);
+                return 0;
+            }
+        }
+
         // -------------------- Records: Local save --------------------
         public static async Task<int> RecordKaydetAsync(Record r)
         {
