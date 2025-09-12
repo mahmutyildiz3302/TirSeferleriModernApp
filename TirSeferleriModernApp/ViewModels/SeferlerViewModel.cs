@@ -449,7 +449,8 @@ namespace TirSeferleriModernApp.ViewModels
                         if (_countdownRemaining <= 0)
                         {
                             // Tetikle: listeyi yeniden oku ve sayaç resetle (UI thread üstünden yap)
-                            _ = Application.Current?.Dispatcher?.Invoke(() =>
+                            // Düzeltilmiş kod:
+                            Application.Current?.Dispatcher?.Invoke(() =>
                             {
                                 SenkronDurumu = _baseStatus;
                                 if (!string.IsNullOrWhiteSpace(SeciliCekiciPlaka))
