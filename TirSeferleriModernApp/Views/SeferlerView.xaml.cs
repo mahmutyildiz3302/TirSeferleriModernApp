@@ -4,6 +4,8 @@ using System.Windows.Controls;
 using System.Windows.Input;
 using TirSeferleriModernApp.Models;
 using TirSeferleriModernApp.Services;
+using TirSeferleriModernApp.ViewModels;
+using System.Threading.Tasks;
 
 // bu dosya XAML'in arkasındaki code-behind dosyasıdır. 
 // DataGrid'e sağ tıklanınca açılan sütun görünürlüğü menüsünü (ContextMenu) burada tanımlanır.
@@ -58,13 +60,45 @@ namespace TirSeferleriModernApp.Views
             }
         }
 
-        private void dgSeferler_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
+        private async void dgSeferler_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
         {
             if (e.Row?.Item is Sefer sefer && sefer.SeferId > 0)
             {
                 try
                 {
+                    // 1) Yerel: Seferler güncelle
                     DatabaseService.SeferGuncelle(sefer);
+
+                    // 2) Records satırını güncelle/is_dirty=1 yap (senkron tetiklemek için)
+                    var (remoteId, createdAt) = DatabaseService.TryGetRecordMeta(sefer.SeferId);
+                    var rec = new Record
+                    {
+                        id = sefer.SeferId,
+                        remote_id = remoteId,
+                        deleted = false,
+                        containerNo = sefer.KonteynerNo,
+                        loadLocation = sefer.YuklemeYeri,
+                        unloadLocation = sefer.BosaltmaYeri,
+                        size = sefer.KonteynerBoyutu,
+                        status = sefer.BosDolu,
+                        nightOrDay = null,
+                        truckPlate = sefer.CekiciPlaka,
+                        notes = sefer.Aciklama,
+                        createdByUserId = null,
+                        createdAt = createdAt > 0 ? createdAt : System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                    };
+                    await DatabaseService.RecordKaydetAsync(rec);
+
+                    // 3) Durumu bildir
+                    SyncStatusHub.Set("Senkron: Bekliyor");
+
+                    // 4) Online ise buluta hemen yazmayı dene (başarısızsa SyncAgent zaten deneyecek)
+                    try
+                    {
+                        var fs = new FirestoreServisi();
+                        _ = await fs.BulutaYazOrGuncelle(rec);
+                    }
+                    catch { /* background agent will retry */ }
                 }
                 catch (Exception ex)
                 {
@@ -72,8 +106,8 @@ namespace TirSeferleriModernApp.Views
                 }
             }
 
-            // Yükleme/Boşaltma/Ekstra/BoşDolu alanı değiştiyse fiyatı yeniden hesapla
-            if (e.Row?.Item is Sefer s && (e.Column.Header?.ToString() == "Yükleme" || e.Column.Header?.ToString() == "Boşaltma" || e.Column.Header?.ToString() == "Ekstra" || e.Column.Header?.ToString() == "Boş/Dolu"))
+            // Yükleme/Boşaltma/Ekstra/BoşDolu alanı değiştiyse fiyatı yeniden hesapla ve kaydet
+            if (e.Row?.Item is Sefer s && (e.Column.Header?.ToString() == "Yükleme" || e.Column.Header?.ToString() == "Boşaltma" || e.Column.Header?.ToString() == "Emanet/Soda" || e.Column.Header?.ToString() == "Boş/Dolu"))
             {
                 var u = DatabaseService.GetUcretForRoute(s.YuklemeYeri, s.BosaltmaYeri, null, s.BosDolu);
                 if (u.HasValue)
@@ -81,6 +115,15 @@ namespace TirSeferleriModernApp.Views
                     s.Fiyat = u.Value;
                     try { DatabaseService.SeferGuncelle(s); } catch { }
                 }
+            }
+
+            // 5) Listeyi ve sayaçları tazele (FS/DB rozetleri dahil)
+            if (DataContext is SeferlerViewModel vm)
+            {
+                if (!string.IsNullOrWhiteSpace(vm.SeciliCekiciPlaka))
+                    vm.LoadSeferler(vm.SeciliCekiciPlaka);
+                else
+                    vm.LoadSeferler();
             }
         }
     }
