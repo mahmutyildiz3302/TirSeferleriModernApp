@@ -15,6 +15,8 @@ namespace TirSeferleriModernApp.Services
         private FirestoreDb? _db;
         public FirestoreDb? Db => _db;
         private FirestoreChangeListener? _recordsListener;
+        private CancellationTokenSource? _listenCts;
+        private Task? _listenTask;
 
         // Firestore dinleyicisinden yerel veriye gelen yansýmalarý bildirmek için olay
         // Parametre: etkilenen yerel Records.id (SeferId ile eþlenir)
@@ -236,22 +238,25 @@ namespace TirSeferleriModernApp.Services
         // Ýþlemler arka planda yapýlýr, UI kilitlenmez.
         public void HepsiniDinle(CancellationToken cancellationToken = default, Action<object?>? onChanged = null)
         {
-            if (_recordsListener != null) return; // zaten dinleniyor
+            if (_recordsListener != null || _listenTask != null) return; // zaten dinleniyor
 
-            _ = Task.Run(async () =>
+            _listenCts = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken);
+            var ct = _listenCts.Token;
+
+            _listenTask = Task.Run(async () =>
             {
                 try
                 {
                     if (_db == null)
                     {
-                        await Baglan(cancellationToken).ConfigureAwait(false);
+                        await Baglan(ct).ConfigureAwait(false);
                     }
-                    if (_db == null || cancellationToken.IsCancellationRequested) return;
+                    if (_db == null || ct.IsCancellationRequested) return;
 
                     var col = _db.Collection("records");
                     _recordsListener = col.Listen(snapshot =>
                     {
-                        if (cancellationToken.IsCancellationRequested) return;
+                        if (ct.IsCancellationRequested) return;
                         SyncStatusHub.Set("Bulut: Dinleniyor");
                         LogService.Info("Firestore dinleyici snapshot aldý.");
                         _ = Task.Run(async () =>
@@ -260,7 +265,7 @@ namespace TirSeferleriModernApp.Services
                             {
                                 foreach (var change in snapshot.Changes)
                                 {
-                                    if (cancellationToken.IsCancellationRequested) break;
+                                    if (ct.IsCancellationRequested) break;
                                     var doc = change.Document;
                                     if (doc == null || !doc.Exists) continue;
 
@@ -274,15 +279,15 @@ namespace TirSeferleriModernApp.Services
                                     long localUpdated = 0;
                                     await using (var conn = new SqliteConnection(DatabaseService.ConnectionString))
                                     {
-                                        await conn.OpenAsync(cancellationToken).ConfigureAwait(false);
+                                        await conn.OpenAsync(ct).ConfigureAwait(false);
 
                                         // 1) remote_id ile eþleþen localId var mý?
                                         await using (var cmd = conn.CreateCommand())
                                         {
                                             cmd.CommandText = "SELECT id, IFNULL(updated_at,0) FROM Records WHERE remote_id=@rid LIMIT 1";
                                             cmd.Parameters.AddWithValue("@rid", rid);
-                                            await using var rdr = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
-                                            if (await rdr.ReadAsync(cancellationToken).ConfigureAwait(false))
+                                            await using var rdr = await cmd.ExecuteReaderAsync(ct).ConfigureAwait(false);
+                                            if (await rdr.ReadAsync(ct).ConfigureAwait(false))
                                             {
                                                 localId = rdr.IsDBNull(0) ? 0 : rdr.GetInt32(0);
                                                 localUpdated = rdr.IsDBNull(1) ? 0 : rdr.GetInt64(1);
@@ -311,7 +316,7 @@ namespace TirSeferleriModernApp.Services
                                                 map.CommandText = "UPDATE Records SET remote_id=@rid WHERE id=@id AND IFNULL(remote_id,'')=''";
                                                 map.Parameters.AddWithValue("@rid", rid);
                                                 map.Parameters.AddWithValue("@id", docLocalId);
-                                                var affected = await map.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+                                                var affected = await map.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
                                                 if (affected > 0)
                                                 {
                                                     localId = docLocalId; // eþleþtirme saðlandý
@@ -319,7 +324,7 @@ namespace TirSeferleriModernApp.Services
                                                     await using var readUpd = conn.CreateCommand();
                                                     readUpd.CommandText = "SELECT IFNULL(updated_at,0) FROM Records WHERE id=@id";
                                                     readUpd.Parameters.AddWithValue("@id", docLocalId);
-                                                    var val = await readUpd.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
+                                                    var val = await readUpd.ExecuteScalarAsync(ct).ConfigureAwait(false);
                                                     localUpdated = val == null || val == DBNull.Value ? 0 : Convert.ToInt64(val);
                                                 }
                                             }
@@ -369,7 +374,7 @@ namespace TirSeferleriModernApp.Services
                                             upd.Parameters.AddWithValue("@createdByUserId", (object?)createdByUserId ?? DBNull.Value);
                                             upd.Parameters.AddWithValue("@createdAt", createdAt);
                                             upd.Parameters.AddWithValue("@id", localId);
-                                            await upd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
+                                            await upd.ExecuteNonQueryAsync(ct).ConfigureAwait(false);
 
                                             LogService.Info($"Yerel kayýt güncellendi. local_id={localId}, remote_id={rid}");
                                         }
@@ -382,7 +387,7 @@ namespace TirSeferleriModernApp.Services
                                     }
                                 }
                             }
-                            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                            catch (OperationCanceledException) when (ct.IsCancellationRequested)
                             {
                                 // sessiz çýk
                             }
@@ -395,14 +400,26 @@ namespace TirSeferleriModernApp.Services
                             {
                                 try { onChanged?.Invoke(null); } catch { }
                             }
-                        });
+                        }, ct);
                     });
                     LogService.Info("Firestore dinleyici baþlatýldý.");
+
+                    // Dinleme iptal olana dek bekle
+                    try
+                    {
+                        while (!ct.IsCancellationRequested)
+                        {
+                            await Task.Delay(200, ct).ConfigureAwait(false);
+                        }
+                    }
+                    catch (OperationCanceledException) when (ct.IsCancellationRequested)
+                    {
+                        // beklenen iptal
+                    }
                 }
-                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                catch (OperationCanceledException) when (ct.IsCancellationRequested)
                 {
                     // sessiz çýk
-                    return;
                 }
                 catch (RpcException rex)
                 {
@@ -410,24 +427,28 @@ namespace TirSeferleriModernApp.Services
                     {
                         SyncStatusHub.Set("Bulut: Hata (API etkin deðil veya izin yok)");
                         LogService.Error("Dinleme baþlatýlamadý: PermissionDenied (API devre dýþý veya rol eksik)", rex);
-                        return;
                     }
-                    if (IsTransient(rex.StatusCode))
+                    else if (IsTransient(rex.StatusCode))
                     {
                         SyncStatusHub.Set($"Bulut: Geçici hata ({rex.StatusCode})");
+                        LogService.Error("Dinleme baþlatýlamadý (transient).", rex);
                     }
                     else
                     {
                         SyncStatusHub.Set($"Bulut: Hata ({rex.Status.Detail ?? rex.StatusCode.ToString()})");
+                        LogService.Error("Dinleme baþlatýlamadý. Ýpucu: Firestore baðlantýsýný ve yetkileri kontrol edin.", rex);
                     }
-                    LogService.Error("Dinleme baþlatýlamadý. Ýpucu: Firestore baðlantýsýný ve yetkileri kontrol edin.", rex);
                 }
                 catch (Exception ex)
                 {
                     LogService.Error("Dinleme baþlatýlamadý. Ýpucu: Firestore baðlantýsýný ve yetkileri kontrol edin.", ex);
                     SyncStatusHub.Set($"Bulut: Hata ({ex.Message})");
                 }
-            });
+                finally
+                {
+                    // listener objesini burada kapatmaya çalýþmayýn, DinlemeyiDurdurAsync yapacak
+                }
+            }, ct);
         }
 
         // Dinlemeyi durdur (uygulama kapanýþýnda)
@@ -435,17 +456,35 @@ namespace TirSeferleriModernApp.Services
         {
             try
             {
+                if (_listenCts != null && !_listenCts.IsCancellationRequested)
+                {
+                    _listenCts.Cancel();
+                }
+
                 if (_recordsListener != null)
                 {
                     LogService.Info("Firestore dinleyici durduruluyor...");
-                    _recordsListener.StopAsync().GetAwaiter().GetResult();
+                    try { _recordsListener.StopAsync().GetAwaiter().GetResult(); } catch { }
                     _recordsListener = null;
                     LogService.Info("Firestore dinleyici durduruldu.");
+                }
+
+                if (_listenTask != null)
+                {
+                    try { await _listenTask.ConfigureAwait(false); }
+                    catch (OperationCanceledException) { }
+                    // TaskCanceledException, OperationCanceledException'dan türediði için ayrý catch gerekmez
                 }
             }
             catch (Exception ex)
             {
                 LogService.Error("Dinleme durdurma hatasý", ex);
+            }
+            finally
+            {
+                try { _listenCts?.Dispose(); } catch { }
+                _listenCts = null;
+                _listenTask = null;
             }
             SyncStatusHub.Set("Kapalý");
             await Task.CompletedTask;
