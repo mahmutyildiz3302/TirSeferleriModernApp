@@ -204,7 +204,7 @@ namespace TirSeferleriModernApp.ViewModels
                         _baseStatus.Contains("Çalışıyor", StringComparison.OrdinalIgnoreCase))
                     {
                         _pauseCountdown = true; // senkron sırasında sayaç duraklasın
-                        _ = Application.Current?.Dispatcher?.Invoke(() => SenkronDurumu = _baseStatus + offlineHint);
+                        Application.Current?.Dispatcher?.Invoke(() => SenkronDurumu = _baseStatus + offlineHint);
                     }
                     else if (_baseStatus.Contains("Dinleniyor", StringComparison.OrdinalIgnoreCase) ||
                              _baseStatus.Contains("Güncel", StringComparison.OrdinalIgnoreCase) ||
@@ -212,13 +212,19 @@ namespace TirSeferleriModernApp.ViewModels
                     {
                         _pauseCountdown = false;
                         RestartCountdown();
-                        _ = Application.Current?.Dispatcher?.Invoke(() => SenkronDurumu = ComposeCountdownStatus(_baseStatus + offlineHint));
+                        Application.Current?.Dispatcher?.Invoke(() => SenkronDurumu = ComposeCountdownStatus(_baseStatus + offlineHint));
                     }
                     else
                     {
-                        _ = Application.Current?.Dispatcher?.Invoke(() => SenkronDurumu = _baseStatus + offlineHint);
+                        Application.Current?.Dispatcher?.Invoke(() => SenkronDurumu = _baseStatus + offlineHint);
                     }
                 });
+
+                // Firestore değişikliklerini dinle (UI'yi anında güncelle)
+                FirestoreServisi.RecordChangedFromFirestore += id =>
+                {
+                    Application.Current?.Dispatcher?.Invoke(() => OnRecordChangedFromFirestore(id));
+                };
 
                 // Sayaç başlat
                 _refreshIntervalSeconds = _defaultIntervalSeconds;
@@ -444,12 +450,11 @@ namespace TirSeferleriModernApp.ViewModels
                         {
                             _countdownRemaining--;
                             var composed = ComposeCountdownStatus(_baseStatus);
-                            _ = Application.Current?.Dispatcher?.Invoke(() => SenkronDurumu = composed);
+                            Application.Current?.Dispatcher?.Invoke(() => SenkronDurumu = composed);
                         }
                         if (_countdownRemaining <= 0)
                         {
                             // Tetikle: listeyi yeniden oku ve sayaç resetle (UI thread üstünden yap)
-                            // Düzeltilmiş kod:
                             Application.Current?.Dispatcher?.Invoke(() =>
                             {
                                 SenkronDurumu = _baseStatus;

@@ -22,7 +22,8 @@ namespace TirSeferleriModernApp.Services
                 EnsureDatabaseFileStatic();
                 using var conn = new SqliteConnection(ConnectionString); conn.Open();
                 using var cmd = conn.CreateCommand();
-                cmd.CommandText = "SELECT id FROM Records WHERE IFNULL(TRIM(remote_id),'')<>''";
+                // PATCH: Sadece senkronu tamamlanmýþ (is_dirty=0) kayýtlarý FS olarak iþaretle
+                cmd.CommandText = "SELECT id FROM Records WHERE IFNULL(TRIM(remote_id),'')<>'' AND IFNULL(is_dirty,0)=0";
                 using var rdr = cmd.ExecuteReader();
                 while (rdr.Read())
                 {
