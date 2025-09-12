@@ -23,6 +23,28 @@ namespace TirSeferleriModernApp.ViewModels
         private bool _hadBothEndpointsAtStart;       // sefer seçildiğinde her iki nokta zaten dolu miydi?
         private bool _haveBothEndpoints;             // mevcut durumda iki uç da dolu mu? (ilk kez dolu olduğunda tetiklemek için)
 
+        // Düzenleme/Kirli durum bayrakları
+        private bool _isEditing;
+        public bool IsEditing
+        {
+            get => _isEditing;
+            set => SetProperty(ref _isEditing, value);
+        }
+
+        private bool _isDirty;
+        public bool IsDirty
+        {
+            get => _isDirty;
+            set => SetProperty(ref _isDirty, value);
+        }
+
+        private bool _isSaving;
+        public bool IsSaving
+        {
+            get => _isSaving;
+            set => SetProperty(ref _isSaving, value);
+        }
+
         // UI: Kaynak göster/gizle
         private bool _kaynakGoster;
         public bool KaynakGoster
@@ -553,6 +575,13 @@ namespace TirSeferleriModernApp.ViewModels
 
         private void SeciliSefer_PropertyChanged(object? sender, PropertyChangedEventArgs e)
         {
+            // Düzenleme bayrakları
+            if (e.PropertyName != nameof(Sefer.SeferId))
+            {
+                IsEditing = true;
+                IsDirty = true;
+            }
+
             if (e.PropertyName == nameof(Sefer.YuklemeYeri) ||
                 e.PropertyName == nameof(Sefer.BosaltmaYeri))
             {
@@ -579,72 +608,101 @@ namespace TirSeferleriModernApp.ViewModels
             }
         }
 
+        public async Task<bool> SaveSeferAsync(Sefer sefer)
+        {
+            if (sefer == null) return false;
+            if (IsSaving) return false; // reentrancy guard
+            try
+            {
+                IsSaving = true;
+
+                // Seçimden gelen bilgileri tamamla
+                if (!string.IsNullOrWhiteSpace(SeciliCekiciPlaka))
+                {
+                    var info = DatabaseService.GetVehicleInfoByCekiciPlaka(SeciliCekiciPlaka);
+                    sefer.CekiciId = info.cekiciId;
+                    sefer.DorseId = info.dorseId;
+                    sefer.SoforId = info.soforId;
+                    sefer.SoforAdi = info.soforAdi;
+                    sefer.CekiciPlaka = SeciliCekiciPlaka;
+                    SeciliDorsePlaka = info.dorsePlaka; // üst şerit güncellensin
+                    SeciliSoforAdi = info.soforAdi;      // üst şerit güncellensin
+                }
+
+                // Kaydetmeden önce fiyatı hesapla
+                if (ReferenceEquals(sefer, SeciliSefer))
+                    RecalcFiyat();
+
+                if (!ValidateSefer(sefer))
+                    return false;
+
+                // SQLite
+                if (sefer.SeferId <= 0)
+                {
+                    var newId = DatabaseService.SeferEkle(sefer);
+                    if (newId <= 0) { MessageQueue.Enqueue("Sefer kaydedilemedi."); return false; }
+                    sefer.SeferId = newId;
+                    MessageQueue.Enqueue($"{sefer.KonteynerNo} numaralı konteyner seferi başarıyla eklendi!");
+                }
+                else
+                {
+                    DatabaseService.SeferGuncelle(sefer);
+                    MessageQueue.Enqueue($"{sefer.KonteynerNo} numaralı konteyner seferi başarıyla güncellendi!");
+                }
+
+                // Records + senkron tetikleyici
+                var (remoteId, createdAt) = DatabaseService.TryGetRecordMeta(sefer.SeferId);
+                var rec = new Record
+                {
+                    id = sefer.SeferId,
+                    remote_id = remoteId,
+                    deleted = false,
+                    containerNo = sefer.KonteynerNo,
+                    loadLocation = sefer.YuklemeYeri,
+                    unloadLocation = sefer.BosaltmaYeri,
+                    size = sefer.KonteynerBoyutu,
+                    status = sefer.BosDolu,
+                    nightOrDay = null,
+                    truckPlate = sefer.CekiciPlaka,
+                    notes = sefer.Aciklama,
+                    createdByUserId = null,
+                    createdAt = createdAt > 0 ? createdAt : DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
+                };
+                await DatabaseService.RecordKaydetAsync(rec);
+                SenkronDurumu = "Senkron: Bekliyor";
+
+                // Online ise doğrudan buluta dene (başarısız olursa SyncAgent dener)
+                try
+                {
+                    var fs = new FirestoreServisi();
+                    _ = await fs.BulutaYazOrGuncelle(rec);
+                }
+                catch { }
+
+                // Listeyi yenile (aynı plaka filtresi korunur)
+                if (!string.IsNullOrWhiteSpace(SeciliCekiciPlaka))
+                    RefreshFromDatabaseByPlaka(SeciliCekiciPlaka);
+                else
+                    RefreshFromDatabaseAll();
+
+                RestartCountdown();
+
+                // Bayraklar
+                IsDirty = false;
+                IsEditing = false;
+                return true;
+            }
+            finally
+            {
+                IsSaving = false;
+            }
+        }
+
         [RelayCommand]
         private async Task KaydetVeyaGuncelle()
         {
             SeciliSefer ??= new Sefer { Tarih = DateTime.Today };
-
-            // Seçimden gelen bilgileri (ID'ler dahil) tamamla
-            if (!string.IsNullOrWhiteSpace(SeciliCekiciPlaka))
-            {
-                var info = DatabaseService.GetVehicleInfoByCekiciPlaka(SeciliCekiciPlaka);
-                SeciliSefer.CekiciId = info.cekiciId;
-                SeciliSefer.DorseId = info.dorseId;
-                SeciliSefer.SoforId = info.soforId;
-                SeciliSefer.SoforAdi = info.soforAdi;
-                SeciliSefer.CekiciPlaka = SeciliCekiciPlaka;
-                SeciliDorsePlaka = info.dorsePlaka; // üst şerit güncellensin
-                SeciliSoforAdi = info.soforAdi;      // üst şerit güncellensin
-            }
-
-            // Kaydetmeden önce fiyatı hesapla
-            RecalcFiyat();
-
-            var seferToPersist = SeciliSefer;
-
-            if (SeciliSefer.SeferId <= 0)
-                SeferEkle(SeciliSefer);
-            else
-                SeferGuncelle(SeciliSefer);
-
-            // Records tablosuna da yazarak senkronu tetikle
-            try
-            {
-                if (seferToPersist != null)
-                {
-                    var (remoteId, createdAt) = DatabaseService.TryGetRecordMeta(seferToPersist.SeferId);
-                    var rec = new Record
-                    {
-                        id = seferToPersist.SeferId,
-                        remote_id = remoteId,
-                        deleted = false,
-                        containerNo = seferToPersist.KonteynerNo,
-                        loadLocation = seferToPersist.YuklemeYeri,
-                        unloadLocation = seferToPersist.BosaltmaYeri,
-                        size = seferToPersist.KonteynerBoyutu,
-                        status = seferToPersist.BosDolu,
-                        nightOrDay = null,
-                        truckPlate = seferToPersist.CekiciPlaka,
-                        notes = seferToPersist.Aciklama,
-                        createdByUserId = null,
-                        createdAt = createdAt > 0 ? createdAt : DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-                    };
-                    await DatabaseService.RecordKaydetAsync(rec);
-                    SenkronDurumu = "Senkron: Bekliyor";
-                }
-            }
-            catch (Exception ex)
-            {
-                SenkronDurumu = $"Senkron: Yerel kayıt hatası ({ex.Message})";
-            }
-
-            // Listeyi yenile (aynı plaka filtresi korunur)
-            if (!string.IsNullOrWhiteSpace(SeciliCekiciPlaka))
-                RefreshFromDatabaseByPlaka(SeciliCekiciPlaka);
-            else
-                RefreshFromDatabaseAll();
-
-            RestartCountdown(); // PATCH: işlem sonrası sayaç reset
+            await SaveSeferAsync(SeciliSefer);
         }
 
         [RelayCommand]
@@ -665,6 +723,8 @@ namespace TirSeferleriModernApp.ViewModels
         private void SecimiTemizle()
         {
             SeciliSefer = new Sefer { Tarih = DateTime.Today };
+            IsDirty = false;
+            IsEditing = false;
         }
 
         private static string? NormalizeBosDoluForDb(string? bd)
@@ -706,7 +766,7 @@ namespace TirSeferleriModernApp.ViewModels
             DatabaseService.SeferGuncelle(guncellenecekSefer);
 
             MessageQueue.Enqueue($"{guncellenecekSefer.KonteynerNo} numaralı konteyner seferi başarıyla güncellendi!");
-            SeciliSefer = new Sefer { Tarih = DateTime.Today };
+            // Otomatik temizleme kaldırıldı — seçim korunur
         }
 
         private void SeferEkle(Sefer yeniSefer)
@@ -723,7 +783,7 @@ namespace TirSeferleriModernApp.ViewModels
             {
                 MessageQueue.Enqueue("Sefer kaydedilemedi.");
             }
-            SeciliSefer = new Sefer { Tarih = DateTime.Today };
+            // Otomatik temizleme kaldırıldı — seçim korunur
         }
 
 #if DEBUG

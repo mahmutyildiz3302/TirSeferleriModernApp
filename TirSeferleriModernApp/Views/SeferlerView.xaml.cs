@@ -15,6 +15,8 @@ namespace TirSeferleriModernApp.Views
 {
     public partial class SeferlerView : UserControl
     {
+        private bool _isHandlingEdit; // reentrancy guard
+
         public SeferlerView()
         {
             InitializeComponent();
@@ -49,82 +51,42 @@ namespace TirSeferleriModernApp.Views
             dgSeferler.ContextMenu = contextMenu;
         }
 
-        // Enter ile hücreyi commit et ve DB'ye yaz
-        private void dgSeferler_PreviewKeyDown(object sender, KeyEventArgs e)
+        // Enter ile hücreyi commit et ve ortak kaydetme akışını tetikle
+        private async void dgSeferler_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
             {
                 if (dgSeferler.CommitEdit(DataGridEditingUnit.Cell, true))
                     dgSeferler.CommitEdit(DataGridEditingUnit.Row, true);
                 e.Handled = true;
+
+                if (DataContext is SeferlerViewModel vm && dgSeferler.SelectedItem is Sefer s)
+                {
+                    await vm.SaveSeferAsync(s);
+                }
             }
         }
 
         private async void dgSeferler_CellEditEnding(object sender, DataGridCellEditEndingEventArgs e)
         {
-            if (e.Row?.Item is Sefer sefer && sefer.SeferId > 0)
+            if (_isHandlingEdit) return; // reentrancy guard
+            if (e.EditAction != DataGridEditAction.Commit) return;
+
+            if (DataContext is SeferlerViewModel vm && e.Row?.Item is Sefer sefer && sefer.SeferId > 0)
             {
                 try
                 {
-                    // 1) Yerel: Seferler güncelle
-                    DatabaseService.SeferGuncelle(sefer);
-
-                    // 2) Records satırını güncelle/is_dirty=1 yap (senkron tetiklemek için)
-                    var (remoteId, createdAt) = DatabaseService.TryGetRecordMeta(sefer.SeferId);
-                    var rec = new Record
-                    {
-                        id = sefer.SeferId,
-                        remote_id = remoteId,
-                        deleted = false,
-                        containerNo = sefer.KonteynerNo,
-                        loadLocation = sefer.YuklemeYeri,
-                        unloadLocation = sefer.BosaltmaYeri,
-                        size = sefer.KonteynerBoyutu,
-                        status = sefer.BosDolu,
-                        nightOrDay = null,
-                        truckPlate = sefer.CekiciPlaka,
-                        notes = sefer.Aciklama,
-                        createdByUserId = null,
-                        createdAt = createdAt > 0 ? createdAt : System.DateTimeOffset.UtcNow.ToUnixTimeMilliseconds()
-                    };
-                    await DatabaseService.RecordKaydetAsync(rec);
-
-                    // 3) Durumu bildir
-                    SyncStatusHub.Set("Senkron: Bekliyor");
-
-                    // 4) Online ise buluta hemen yazmayı dene (başarısızsa SyncAgent zaten deneyecek)
-                    try
-                    {
-                        var fs = new FirestoreServisi();
-                        _ = await fs.BulutaYazOrGuncelle(rec);
-                    }
-                    catch { /* background agent will retry */ }
+                    _isHandlingEdit = true;
+                    await vm.SaveSeferAsync(sefer);
                 }
-                catch (Exception ex)
+                finally
                 {
-                    MessageBox.Show($"Güncelleme hatası: {ex.Message}");
+                    _isHandlingEdit = false;
                 }
             }
 
-            // Yükleme/Boşaltma/Ekstra/BoşDolu alanı değiştiyse fiyatı yeniden hesapla ve kaydet
-            if (e.Row?.Item is Sefer s && (e.Column.Header?.ToString() == "Yükleme" || e.Column.Header?.ToString() == "Boşaltma" || e.Column.Header?.ToString() == "Emanet/Soda" || e.Column.Header?.ToString() == "Boş/Dolu"))
-            {
-                var u = DatabaseService.GetUcretForRoute(s.YuklemeYeri, s.BosaltmaYeri, null, s.BosDolu);
-                if (u.HasValue)
-                {
-                    s.Fiyat = u.Value;
-                    try { DatabaseService.SeferGuncelle(s); } catch { }
-                }
-            }
-
-            // 5) Listeyi ve sayaçları tazele (FS/DB rozetleri dahil)
-            if (DataContext is SeferlerViewModel vm)
-            {
-                if (!string.IsNullOrWhiteSpace(vm.SeciliCekiciPlaka))
-                    vm.LoadSeferler(vm.SeciliCekiciPlaka);
-                else
-                    vm.LoadSeferler();
-            }
+            // Yükleme/Boşaltma/Ekstra/BoşDolu alanı değiştiyse fiyatı yeniden hesapla ve kaydet (SaveSeferAsync zaten çağrıldı)
+            // Eski lokal DB yazımları kaldırıldı; tek kaynak: VM.SaveSeferAsync
         }
     }
 }
