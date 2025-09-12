@@ -51,19 +51,14 @@ namespace TirSeferleriModernApp.Views
             dgSeferler.ContextMenu = contextMenu;
         }
 
-        // Enter ile hücreyi commit et ve ortak kaydetme akışını tetikle
-        private async void dgSeferler_PreviewKeyDown(object sender, KeyEventArgs e)
+        // Enter ile hücreyi commit et (kaydetme CellEditEnding'de yapılır)
+        private void dgSeferler_PreviewKeyDown(object sender, KeyEventArgs e)
         {
             if (e.Key == Key.Enter)
             {
                 if (dgSeferler.CommitEdit(DataGridEditingUnit.Cell, true))
                     dgSeferler.CommitEdit(DataGridEditingUnit.Row, true);
                 e.Handled = true;
-
-                if (DataContext is SeferlerViewModel vm && dgSeferler.SelectedItem is Sefer s)
-                {
-                    await vm.SaveSeferAsync(s);
-                }
             }
         }
 
