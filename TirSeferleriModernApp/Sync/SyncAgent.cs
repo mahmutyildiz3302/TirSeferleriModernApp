@@ -40,23 +40,32 @@ namespace TirSeferleriModernApp.Sync
 
         private async Task RunLoopAsync(CancellationToken token)
         {
-            while (!token.IsCancellationRequested)
+            using var timer = new PeriodicTimer(_interval);
+            while (true)
             {
                 try
                 {
                     await SyncOnceAsync(token).ConfigureAwait(false);
                 }
-                catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+                catch (OperationCanceledException) when (token.IsCancellationRequested)
+                {
+                    break;
+                }
                 catch (Exception ex)
                 {
                     LogService.Error("SyncAgent döngü hatasý. Ýpucu: Að baðlantýsýný ve Firestore yapýlandýrmasýný kontrol edin.", ex);
                     SyncStatusHub.Set($"Senkron: Hata ({ex.Message})");
                 }
+
                 try
                 {
-                    await Task.Delay(_interval, token).ConfigureAwait(false);
+                    if (!await timer.WaitForNextTickAsync(token).ConfigureAwait(false))
+                        break; // iptal veya timer dispose
                 }
-                catch (OperationCanceledException) when (token.IsCancellationRequested) { }
+                catch (OperationCanceledException) when (token.IsCancellationRequested)
+                {
+                    break;
+                }
             }
         }
 

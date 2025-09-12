@@ -337,20 +337,23 @@ namespace TirSeferleriModernApp.Services
                 EnsureDatabaseFileStatic();
                 using var conn = new SqliteConnection(ConnectionString); conn.Open();
 
-                // Yeni isim için güncelle
-                using (var cmd = conn.CreateCommand())
+                // Yeni isim varsa güncelle
+                if (ColumnExists(conn, "Seferler", "Emanet/Soda"))
                 {
-                    cmd.CommandText = "UPDATE Seferler SET \"Emanet/Soda\"=' ' WHERE UPPER(TRIM(IFNULL(\"Emanet/Soda'', 'EKSTRA YOK'";
+                    using var cmd = conn.CreateCommand();
+                    cmd.CommandText = "UPDATE Seferler SET \"Emanet/Soda\"=' ' WHERE UPPER(TRIM(IFNULL(\"Emanet/Soda\",'')))='EKSTRA YOK'";
                     cmd.ExecuteNonQuery();
                 }
-                // Eski isim varsa (taşınmamış eski DB) onu da güncelle
-                using (var cmd2 = conn.CreateCommand())
+
+                // Eski isim varsa onu da güncelle
+                if (ColumnExists(conn, "Seferler", "Ekstra"))
                 {
+                    using var cmd2 = conn.CreateCommand();
                     cmd2.CommandText = "UPDATE Seferler SET Ekstra=' ' WHERE UPPER(TRIM(IFNULL(Ekstra,'')))='EKSTRA YOK'";
                     cmd2.ExecuteNonQuery();
                 }
             }
-            catch (Exception ex) { Debug.WriteLine(ex.Message); }
+            catch (Exception ex) { Debug.WriteLine("[NormalizeEkstraBosluk] " + ex.Message); }
         }
 
         private void EnsureDatabaseFile()
