@@ -1,4 +1,5 @@
-﻿using Microsoft.Data.Sqlite;
+﻿// PATCH: DatabaseService sınıfı partial yapıldı; ek yardımcılar başka dosyada tanımlanabilsin.
+using Microsoft.Data.Sqlite;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -11,7 +12,7 @@ using static TirSeferleriModernApp.Views.VergilerAracView;
 
 namespace TirSeferleriModernApp.Services
 {
-    public class DatabaseService
+    public partial class DatabaseService
     {
         private static readonly string DbFile = Path.Combine(AppDomain.CurrentDomain.BaseDirectory, "TirSeferleri.db");
         public static readonly string ConnectionString = $"Data Source={DbFile}";
@@ -341,7 +342,7 @@ namespace TirSeferleriModernApp.Services
                 if (ColumnExists(conn, "Seferler", "Emanet/Soda"))
                 {
                     using var cmd = conn.CreateCommand();
-                    cmd.CommandText = "UPDATE Seferler SET \"Emanet/Soda\"=' ' WHERE UPPER(TRIM(IFNULL(\"Emanet/Soda\",'')))='EKSTRA YOK'";
+                    cmd.CommandText = "UPDATE Seferler SET \"Emanet/Soda\"=' ' WHERE UPPER(TRIM(IFNULL(\"Emanet/Soda'', ')))='EKSTRA YOK'";
                     cmd.ExecuteNonQuery();
                 }
 
@@ -1601,8 +1602,7 @@ namespace TirSeferleriModernApp.Services
             using var tx = conn.BeginTransaction();
             try
             {
-                var routes = new (string from, string to, decimal fiyat)[]
-                {
+                var routes = new (string from, string to, decimal fiyat)[]{
                     ("ARDEP", "LİMAN", 1400m),
                     ("DEMİRELLER", "LİMAN", 1650m),
                     ("KAHRAMANLI", "LİMAN", 1650m),

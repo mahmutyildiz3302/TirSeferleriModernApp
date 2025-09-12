@@ -9,8 +9,10 @@ using MaterialDesignThemes.Wpf;
 using System.ComponentModel;
 using System.Linq;
 using System.Collections.Generic;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Diagnostics;
+using System.Windows;
 
 namespace TirSeferleriModernApp.ViewModels
 {
@@ -68,6 +70,15 @@ namespace TirSeferleriModernApp.ViewModels
             get => _senkronDurumu;
             set => SetProperty(ref _senkronDurumu, value);
         }
+
+        // PATCH: Senkron durum sayaç kontrolü
+        private readonly int _defaultIntervalSeconds = Math.Max(5, (AppSettingsHelper.Current?.GetType().GetProperty("SeferlerRefreshSeconds")?.GetValue(AppSettingsHelper.Current) as int?) ?? 60);
+        private int _refreshIntervalSeconds;
+        private int _countdownRemaining;
+        private CancellationTokenSource? _statusTimerCts;
+        private Task? _statusTimerTask;
+        private string _baseStatus = ""; // Sayaçsız metin
+        private volatile bool _pauseCountdown;
 
         // Yıl/ay filtreleme
         public ObservableCollection<int> YilSecenekleri { get; } = new();
@@ -182,10 +193,37 @@ namespace TirSeferleriModernApp.ViewModels
             if (subscribeStatus)
             {
                 // Global senkron durum değişimlerini dinle ve ekrana yansıt
-                _ = SyncStatusHub.Subscribe(status => SenkronDurumu = status);
+                _ = SyncStatusHub.Subscribe(status =>
+                {
+                    _baseStatus = status ?? string.Empty;
+                    // Hata/Geçici durumlarında kısa "Uzak: -" ekle
+                    var showOffline = !string.IsNullOrWhiteSpace(_baseStatus) && (_baseStatus.Contains("Hata", StringComparison.OrdinalIgnoreCase) || _baseStatus.Contains("Geçici", StringComparison.OrdinalIgnoreCase));
+                    var offlineHint = showOffline ? " • Uzak: -" : string.Empty;
 
-                // Firestore’dan gelen güncellemeleri dinle: ilgili satırın DataKaynak bilgisini Firestore olarak işaretle ve özetleri güncelle
-                FirestoreServisi.RecordChangedFromFirestore += OnRecordChangedFromFirestore;
+                    if (_baseStatus.Contains("Bekliyor", StringComparison.OrdinalIgnoreCase) ||
+                        _baseStatus.Contains("Çalışıyor", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _pauseCountdown = true; // senkron sırasında sayaç duraklasın
+                        _ = Application.Current?.Dispatcher?.Invoke(() => SenkronDurumu = _baseStatus + offlineHint);
+                    }
+                    else if (_baseStatus.Contains("Dinleniyor", StringComparison.OrdinalIgnoreCase) ||
+                             _baseStatus.Contains("Güncel", StringComparison.OrdinalIgnoreCase) ||
+                             _baseStatus.Contains("Bağlandı", StringComparison.OrdinalIgnoreCase))
+                    {
+                        _pauseCountdown = false;
+                        RestartCountdown();
+                        _ = Application.Current?.Dispatcher?.Invoke(() => SenkronDurumu = ComposeCountdownStatus(_baseStatus + offlineHint));
+                    }
+                    else
+                    {
+                        _ = Application.Current?.Dispatcher?.Invoke(() => SenkronDurumu = _baseStatus + offlineHint);
+                    }
+                });
+
+                // Sayaç başlat
+                _refreshIntervalSeconds = _defaultIntervalSeconds;
+                RestartCountdown();
+                EnsureStatusTimer();
             }
         }
 
@@ -222,18 +260,22 @@ namespace TirSeferleriModernApp.ViewModels
                 RefreshFromDatabaseByPlaka(SeciliCekiciPlaka);
             else
                 RefreshFromDatabaseAll();
+
+            RestartCountdown(); // PATCH: manuel seçim de sayaç sıfırlar
         }
 
         public void LoadSeferler()
         {
             RefreshFromDatabaseAll();
             DepoAdlari.ReplaceAll(DatabaseService.GetDepoAdlari());
+            RestartCountdown(); // PATCH
         }
 
         public void LoadSeferler(string cekiciPlaka)
         {
             RefreshFromDatabaseByPlaka(cekiciPlaka);
             DepoAdlari.ReplaceAll(DatabaseService.GetDepoAdlari());
+            RestartCountdown(); // PATCH
         }
 
         private void EnsureYilSecenekleri()
@@ -251,6 +293,7 @@ namespace TirSeferleriModernApp.ViewModels
         {
             EnsureYilSecenekleri();
             _allSeferlerCache = DatabaseService.GetSeferler();
+            MarkSourcesOnList(_allSeferlerCache); // PATCH: FS/DB rozetleri
             SonYerelOkumaZamani = DateTime.Now;
             ApplyDateFilterAndUpdate();
         }
@@ -259,6 +302,7 @@ namespace TirSeferleriModernApp.ViewModels
         {
             EnsureYilSecenekleri();
             _allSeferlerCache = DatabaseService.GetSeferlerByCekiciPlaka(plaka);
+            MarkSourcesOnList(_allSeferlerCache); // PATCH: FS/DB rozetleri
             SonYerelOkumaZamani = DateTime.Now;
             ApplyDateFilterAndUpdate();
         }
@@ -359,6 +403,92 @@ namespace TirSeferleriModernApp.ViewModels
                 Aciklama = "Toplam",
                 CekiciPlaka = string.Empty
             };
+        }
+
+        // PATCH: FS/DB rozetlerini belirle — deterministik: önce id->Records.remote_id
+        private void MarkSourcesOnList(List<Sefer> list)
+        {
+            try
+            {
+                var idsWithRemote = DatabaseService.GetLocalIdsHavingRemote();
+                foreach (var s in list)
+                {
+                    if (s == null) continue;
+                    if (s.SeferId > 0 && idsWithRemote.Contains(s.SeferId))
+                        s.DataKaynak = DataKaynakTuru.Firestore;
+                    else
+                        s.DataKaynak = DataKaynakTuru.SQLite;
+                }
+            }
+            catch (Exception ex)
+            {
+                Debug.WriteLine("[MarkSourcesOnList] " + ex.Message);
+            }
+        }
+
+        // PATCH: Sayaç ve tetikleyici
+        private void EnsureStatusTimer()
+        {
+            if (_statusTimerTask != null) return;
+            _statusTimerCts = CancellationTokenSource.CreateLinkedTokenSource(App.AppCts.Token);
+            var token = _statusTimerCts.Token;
+            _statusTimerTask = Task.Run(async () =>
+            {
+                while (!token.IsCancellationRequested)
+                {
+                    try
+                    {
+                        await Task.Delay(1000, token).ConfigureAwait(false);
+                        if (_pauseCountdown) continue;
+                        if (_countdownRemaining > 0)
+                        {
+                            _countdownRemaining--;
+                            var composed = ComposeCountdownStatus(_baseStatus);
+                            _ = Application.Current?.Dispatcher?.Invoke(() => SenkronDurumu = composed);
+                        }
+                        if (_countdownRemaining <= 0)
+                        {
+                            // Tetikle: listeyi yeniden oku ve sayaç resetle
+                            _ = Application.Current?.Dispatcher?.Invoke(() => SenkronDurumu = _baseStatus);
+                            if (!string.IsNullOrWhiteSpace(SeciliCekiciPlaka))
+                                RefreshFromDatabaseByPlaka(SeciliCekiciPlaka);
+                            else
+                                RefreshFromDatabaseAll();
+                            RestartCountdown();
+                        }
+                    }
+                    catch (OperationCanceledException) when (token.IsCancellationRequested)
+                    {
+                        Debug.WriteLine("[SeferlerVM] Status timer canceled");
+                        break;
+                    }
+                    catch (TaskCanceledException)
+                    {
+                        Debug.WriteLine("[SeferlerVM] Status timer task canceled");
+                        break;
+                    }
+                    catch (Exception ex)
+                    {
+                        Debug.WriteLine("[SeferlerVM] Status timer error: " + ex.Message);
+                    }
+                }
+            }, token);
+        }
+
+        private void RestartCountdown()
+        {
+            _refreshIntervalSeconds = _defaultIntervalSeconds;
+            _countdownRemaining = _refreshIntervalSeconds;
+        }
+
+        private string ComposeCountdownStatus(string baseText)
+        {
+            if (string.IsNullOrWhiteSpace(baseText)) baseText = "";
+            if (baseText.Contains("Dinleniyor", StringComparison.OrdinalIgnoreCase))
+            {
+                return $"{baseText} • {_countdownRemaining} sn";
+            }
+            return baseText;
         }
 
         private void RecalcFiyat()
@@ -504,6 +634,8 @@ namespace TirSeferleriModernApp.ViewModels
                 RefreshFromDatabaseByPlaka(SeciliCekiciPlaka);
             else
                 RefreshFromDatabaseAll();
+
+            RestartCountdown(); // PATCH: işlem sonrası sayaç reset
         }
 
         [RelayCommand]
@@ -517,6 +649,7 @@ namespace TirSeferleriModernApp.ViewModels
                     month = m;
             }
             SeciliAy = month;
+            RestartCountdown(); // PATCH
         }
 
         [RelayCommand]

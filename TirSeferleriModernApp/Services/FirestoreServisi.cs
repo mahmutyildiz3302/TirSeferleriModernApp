@@ -1,3 +1,4 @@
+// PATCH: Firestore eþleþme yardýmcýlarý ve dinleyici yaþam döngüsü yönetimi eklendi.
 using System;
 using System.IO;
 using System.Threading;
