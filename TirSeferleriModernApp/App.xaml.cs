@@ -3,6 +3,7 @@ using System.Data;
 using System.Diagnostics;
 using System.IO;
 using System.Linq;
+using System.Threading;
 using System.Threading.Tasks;
 using System.Windows;
 using TirSeferleriModernApp.Services;
@@ -12,12 +13,28 @@ namespace TirSeferleriModernApp
 {
     public partial class App : Application
     {
+        // Merkezi uygulama iptal kaynağı
+        public static readonly CancellationTokenSource AppCts = new();
+
         private readonly SyncAgent _syncAgent = new();
         private readonly FirestoreServisi _firestore = new();
 
         protected override void OnStartup(StartupEventArgs e)
         {
             base.OnStartup(e);
+
+            // Ana pencere kapanırken iptali tetikle
+            if (Current.MainWindow != null)
+            {
+                Current.MainWindow.Closing += (_, __) =>
+                {
+                    if (!AppCts.IsCancellationRequested)
+                    {
+                        Trace.WriteLine("[App] Closing -> AppCts.Cancel()");
+                        try { AppCts.Cancel(); } catch { }
+                    }
+                };
+            }
 
             SyncStatusHub.Set("Kapalı");
 
@@ -50,7 +67,7 @@ namespace TirSeferleriModernApp
             // Senkron ve dinleyici
             try
             {
-                _syncAgent.Start();
+                _syncAgent.Start(); // SyncAgent kendi içinde App.AppCts ile bağlı çalışacak
                 LogService.Info("SyncAgent başlatıldı.");
                 SyncStatusHub.Set("Senkron: Çalışıyor");
             }
@@ -62,7 +79,7 @@ namespace TirSeferleriModernApp
 
             try
             {
-                _firestore.HepsiniDinle();
+                _firestore.HepsiniDinle(AppCts.Token);
                 LogService.Info("Firestore dinleyici başlatıldı.");
                 SyncStatusHub.Set("Bulut: Dinleniyor");
             }
@@ -138,6 +155,13 @@ namespace TirSeferleriModernApp
         {
             base.OnExit(e);
 
+            // Kapanışta AppCts'yi iptal et (Closing tetiklenmemişse)
+            if (!AppCts.IsCancellationRequested)
+            {
+                Trace.WriteLine("[App] OnExit -> AppCts.Cancel()");
+                try { AppCts.Cancel(); } catch { }
+            }
+
             try
             {
                 LogService.Info("SyncAgent durduruluyor...");
@@ -160,8 +184,18 @@ namespace TirSeferleriModernApp
                 LogService.Error("Firestore dinleyici durdurma hatası", ex);
             }
 
+            // HttpClient sağlayıcısı varsa kapat
+            try
+            {
+                HttpClientProvider.Dispose();
+                Trace.WriteLine("[App] HttpClient disposed");
+            }
+            catch { }
+
             SyncStatusHub.Set("Kapalı");
             LogService.Info("Uygulama kapanıyor.");
+
+            try { AppCts.Dispose(); } catch { }
         }
     }
 }

@@ -21,7 +21,8 @@ namespace TirSeferleriModernApp.Sync
         public void Start()
         {
             if (IsRunning) return;
-            _cts = new CancellationTokenSource();
+            // Uygulama seviyesindeki token'a baðlý bir CTS oluþtur (ek iptaller için)
+            _cts = CancellationTokenSource.CreateLinkedTokenSource(App.AppCts.Token);
             _loopTask = Task.Run(() => RunLoopAsync(_cts.Token));
             SyncStatusHub.Set("Senkron: Çalýþýyor");
             LogService.Info("SyncAgent baþlatýldý.");
@@ -32,7 +33,19 @@ namespace TirSeferleriModernApp.Sync
             if (_cts == null) return;
             _cts.Cancel();
             try { if (_loopTask != null) await _loopTask.ConfigureAwait(false); }
-            catch { /* ignore */ }
+            catch (OperationCanceledException) when (_cts.IsCancellationRequested || App.AppCts.IsCancellationRequested)
+            {
+                // sessizce yut
+                Debug.WriteLine("[SyncAgent] StopAsync -> OperationCanceled (expected)");
+            }
+            catch (TaskCanceledException)
+            {
+                Debug.WriteLine("[SyncAgent] StopAsync -> TaskCanceled (expected)");
+            }
+            catch (Exception ex)
+            {
+                LogService.Error("SyncAgent StopAsync bekleme hatasý", ex);
+            }
             finally { _loopTask = null; _cts.Dispose(); _cts = null; }
             SyncStatusHub.Set("Kapalý");
             LogService.Info("SyncAgent durduruldu.");
@@ -41,6 +54,8 @@ namespace TirSeferleriModernApp.Sync
         private async Task RunLoopAsync(CancellationToken token)
         {
             using var timer = new PeriodicTimer(_interval);
+            using var reg = token.Register(() => { try { timer.Dispose(); } catch { } });
+
             while (true)
             {
                 try
@@ -49,6 +64,12 @@ namespace TirSeferleriModernApp.Sync
                 }
                 catch (OperationCanceledException) when (token.IsCancellationRequested)
                 {
+                    Debug.WriteLine("[SyncAgent] RunLoop -> canceled");
+                    break;
+                }
+                catch (TaskCanceledException) when (token.IsCancellationRequested)
+                {
+                    Debug.WriteLine("[SyncAgent] RunLoop -> task canceled");
                     break;
                 }
                 catch (Exception ex)
@@ -57,12 +78,17 @@ namespace TirSeferleriModernApp.Sync
                     SyncStatusHub.Set($"Senkron: Hata ({ex.Message})");
                 }
 
+                // Token geçmeden bekle; iptal edildiðinde reg->Dispose çaðrýsý false döndürür
                 try
                 {
                     if (!await timer.WaitForNextTickAsync(token).ConfigureAwait(false))
-                        break; // iptal veya timer dispose
+                        break;
                 }
                 catch (OperationCanceledException) when (token.IsCancellationRequested)
+                {
+                    break;
+                }
+                catch (TaskCanceledException)
                 {
                     break;
                 }
@@ -74,7 +100,15 @@ namespace TirSeferleriModernApp.Sync
             // Firestore'a baðlý deðilse baðlanmayý dene (her denemede deðil, sadece ihtiyaç olduðunda)
             if (_firestore.Db == null)
             {
-                try { await _firestore.Baglan().ConfigureAwait(false); }
+                try { await _firestore.Baglan(token).ConfigureAwait(false); }
+                catch (OperationCanceledException) when (token.IsCancellationRequested)
+                {
+                    return;
+                }
+                catch (TaskCanceledException)
+                {
+                    return;
+                }
                 catch (Exception ex)
                 {
                     LogService.Error("Firestore baðlantý hatasý. Ýpucu: AppSettings.json ve FIRESTORE_SETUP.md adýmlarýný kontrol edin.", ex);
@@ -90,7 +124,9 @@ namespace TirSeferleriModernApp.Sync
                 if (token.IsCancellationRequested) break;
 
                 // Buluta yaz veya güncelle
-                var result = await _firestore.BulutaYazOrGuncelle(rec).ConfigureAwait(false);
+                var result = await _firestore.BulutaYazOrGuncelle(rec, token).ConfigureAwait(false);
+                if (token.IsCancellationRequested) break;
+
                 if (!string.IsNullOrWhiteSpace(result) && !result.StartsWith("Hata", StringComparison.OrdinalIgnoreCase))
                 {
                     // Baþarýlý - yerelde remote_id'yi yaz ve is_dirty=0 yap
@@ -98,7 +134,7 @@ namespace TirSeferleriModernApp.Sync
                     SyncStatusHub.Set("Senkron: Güncel");
                     LogService.Info($"SyncAgent: local_id={rec.id} senkron edildi, remote_id={result}");
                 }
-                else
+                else if (!token.IsCancellationRequested)
                 {
                     LogService.Error($"Senkronizasyon baþarýsýz (id={rec.id}) - {result}");
                     SyncStatusHub.Set($"Senkron: Hata ({result})");
@@ -144,6 +180,14 @@ namespace TirSeferleriModernApp.Sync
                     list.Add(r);
                 }
             }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                // sessizce
+            }
+            catch (TaskCanceledException)
+            {
+                // sessizce
+            }
             catch (Exception ex)
             {
                 LogService.Error("Kirli kayýtlar okunamadý. Ýpucu: Records þemasýný kontrol edin.", ex);
@@ -167,6 +211,14 @@ namespace TirSeferleriModernApp.Sync
                 cmd.Parameters.AddWithValue("@id", id);
                 await cmd.ExecuteNonQueryAsync(token).ConfigureAwait(false);
             }
+            catch (OperationCanceledException) when (token.IsCancellationRequested)
+            {
+                // sessizce
+            }
+            catch (TaskCanceledException)
+            {
+                // sessizce
+            }
             catch (Exception ex)
             {
                 LogService.Error($"Yerel kayýt güncellenemedi (id={id}). Ýpucu: DB dosyasý eriþimi veya þema.", ex);
@@ -176,7 +228,7 @@ namespace TirSeferleriModernApp.Sync
 
         public void Dispose()
         {
-            _cts?.Cancel();
+            try { _cts?.Cancel(); } catch { }
             _cts?.Dispose();
         }
     }

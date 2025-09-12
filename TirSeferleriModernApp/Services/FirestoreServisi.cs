@@ -1,5 +1,6 @@
 using System;
 using System.IO;
+using System.Threading;
 using System.Threading.Tasks;
 using Google.Cloud.Firestore;
 using TirSeferleriModernApp.Models;
@@ -32,8 +33,10 @@ namespace TirSeferleriModernApp.Services
 
         // AppSettings.json'dan proje kimliði ve kimlik bilgisi yolu okunur ve Firestore'a baðlanýlýr.
         // Baðlantý kurulamazsa anlaþýlýr bir hata mesajý ile istisna fýrlatýlmaz; durum hub ve log ile bildirilir.
-        public async Task Baglan()
+        public async Task Baglan(CancellationToken cancellationToken = default)
         {
+            if (cancellationToken.IsCancellationRequested) return;
+
             var settings = AppSettingsHelper.Current;
             var projectId = settings.FirebaseProjectId?.Trim();
             var credPath = settings.GoogleApplicationCredentialsPath?.Trim();
@@ -75,7 +78,7 @@ namespace TirSeferleriModernApp.Services
             int attempt = 0;
             var delays = new[] { 500, 1000, 2000 }; // ms
 
-            while (true)
+            while (!cancellationToken.IsCancellationRequested)
             {
                 try
                 {
@@ -87,6 +90,8 @@ namespace TirSeferleriModernApp.Services
                 }
                 catch (RpcException rex)
                 {
+                    if (cancellationToken.IsCancellationRequested) return;
+
                     if (rex.StatusCode == StatusCode.PermissionDenied)
                     {
                         SyncStatusHub.Set("Bulut: Hata (API etkin deðil veya izin yok)");
@@ -98,7 +103,7 @@ namespace TirSeferleriModernApp.Services
                     {
                         var wait = delays[attempt++];
                         SyncStatusHub.Set($"Bulut: Geçici hata, tekrar denenecek ({rex.StatusCode})");
-                        await Task.Delay(wait).ConfigureAwait(false);
+                        try { await Task.Delay(wait, cancellationToken).ConfigureAwait(false); } catch { }
                         continue;
                     }
 
@@ -106,8 +111,14 @@ namespace TirSeferleriModernApp.Services
                     LogService.Error("Firestore'a baðlanýlamadý (RpcException). Ýpucu: API, að ve rol yetkilerini kontrol edin.", rex);
                     return;
                 }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    // sessizce çýk
+                    return;
+                }
                 catch (Exception ex)
                 {
+                    if (cancellationToken.IsCancellationRequested) return;
                     SyncStatusHub.Set("Bulut: Hata");
                     LogService.Error("Firestore'a baðlanýlamadý. Ýpucu: FIRESTORE_SETUP.md adýmlarýný doðrulayýn (API etkin, rol, JSON yolu, ProjectId)", ex);
                     return;
@@ -117,7 +128,7 @@ namespace TirSeferleriModernApp.Services
 
         // Bulutta yeni belge oluþturur veya mevcut belgeyi günceller.
         // Baþarýlýysa belge ID'sini, hata olursa kýsa bir mesaj döndürür.
-        public async Task<string> BulutaYazOrGuncelle(Record r)
+        public async Task<string> BulutaYazOrGuncelle(Record r, CancellationToken cancellationToken = default)
         {
             try
             {
@@ -125,7 +136,7 @@ namespace TirSeferleriModernApp.Services
 
                 if (_db == null)
                 {
-                    await Baglan();
+                    await Baglan(cancellationToken).ConfigureAwait(false);
                 }
                 if (_db == null) return "Hata: Firestore API etkin deðil veya izin yok (baðlantý kurulamadý)";
 
@@ -153,6 +164,7 @@ namespace TirSeferleriModernApp.Services
                 // basit retry sadece transient hatalarda
                 async Task<string> WriteAsync()
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     if (string.IsNullOrWhiteSpace(r.remote_id))
                     {
                         var added = await collection.AddAsync(data);
@@ -173,7 +185,12 @@ namespace TirSeferleriModernApp.Services
                 int attempt = 0; var delays = new[] { 500, 1000, 2000 };
                 while (true)
                 {
+                    cancellationToken.ThrowIfCancellationRequested();
                     try { return await WriteAsync(); }
+                    catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                    {
+                        return ""; // sessiz çýkýþ
+                    }
                     catch (RpcException rex)
                     {
                         if (rex.StatusCode == StatusCode.PermissionDenied)
@@ -186,7 +203,7 @@ namespace TirSeferleriModernApp.Services
                         {
                             var wait = delays[attempt++];
                             SyncStatusHub.Set($"Bulut: Geçici hata, tekrar denenecek ({rex.StatusCode})");
-                            await Task.Delay(wait).ConfigureAwait(false);
+                            try { await Task.Delay(wait, cancellationToken).ConfigureAwait(false); } catch { return ""; }
                             continue;
                         }
                         SyncStatusHub.Set($"Bulut: Hata ({rex.Status.Detail ?? rex.StatusCode.ToString()})");
@@ -195,8 +212,13 @@ namespace TirSeferleriModernApp.Services
                     }
                 }
             }
+            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+            {
+                return ""; // sessizce
+            }
             catch (Exception ex)
             {
+                if (cancellationToken.IsCancellationRequested) return "";
                 SyncStatusHub.Set($"Bulut: Hata ({ex.Message})");
                 LogService.Error("Buluta yazma/güncelleme hatasý. Ýpucu: Að baðlantýsýný ve IAM rolünü kontrol edin.", ex);
                 return $"Hata: {ex.Message}";
@@ -212,7 +234,7 @@ namespace TirSeferleriModernApp.Services
         // records koleksiyonunu dinler. Deðiþiklik geldiðinde ilgili yerel kaydý
         // remote_id ile bulur, uzaktaki updated_at daha yeni ise yerelde günceller.
         // Ýþlemler arka planda yapýlýr, UI kilitlenmez.
-        public void HepsiniDinle(Action<object?>? onChanged = null)
+        public void HepsiniDinle(CancellationToken cancellationToken = default, Action<object?>? onChanged = null)
         {
             if (_recordsListener != null) return; // zaten dinleniyor
 
@@ -222,13 +244,14 @@ namespace TirSeferleriModernApp.Services
                 {
                     if (_db == null)
                     {
-                        await Baglan().ConfigureAwait(false);
+                        await Baglan(cancellationToken).ConfigureAwait(false);
                     }
-                    if (_db == null) return;
+                    if (_db == null || cancellationToken.IsCancellationRequested) return;
 
                     var col = _db.Collection("records");
                     _recordsListener = col.Listen(snapshot =>
                     {
+                        if (cancellationToken.IsCancellationRequested) return;
                         SyncStatusHub.Set("Bulut: Dinleniyor");
                         LogService.Info("Firestore dinleyici snapshot aldý.");
                         _ = Task.Run(async () =>
@@ -237,6 +260,7 @@ namespace TirSeferleriModernApp.Services
                             {
                                 foreach (var change in snapshot.Changes)
                                 {
+                                    if (cancellationToken.IsCancellationRequested) break;
                                     var doc = change.Document;
                                     if (doc == null || !doc.Exists) continue;
 
@@ -250,15 +274,15 @@ namespace TirSeferleriModernApp.Services
                                     long localUpdated = 0;
                                     await using (var conn = new SqliteConnection(DatabaseService.ConnectionString))
                                     {
-                                        await conn.OpenAsync().ConfigureAwait(false);
+                                        await conn.OpenAsync(cancellationToken).ConfigureAwait(false);
 
                                         // 1) remote_id ile eþleþen localId var mý?
                                         await using (var cmd = conn.CreateCommand())
                                         {
                                             cmd.CommandText = "SELECT id, IFNULL(updated_at,0) FROM Records WHERE remote_id=@rid LIMIT 1";
                                             cmd.Parameters.AddWithValue("@rid", rid);
-                                            await using var rdr = await cmd.ExecuteReaderAsync().ConfigureAwait(false);
-                                            if (await rdr.ReadAsync().ConfigureAwait(false))
+                                            await using var rdr = await cmd.ExecuteReaderAsync(cancellationToken).ConfigureAwait(false);
+                                            if (await rdr.ReadAsync(cancellationToken).ConfigureAwait(false))
                                             {
                                                 localId = rdr.IsDBNull(0) ? 0 : rdr.GetInt32(0);
                                                 localUpdated = rdr.IsDBNull(1) ? 0 : rdr.GetInt64(1);
@@ -287,7 +311,7 @@ namespace TirSeferleriModernApp.Services
                                                 map.CommandText = "UPDATE Records SET remote_id=@rid WHERE id=@id AND IFNULL(remote_id,'')=''";
                                                 map.Parameters.AddWithValue("@rid", rid);
                                                 map.Parameters.AddWithValue("@id", docLocalId);
-                                                var affected = await map.ExecuteNonQueryAsync().ConfigureAwait(false);
+                                                var affected = await map.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
                                                 if (affected > 0)
                                                 {
                                                     localId = docLocalId; // eþleþtirme saðlandý
@@ -295,7 +319,7 @@ namespace TirSeferleriModernApp.Services
                                                     await using var readUpd = conn.CreateCommand();
                                                     readUpd.CommandText = "SELECT IFNULL(updated_at,0) FROM Records WHERE id=@id";
                                                     readUpd.Parameters.AddWithValue("@id", docLocalId);
-                                                    var val = await readUpd.ExecuteScalarAsync().ConfigureAwait(false);
+                                                    var val = await readUpd.ExecuteScalarAsync(cancellationToken).ConfigureAwait(false);
                                                     localUpdated = val == null || val == DBNull.Value ? 0 : Convert.ToInt64(val);
                                                 }
                                             }
@@ -345,7 +369,7 @@ namespace TirSeferleriModernApp.Services
                                             upd.Parameters.AddWithValue("@createdByUserId", (object?)createdByUserId ?? DBNull.Value);
                                             upd.Parameters.AddWithValue("@createdAt", createdAt);
                                             upd.Parameters.AddWithValue("@id", localId);
-                                            await upd.ExecuteNonQueryAsync().ConfigureAwait(false);
+                                            await upd.ExecuteNonQueryAsync(cancellationToken).ConfigureAwait(false);
 
                                             LogService.Info($"Yerel kayýt güncellendi. local_id={localId}, remote_id={rid}");
                                         }
@@ -357,6 +381,10 @@ namespace TirSeferleriModernApp.Services
                                         }
                                     }
                                 }
+                            }
+                            catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                            {
+                                // sessiz çýk
                             }
                             catch (Exception ex)
                             {
@@ -370,6 +398,11 @@ namespace TirSeferleriModernApp.Services
                         });
                     });
                     LogService.Info("Firestore dinleyici baþlatýldý.");
+                }
+                catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
+                {
+                    // sessiz çýk
+                    return;
                 }
                 catch (RpcException rex)
                 {
